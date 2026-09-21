@@ -133,6 +133,7 @@ import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.BlurringShader;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
+import org.telegram.ui.Components.CameraLensSelectorView;
 import org.telegram.ui.Components.CombinedDrawable;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.EmojiView;
@@ -1272,10 +1273,11 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 final float deltaScaleFactor = (detector.getScaleFactor() - 1.0f) * .75f;
                 cameraZoom += deltaScaleFactor;
                 cameraZoom = Utilities.clamp(cameraZoom, 1, 0);
-                cameraView.setZoom(cameraZoom);
+                cameraView.setZoomProgress(cameraZoom);
                 if (zoomControlView != null) {
                     zoomControlView.setZoom(cameraZoom, false);
                 }
+                updateSelectedCameraLens(false);
                 showZoomControls(true, true);
                 return true;
             }
@@ -1937,6 +1939,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
     private HintTextView hintTextView;
     private HintTextView collageHintTextView;
     private ZoomControlView zoomControlView;
+    private CameraLensSelectorView cameraLensSelectorView;
     private HintView2 cameraHint;
     private StoryThemeSheet themeSheet;
 
@@ -2975,11 +2978,26 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         controlContainer.addView(zoomControlView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 50, Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM, 0, 0, 0, 100 + 8));
         zoomControlView.setDelegate(zoom -> {
             if (cameraView != null) {
-                cameraView.setZoom(cameraZoom = zoom);
+                cameraView.setZoomProgress(cameraZoom = zoom);
+                updateSelectedCameraLens(false);
             }
             showZoomControls(true, true);
         });
         zoomControlView.setZoom(cameraZoom = 0, false);
+
+        cameraLensSelectorView = new CameraLensSelectorView(context);
+        cameraLensSelectorView.setVisibility(View.GONE);
+        cameraLensSelectorView.setDelegate(zoomRatio -> {
+            if (cameraView == null || !cameraView.isInited()) {
+                return;
+            }
+            cameraView.setZoomRatio(zoomRatio);
+            cameraZoom = cameraView.getZoomProgress();
+            zoomControlView.setZoom(cameraZoom, false);
+            cameraLensSelectorView.setSelectedZoomRatio(zoomRatio, true);
+        });
+        controlContainer.addView(cameraLensSelectorView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 46,
+                Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM, 0, 0, 0, 158));
 
         qrLinkView = new ScannedLinkPreview(context, currentAccount, () -> {
             if (collageLayoutView != null) {
@@ -4216,7 +4234,16 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
         @Override
         public void onZoom(float zoom) {
-            zoomControlView.setZoom(zoom, true);
+            if (cameraView != null) {
+                float oneXProgress = cameraView.supportsLensZoomRatios()
+                        ? cameraView.getZoomProgressForRatio(1f) : 0f;
+                cameraZoom = oneXProgress + zoom * (1f - oneXProgress);
+                cameraView.setZoomProgress(cameraZoom);
+                updateSelectedCameraLens(false);
+            } else {
+                cameraZoom = zoom;
+            }
+            zoomControlView.setZoom(cameraZoom, true);
             showZoomControls(false, true);
         }
     };
@@ -4340,6 +4367,26 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
     private Runnable zoomControlHideRunnable;
     private AnimatorSet zoomControlAnimation;
+
+    private void updateCameraLensSelector() {
+        if (cameraLensSelectorView == null || cameraView == null) {
+            return;
+        }
+        boolean visible = currentPage == PAGE_CAMERA
+                && cameraView.supportsLensZoomRatios()
+                && !cameraView.isCurrentSessionFrontCamera();
+        if (visible) {
+            cameraLensSelectorView.setZoomRatios(cameraView.getAvailableLensZoomRatios());
+            cameraLensSelectorView.setSelectedZoomRatio(cameraView.getZoomRatio(), false);
+        }
+        cameraLensSelectorView.setVisibility(visible ? View.VISIBLE : View.GONE);
+    }
+
+    private void updateSelectedCameraLens(boolean animated) {
+        if (cameraLensSelectorView != null && cameraLensSelectorView.getVisibility() == View.VISIBLE && cameraView != null) {
+            cameraLensSelectorView.setSelectedZoomRatio(cameraView.getZoomRatio(), animated);
+        }
+    }
 
     private void showZoomControls(boolean show, boolean animated) {
         if (zoomControlView.getTag() != null && show || zoomControlView.getTag() == null && !show) {
@@ -5062,6 +5109,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             modeSwitcherView.setVisibility(View.VISIBLE);
             zoomControlView.setVisibility(View.VISIBLE);
             zoomControlView.setAlpha(0);
+            updateCameraLensSelector();
             videoTimerView.setDuration(0, true);
 
             if (outputEntry != null) {
@@ -5293,6 +5341,9 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             destroyCameraView(false);
             recordControl.setVisibility(View.GONE);
             zoomControlView.setVisibility(View.GONE);
+            if (cameraLensSelectorView != null) {
+                cameraLensSelectorView.setVisibility(View.GONE);
+            }
             modeSwitcherView.setVisibility(View.GONE);
 //            dualButton.setVisibility(View.GONE);
             animateRecording(false, false);
@@ -6946,8 +6997,15 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             }
             setCameraFlashModeIcon(currentPage == PAGE_CAMERA ? currentFlashMode : null, true);
             if (zoomControlView != null) {
-                zoomControlView.setZoom(cameraZoom = 0, false);
+                if (cameraView.supportsLensZoomRatios()) {
+                    cameraView.setZoomRatio(1f);
+                    cameraZoom = cameraView.getZoomProgress();
+                } else {
+                    cameraZoom = 0f;
+                }
+                zoomControlView.setZoom(cameraZoom, false);
             }
+            updateCameraLensSelector();
             updateActionBarButtons(true);
         });
         setActionBarButtonVisible(dualButton, cameraView.dualAvailable() && currentPage == PAGE_CAMERA, true);

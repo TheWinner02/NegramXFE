@@ -139,6 +139,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                     if (cache != null) {
                         SerializedData serializedData = new SerializedData(Base64.decode(cache, Base64.DEFAULT));
                         int count = serializedData.readInt32(false);
+                        CameraDiagnostics.logCamera1Count(count, true);
                         for (int a = 0; a < count; a++) {
                             CameraInfo cameraInfo = new CameraInfo(serializedData.readInt32(false), serializedData.readInt32(false));
                             int pCount = serializedData.readInt32(false);
@@ -153,10 +154,12 @@ public class CameraController implements MediaRecorder.OnInfoListener {
 
                             Collections.sort(cameraInfo.previewSizes, comparator);
                             Collections.sort(cameraInfo.pictureSizes, comparator);
+                            CameraDiagnostics.logCachedCamera1(cameraInfo);
                         }
                         serializedData.cleanup();
                     } else {
                         int count = Camera.getNumberOfCameras();
+                        CameraDiagnostics.logCamera1Count(count, false);
                         Camera.CameraInfo info = new Camera.CameraInfo();
 
                         int bufferSize = 4;
@@ -169,6 +172,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                             }
                             Camera camera = Camera.open(cameraInfo.getCameraId());
                             Camera.Parameters params = camera.getParameters();
+                            CameraDiagnostics.logCamera1(cameraId, info, params);
 
                             List<Camera.Size> list = params.getSupportedPreviewSizes();
                             for (int a = 0; a < list.size(); a++) {
@@ -232,6 +236,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                         preferences.edit().putString("cameraCache", Base64.encodeToString(serializedData.toByteArray(), Base64.DEFAULT)).commit();
                         serializedData.cleanup();
                     }
+                    CameraDiagnostics.logCamera2Inventory();
                     cameraInfos = result;
                 }
                 AndroidUtilities.runOnUIThread(() -> {
@@ -420,12 +425,11 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                         BitmapFactory.Options options = new BitmapFactory.Options();
                         options.inJustDecodeBounds = true;
                         BitmapFactory.decodeByteArray(data, 0, data.length, options);
-                        //                    float scaleFactor = Math.max((float) options.outWidth / AndroidUtilities.getPhotoSize(), (float) options.outHeight / AndroidUtilities.getPhotoSize());
-                        //                    if (scaleFactor < 1) {
-                        //                        scaleFactor = 1;
-                        //                    }
+                        if (!(info.frontCamera != 0 && flipFront)) {
+                            float scaleFactor = Math.max((float) options.outWidth / AndroidUtilities.getPhotoSize(), (float) options.outHeight / AndroidUtilities.getPhotoSize());
+                            options.inSampleSize = Math.max(1, (int) scaleFactor);
+                        }
                         options.inJustDecodeBounds = false;
-                        //    options.inSampleSize = (int) scaleFactor;
                         options.inPurgeable = true;
                         bitmap = BitmapFactory.decodeByteArray(data, 0, data.length, options);
                     } catch (Throwable e) {
@@ -553,6 +557,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                     camera = session.cameraInfo.camera = Camera.open(session.cameraInfo.cameraId);
                 }
                 Camera.Parameters params = camera.getParameters();
+                CameraDiagnostics.logOpenedCamera1(session.cameraInfo.cameraId, params);
 
                 List<String> rawFlashModes = params.getSupportedFlashModes();
                 session.availableFlashModes.clear();
@@ -604,6 +609,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                 }
                 camera.setErrorCallback(getErrorListener(session));
                 Camera.Parameters params = camera.getParameters();
+                CameraDiagnostics.logOpenedCamera1(session.cameraInfo.cameraId, params);
 
                 List<String> rawFlashModes = params.getSupportedFlashModes();
                 session.availableFlashModes.clear();
@@ -929,6 +935,30 @@ public class CameraController implements MediaRecorder.OnInfoListener {
         } else {
             return Collections.max(choices, new CompareSizesByArea());
         }
+    }
+
+    public static Size chooseHighQualityPictureSize(List<Size> choices, Size aspectRatio, long maxPixels, Size fallback) {
+        if (choices == null || choices.isEmpty() || aspectRatio == null || maxPixels <= 0) {
+            return fallback;
+        }
+        double targetRatio = (double) aspectRatio.getWidth() / aspectRatio.getHeight();
+        long fallbackPixels = fallback == null ? 0 : (long) fallback.getWidth() * fallback.getHeight();
+        Size best = null;
+        long bestPixels = 0;
+        for (int i = 0; i < choices.size(); i++) {
+            Size option = choices.get(i);
+            long pixels = (long) option.getWidth() * option.getHeight();
+            if (pixels > maxPixels || pixels < fallbackPixels) {
+                continue;
+            }
+            double optionRatio = (double) option.getWidth() / option.getHeight();
+            double ratioDifference = Math.abs(optionRatio - targetRatio) / targetRatio;
+            if (ratioDifference <= 0.02d && pixels > bestPixels) {
+                best = option;
+                bestPixels = pixels;
+            }
+        }
+        return best != null ? best : fallback;
     }
 
     static class CompareSizesByArea implements Comparator<Size> {

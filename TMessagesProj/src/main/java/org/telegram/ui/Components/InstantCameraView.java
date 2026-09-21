@@ -186,7 +186,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
     private Size aspectRatio = SharedConfig.roundCamera16to9 ? new Size(16, 9) : new Size(4, 3);
     private TextureView textureView;
     private BackupImageView textureOverlayView;
-    private final boolean useCamera2 = SharedConfig.isUsingCamera2(currentAccount);
+    private boolean useCamera2 = SharedConfig.isUsingCamera2(currentAccount);
     private CameraSession cameraSession;
     private boolean bothCameras;
     private Camera2Session[] camera2Sessions = new Camera2Session[2];
@@ -265,7 +265,9 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
     private final LinearLayout buttonsLayout;
     private final int buttonsSizePx;
     private final ZoomControlView zoomControlView;
+    private final CameraLensSelectorView cameraLensSelectorView;
     private float lockedZoom;
+    private float camera2LockedZoomRatio = 1f;
 
 
     @SuppressLint("ClickableViewAccessibility")
@@ -328,6 +330,22 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
         zoomControlView.setAlpha(0.0f);
         zoomControlView.setDelegate(this::setLockedZoom);
         addView(zoomControlView, new LayoutParams(LayoutHelper.MATCH_PARENT, dp(50), Gravity.CENTER));
+
+        cameraLensSelectorView = new CameraLensSelectorView(context);
+        cameraLensSelectorView.setVisibility(GONE);
+        cameraLensSelectorView.setDelegate(zoomRatio -> {
+            Camera2Session session = camera2SessionCurrent;
+            if (!useCamera2 || session == null || session.isFrontCamera()) {
+                return;
+            }
+            camera2LockedZoomRatio = Utilities.clamp(zoomRatio, session.getMaxZoom(), session.getHardwareMinZoom());
+            session.setZoom(camera2LockedZoomRatio);
+            lockedZoom = getZoomControlValueFromCamera2(camera2LockedZoomRatio);
+            zoomControlView.setZoom(lockedZoom, false);
+            cameraLensSelectorView.setSelectedZoomRatio(camera2LockedZoomRatio, true);
+        });
+        addView(cameraLensSelectorView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 46,
+                Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM, 0, 0, 0, 72));
 
 
         buttonsLayout = new LinearLayout(context);
@@ -801,6 +819,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
                         camera2Sessions[a] = Camera2Session.create(a == (isFrontface ? 0 : 1), MessagesController.getInstance(UserConfig.selectedAccount).roundVideoSize, MessagesController.getInstance(UserConfig.selectedAccount).roundVideoSize);
                         if (camera2Sessions[a] != null) {
                             camera2Sessions[a].setRecordingVideo(true);
+                            attachCamera2ErrorFallback(camera2Sessions[a]);
                             previewSize[a] = new Size(camera2Sessions[a].getPreviewWidth(), camera2Sessions[a].getPreviewHeight());
                         }
                     }
@@ -810,14 +829,23 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
                 if (camera2SessionCurrent != null && camera2Sessions[isFrontface == initialCameraFront ? 1 : 0] == null) {
                     bothCameras = false;
                 }
-                if (camera2SessionCurrent == null) return;
+                if (camera2SessionCurrent == null) {
+                    fallbackToCamera1BeforeOpen();
+                }
             } else {
                 camera2SessionCurrent = camera2Sessions[isFrontface ? 0 : 1] = Camera2Session.create(isFrontface, MessagesController.getInstance(UserConfig.selectedAccount).roundVideoSize, MessagesController.getInstance(UserConfig.selectedAccount).roundVideoSize);
-                if (camera2SessionCurrent == null) return;
-                camera2SessionCurrent.setRecordingVideo(true);
-                previewSize[0] = new Size(camera2SessionCurrent.getPreviewWidth(), camera2SessionCurrent.getPreviewHeight());
+                if (camera2SessionCurrent == null) {
+                    fallbackToCamera1BeforeOpen();
+                } else {
+                    camera2SessionCurrent.setRecordingVideo(true);
+                    attachCamera2ErrorFallback(camera2SessionCurrent);
+                    previewSize[0] = new Size(camera2SessionCurrent.getPreviewWidth(), camera2SessionCurrent.getPreviewHeight());
+                }
             }
-            applyLockedZoomToCamera();
+            if (useCamera2) {
+                restoreLockedCamera2Zoom();
+                updateCameraLensSelector();
+            }
         }
         textureView = new TextureView(getContext());
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
@@ -1174,7 +1202,8 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
         if (useCamera2) {
             if (bothCameras) {
                 camera2SessionCurrent = camera2Sessions[isFrontface == initialCameraFront ? 0 : 1];
-                applyLockedZoomToCamera();
+                restoreLockedCamera2Zoom();
+                updateCameraLensSelector();
                 cameraThread.flipSurfaces();
                 return;
             } else {
@@ -1184,11 +1213,15 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
                     camera2Sessions[isFrontface ? 1 : 0] = null;
                 }
                 camera2SessionCurrent = camera2Sessions[isFrontface ? 0 : 1] = Camera2Session.create(isFrontface, MessagesController.getInstance(UserConfig.selectedAccount).roundVideoSize, MessagesController.getInstance(UserConfig.selectedAccount).roundVideoSize);
-                if (camera2SessionCurrent == null) return;
+                if (camera2SessionCurrent == null) {
+                    fallbackToCamera1AfterOpen();
+                    return;
+                }
                 camera2SessionCurrent.setRecordingVideo(true);
+                attachCamera2ErrorFallback(camera2SessionCurrent);
                 previewSize[0] = new Size(camera2SessionCurrent.getPreviewWidth(), camera2SessionCurrent.getPreviewHeight());
                 cameraThread.setCurrentSession(camera2SessionCurrent);
-                applyLockedZoomToCamera();
+                restoreLockedCamera2Zoom();
             }
         } else {
             if (cameraSession != null) {
@@ -1200,6 +1233,53 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
         initCamera();
         cameraReady = false;
         cameraThread.reinitForNewCamera();
+        updateCameraLensSelector();
+    }
+
+    private void attachCamera2ErrorFallback(Camera2Session session) {
+        session.setErrorCallback(() -> {
+            if (useCamera2) {
+                fallbackToCamera1AfterOpen();
+            }
+        });
+    }
+
+    private void fallbackToCamera1BeforeOpen() {
+        FileLog.e("InstantCamera Camera2 is unavailable, using Camera1");
+        destroyCamera2Sessions();
+        useCamera2 = false;
+        bothCameras = false;
+        initCamera();
+        updateCameraLensSelector();
+    }
+
+    private void fallbackToCamera1AfterOpen() {
+        AndroidUtilities.runOnUIThread(() -> {
+            if (!useCamera2) {
+                return;
+            }
+            FileLog.e("InstantCamera Camera2 failed, falling back to Camera1");
+            destroyCamera2Sessions();
+            useCamera2 = false;
+            bothCameras = false;
+            if (!initCamera() || cameraThread == null) {
+                return;
+            }
+            cameraReady = false;
+            cameraThread.reinitForNewCamera();
+            updateCameraLensSelector();
+        });
+    }
+
+    private void destroyCamera2Sessions() {
+        for (int i = 0; i < camera2Sessions.length; i++) {
+            if (camera2Sessions[i] != null) {
+                camera2Sessions[i].setErrorCallback(null);
+                camera2Sessions[i].destroy(false);
+                camera2Sessions[i] = null;
+            }
+        }
+        camera2SessionCurrent = null;
     }
 
     // Old Camera1 API
@@ -3883,7 +3963,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
             float scale = (float) Math.hypot(ev.getX(index2) - ev.getX(index1), ev.getY(index2) - ev.getY(index1)) / pinchStartDistance;
             if (useCamera2) {
                 if (camera2SessionCurrent != null) {
-                    float zoom = Utilities.clamp(pinchStartZoom * scale, camera2SessionCurrent.getMaxZoom(), camera2SessionCurrent.getMinZoom());
+                    float zoom = Utilities.clamp(pinchStartZoom * scale, camera2SessionCurrent.getMaxZoom(), camera2SessionCurrent.getHardwareMinZoom());
                     camera2SessionCurrent.setZoom(zoom);
                     pinchScale = zoom;
                     syncZoomControlView(pinchScale);
@@ -3914,7 +3994,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
         float toZoom;
         if (useCamera2) {
             if (camera2SessionCurrent == null) return;
-            fromZoom = Utilities.clamp(pinchScale, camera2SessionCurrent.getMaxZoom(), camera2SessionCurrent.getMinZoom());
+            fromZoom = Utilities.clamp(pinchScale, camera2SessionCurrent.getMaxZoom(), camera2SessionCurrent.getHardwareMinZoom());
             toZoom = getLockedZoomForCamera2();
         } else {
             fromZoom = Utilities.clamp(pinchScale, 1f, 0f);
@@ -3979,12 +4059,8 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
         if (camera2SessionCurrent == null) {
             return 1f;
         }
-        float min = camera2SessionCurrent.getMinZoom();
-        float max = camera2SessionCurrent.getMaxZoom();
-        if (max <= min) {
-            return min;
-        }
-        return min + lockedZoom * (max - min);
+        return Utilities.clamp(camera2LockedZoomRatio,
+                camera2SessionCurrent.getMaxZoom(), camera2SessionCurrent.getHardwareMinZoom());
     }
 
     private float getZoomControlValueFromCamera2(float zoom) {
@@ -3992,12 +4068,12 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
         if (session == null) {
             return lockedZoom;
         }
-        final float min = session.getMinZoom();
+        final float min = session.getHardwareMinZoom();
         final float max = session.getMaxZoom();
-        if (max <= min) {
+        if (min <= 0f || max <= min || zoom <= 0f) {
             return 0f;
         }
-        return Utilities.clamp((zoom - min) / (max - min), 1f, 0f);
+        return Utilities.clamp((float) (Math.log(zoom / min) / Math.log(max / min)), 1f, 0f);
     }
 
     private void syncZoomControlView(float currentZoom) {
@@ -4006,6 +4082,9 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
         }
         final float value = useCamera2 ? getZoomControlValueFromCamera2(currentZoom) : Utilities.clamp01(currentZoom);
         zoomControlView.setZoom(value, false);
+        if (useCamera2 && cameraLensSelectorView.getVisibility() == VISIBLE) {
+            cameraLensSelectorView.setSelectedZoomRatio(currentZoom, false);
+        }
     }
 
     private void setLockedZoom(float zoom) {
@@ -4029,15 +4108,40 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
             if (session == null) {
                 return;
             }
-            final float min = session.getMinZoom();
+            final float min = session.getHardwareMinZoom();
             final float max = session.getMaxZoom();
-            final float zoom = max <= min ? min : min + lockedZoom * (max - min);
-            session.whenDone(() -> session.setZoom(zoom));
+            camera2LockedZoomRatio = min <= 0f || max <= min
+                    ? Math.max(1f, min)
+                    : (float) (min * Math.pow(max / min, lockedZoom));
+            session.whenDone(() -> session.setZoom(camera2LockedZoomRatio));
         } else {
             if (cameraSession != null) {
                 cameraSession.setZoom(lockedZoom);
             }
         }
+    }
+
+    private void restoreLockedCamera2Zoom() {
+        Camera2Session session = camera2SessionCurrent;
+        if (session == null) {
+            return;
+        }
+        camera2LockedZoomRatio = Utilities.clamp(camera2LockedZoomRatio,
+                session.getMaxZoom(), session.getHardwareMinZoom());
+        lockedZoom = getZoomControlValueFromCamera2(camera2LockedZoomRatio);
+        zoomControlView.setZoom(lockedZoom, false);
+        session.whenDone(() -> session.setZoom(camera2LockedZoomRatio));
+    }
+
+    private void updateCameraLensSelector() {
+        Camera2Session session = camera2SessionCurrent;
+        boolean visible = useCamera2 && session != null && !session.isFrontCamera()
+                && session.getAvailableLensZoomRatios().size() > 1;
+        if (visible) {
+            cameraLensSelectorView.setZoomRatios(session.getAvailableLensZoomRatios());
+            cameraLensSelectorView.setSelectedZoomRatio(session.getZoom(), false);
+        }
+        cameraLensSelectorView.setVisibility(visible ? VISIBLE : GONE);
     }
 
     public void setUseFrontCamera(boolean useFront) {

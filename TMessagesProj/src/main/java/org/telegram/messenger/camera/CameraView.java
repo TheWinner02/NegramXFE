@@ -101,6 +101,10 @@ import tw.nekomimi.nekogram.NekoConfig;
 @SuppressLint("NewApi")
 public class CameraView extends FrameLayout implements TextureView.SurfaceTextureListener, CameraController.ICameraView, CameraController.ErrorCallback  {
 
+    private static final long LOW_END_MAX_PICTURE_PIXELS = 8_000_000L;
+    private static final long AVERAGE_MAX_PICTURE_PIXELS = 12_000_000L;
+    private static final long HIGH_END_MAX_PICTURE_PIXELS = 16_000_000L;
+
     public boolean WRITE_TO_FILE_IN_BACKGROUND = false;
 
     public boolean isStory;
@@ -123,7 +127,9 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
     private int focusAreaSize;
     private Drawable thumbDrawable;
 
-    private final boolean useCamera2 = false && SharedConfig.isUsingCamera2(UserConfig.selectedAccount);
+    private final boolean useCamera2 = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
+            && SharedConfig.isUsingCamera2(UserConfig.selectedAccount);
+    private boolean camera2Unavailable;
     private final CameraSessionWrapper[] cameraSession = new CameraSessionWrapper[2];
     private CameraSessionWrapper cameraSessionRecording;
 
@@ -781,12 +787,32 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
         }
 
         previewSize[i] = CameraController.chooseOptimalSize(info[i].getPreviewSizes(), wantedWidth, wantedHeight, aspectRatio, isStory);
-        pictureSize[i] = CameraController.chooseOptimalSize(info[i].getPictureSizes(), photoMaxWidth, photoMaxHeight, aspectRatio, false);
+        Size fallbackPictureSize = CameraController.chooseOptimalSize(info[i].getPictureSizes(), photoMaxWidth, photoMaxHeight, aspectRatio, false);
+        pictureSize[i] = square()
+                ? fallbackPictureSize
+                : CameraController.chooseHighQualityPictureSize(info[i].getPictureSizes(), aspectRatio, getMaxPicturePixels(), fallbackPictureSize);
 
         if (BuildVars.LOGS_ENABLED) {
-            FileLog.d("camera preview " + previewSize[0]);
+            FileLog.d("[CameraQuality] cameraId=" + info[i].cameraId
+                    + " preview=" + previewSize[i]
+                    + " jpeg=" + pictureSize[i]
+                    + " fallback=" + fallbackPictureSize
+                    + " max=" + String.format(java.util.Locale.US, "%.0fMP", getMaxPicturePixels() / 1_000_000d)
+                    + " ratio=" + aspectRatio);
         }
         requestLayout();
+    }
+
+    private long getMaxPicturePixels() {
+        switch (SharedConfig.getDevicePerformanceClass()) {
+            case SharedConfig.PERFORMANCE_CLASS_LOW:
+                return LOW_END_MAX_PICTURE_PIXELS;
+            case SharedConfig.PERFORMANCE_CLASS_AVERAGE:
+                return AVERAGE_MAX_PICTURE_PIXELS;
+            case SharedConfig.PERFORMANCE_CLASS_HIGH:
+            default:
+                return HIGH_END_MAX_PICTURE_PIXELS;
+        }
     }
 
     @Override
@@ -969,6 +995,74 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
         if (cameraSession[0] != null) {
             cameraSession[0].setZoom(value);
         }
+    }
+
+    public boolean supportsLensZoomRatios() {
+        return cameraSession[0] != null && cameraSession[0].supportsLensZoomRatios();
+    }
+
+    public boolean isCurrentSessionFrontCamera() {
+        return cameraSession[0] != null && cameraSession[0].isFrontCamera();
+    }
+
+    public java.util.List<Float> getAvailableLensZoomRatios() {
+        return cameraSession[0] == null
+                ? java.util.Collections.singletonList(1f)
+                : cameraSession[0].getAvailableLensZoomRatios();
+    }
+
+    public void setZoomRatio(float zoomRatio) {
+        if (cameraSession[0] != null) {
+            cameraSession[0].setZoomRatio(zoomRatio);
+        }
+    }
+
+    public float getZoomRatio() {
+        return cameraSession[0] == null ? 1f : cameraSession[0].getZoomRatio();
+    }
+
+    public float getMinZoomRatio() {
+        return cameraSession[0] == null ? 1f : cameraSession[0].getMinZoomRatio();
+    }
+
+    public float getMaxZoomRatio() {
+        return cameraSession[0] == null ? 1f : cameraSession[0].getMaxZoomRatio();
+    }
+
+    public void setZoomProgress(float progress) {
+        if (!supportsLensZoomRatios()) {
+            setZoom(progress);
+            return;
+        }
+        progress = Math.max(0f, Math.min(1f, progress));
+        float minZoom = getMinZoomRatio();
+        float maxZoom = getMaxZoomRatio();
+        if (minZoom <= 0f || maxZoom <= minZoom) {
+            setZoomRatio(1f);
+            return;
+        }
+        setZoomRatio((float) (minZoom * Math.pow(maxZoom / minZoom, progress)));
+    }
+
+    public float getZoomProgress() {
+        if (!supportsLensZoomRatios()) {
+            return 0f;
+        }
+        return getZoomProgressForRatio(getZoomRatio());
+    }
+
+    public float getZoomProgressForRatio(float zoomRatio) {
+        if (!supportsLensZoomRatios()) {
+            return 0f;
+        }
+        float minZoom = getMinZoomRatio();
+        float maxZoom = getMaxZoomRatio();
+        if (minZoom <= 0f || maxZoom <= minZoom) {
+            return 0f;
+        }
+        zoomRatio = Math.max(minZoom, Math.min(maxZoom, zoomRatio));
+        return Math.max(0f, Math.min(1f,
+                (float) (Math.log(zoomRatio / minZoom) / Math.log(maxZoom / minZoom))));
     }
 
     public void setDelegate(CameraViewDelegate cameraViewDelegate) {
@@ -2288,13 +2382,21 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
                 return;
             }
             if (BuildVars.LOGS_ENABLED) {
-                FileLog.d("CameraView " + "create camera"+(useCamera2 ? "2" : "")+" session " + i);
+                FileLog.d("[CameraBackend] requested=" + (useCamera2 ? "Camera2" : "Camera1")
+                        + " actual=" + (useCamera2 && !camera2Unavailable ? "Camera2" : "Camera1")
+                        + " session=" + i);
             }
 
-            if (useCamera2) {
+            if (useCamera2 && !camera2Unavailable) {
                 Camera2Session session = Camera2Session.create(i == 0 ? isFrontface : !isFrontface, surfaceWidth, surfaceHeight);
-                if (session == null) return;
+                if (session == null) {
+                    camera2Unavailable = true;
+                    FileLog.e("CameraView Camera2 is unavailable, using Camera1");
+                    createCamera1(surfaceTexture, i);
+                    return;
+                }
                 cameraSession[i] = CameraSessionWrapper.of(session);
+                session.setErrorCallback(() -> fallbackToCamera1(surfaceTexture, i, session));
                 previewSize[i] = new Size(session.getPreviewWidth(), session.getPreviewHeight());
                 cameraThread.setCurrentSession(cameraSession[i], i);
                 session.whenDone(() -> {
@@ -2310,38 +2412,63 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
                 });
                 session.open(surfaceTexture);
             } else {
-                if (previewSize[i] == null) {
-                    updateCameraInfoSize(i);
-                }
-                if (previewSize[i] == null) {
-                    return;
-                }
-                surfaceTexture.setDefaultBufferSize(previewSize[i].getWidth(), previewSize[i].getHeight());
-                CameraSession session = new CameraSession(info[i], previewSize[i], pictureSize[i], ImageFormat.JPEG, false);
-                session.setCurrentFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-                cameraSession[i] = CameraSessionWrapper.of(session);
-                cameraThread.setCurrentSession(cameraSession[i], i);
-                requestLayout();
-                CameraController.getInstance().open(session, surfaceTexture, () -> {
-                    if (cameraSession[i] != null) {
-                        if (BuildVars.LOGS_ENABLED) {
-                            FileLog.d("CameraView " + "camera initied " + i);
-                        }
-                        session.setInitied();
-                        requestLayout();
-                    }
-
-                    if (dual && i == 1 && initFirstCameraAfterSecond) {
-                        initFirstCameraAfterSecond = false;
-                        AndroidUtilities.runOnUIThread(() -> {
-                            updateCameraInfoSize(0);
-                            cameraThread.reinitForNewCamera();
-                            addToDualWait(350L);
-                        });
-                    }
-                }, () -> cameraThread.setCurrentSession(cameraSession[i], i));
+                createCamera1(surfaceTexture, i);
             }
         });
+    }
+
+    private void fallbackToCamera1(SurfaceTexture surfaceTexture, int i, Camera2Session failedSession) {
+        AndroidUtilities.runOnUIThread(() -> {
+            if (cameraSession[i] == null || cameraSession[i].camera2Session != failedSession) {
+                return;
+            }
+            camera2Unavailable = true;
+            FileLog.e("CameraView Camera2 failed, falling back to Camera1");
+            cameraSession[i] = null;
+            failedSession.destroy(true, () -> {
+                previewSize[i] = null;
+                pictureSize[i] = null;
+                info[i] = null;
+                createCamera1(surfaceTexture, i);
+            });
+        });
+    }
+
+    private void createCamera1(SurfaceTexture surfaceTexture, int i) {
+        CameraGLThread cameraThread = this.cameraThread;
+        if (cameraThread == null || surfaceTexture == null) {
+            return;
+        }
+        if (previewSize[i] == null || info[i] == null || pictureSize[i] == null) {
+            updateCameraInfoSize(i);
+        }
+        if (previewSize[i] == null || info[i] == null || pictureSize[i] == null) {
+            return;
+        }
+        surfaceTexture.setDefaultBufferSize(previewSize[i].getWidth(), previewSize[i].getHeight());
+        CameraSession session = new CameraSession(info[i], previewSize[i], pictureSize[i], ImageFormat.JPEG, false);
+        session.setCurrentFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+        cameraSession[i] = CameraSessionWrapper.of(session);
+        cameraThread.setCurrentSession(cameraSession[i], i);
+        requestLayout();
+        CameraController.getInstance().open(session, surfaceTexture, () -> {
+            if (cameraSession[i] != null && cameraSession[i].camera1Session == session) {
+                if (BuildVars.LOGS_ENABLED) {
+                    FileLog.d("CameraView camera initied " + i);
+                }
+                session.setInitied();
+                requestLayout();
+            }
+
+            if (dual && i == 1 && initFirstCameraAfterSecond) {
+                initFirstCameraAfterSecond = false;
+                AndroidUtilities.runOnUIThread(() -> {
+                    updateCameraInfoSize(0);
+                    cameraThread.reinitForNewCamera();
+                    addToDualWait(350L);
+                });
+            }
+        }, () -> cameraThread.setCurrentSession(cameraSession[i], i));
     }
 
     protected void receivedAmplitude(double amplitude) {
@@ -2353,13 +2480,14 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
 
         private static final String VIDEO_MIME_TYPE = "video/hevc";
         private static final String AUDIO_MIME_TYPE = "audio/mp4a-latm";
-        private static final int FRAME_RATE = 30;
+        private static final int DEFAULT_FRAME_RATE = 30;
         private static final int IFRAME_INTERVAL = 1;
 
         private File videoFile;
         private File fileToWrite;
         private boolean writingToDifferentFile;
         private int videoBitrate;
+        private int videoFrameRate = DEFAULT_FRAME_RATE;
         private boolean videoConvertFirstWrite = true;
         private boolean blendEnabled;
 
@@ -2530,13 +2658,11 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
             }
 
             Size pictureSize;
-            int bitrate;
             pictureSize = previewSize[0];
-            if (Math.min(pictureSize.mHeight, pictureSize.mWidth) >= 720) {
-                bitrate = 3500000;
-            } else {
-                bitrate = 1800000;
-            }
+            long videoPixels = (long) pictureSize.getWidth() * pictureSize.getHeight();
+            int bitrate = videoPixels >= 1920L * 1080L ? 6_000_000
+                    : videoPixels >= 1280L * 720L ? 4_000_000
+                    : 2_000_000;
 
             videoFile = outputFile;
 
@@ -2548,6 +2674,11 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
                 videoHeight = pictureSize.getWidth();
             }
             videoBitrate = bitrate;
+            videoFrameRate = cameraSession[0] == null ? DEFAULT_FRAME_RATE : cameraSession[0].getVideoFrameRate();
+            FileLog.d("[CameraVideo] encoder=" + videoWidth + "x" + videoHeight
+                    + " fps=" + videoFrameRate
+                    + " bitrate=" + videoBitrate
+                    + " zoom=" + (cameraSession[0] == null ? "unknown" : cameraSession[0].getZoomRatio() + "x"));
             sharedEglContext = sharedContext;
             synchronized (sync) {
                 if (running) {
@@ -3063,7 +3194,7 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
 
                 format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
                 format.setInteger(MediaFormat.KEY_BIT_RATE, videoBitrate);
-                format.setInteger(MediaFormat.KEY_FRAME_RATE, FRAME_RATE);
+                format.setInteger(MediaFormat.KEY_FRAME_RATE, videoFrameRate);
                 format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL);
 
                 videoEncoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);

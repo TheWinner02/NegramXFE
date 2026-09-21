@@ -186,6 +186,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
     private FrameLayout cameraPanel;
     private ShutterButton shutterButton;
     private ZoomControlView zoomControlView;
+    private CameraLensSelectorView cameraLensSelectorView;
     private AnimatorSet zoomControlAnimation;
     private Runnable zoomControlHideRunnable;
     private Runnable afterCameraInitRunnable;
@@ -1278,10 +1279,29 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         container.addView(zoomControlView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 50, Gravity.LEFT | Gravity.TOP, 0, 0, 0, 100 + 16));
         zoomControlView.setDelegate(zoom -> {
             if (cameraView != null) {
-                cameraView.setZoom(cameraZoom = zoom);
+                cameraZoom = zoom;
+                if (cameraView.supportsLensZoomRatios()) {
+                    cameraView.setZoomProgress(zoom);
+                } else {
+                    cameraView.setZoom(zoom);
+                }
+                updateSelectedCameraLens(false);
             }
             showZoomControls(true, true);
         });
+
+        cameraLensSelectorView = new CameraLensSelectorView(context);
+        cameraLensSelectorView.setVisibility(View.GONE);
+        cameraLensSelectorView.setAlpha(0f);
+        cameraLensSelectorView.setDelegate(zoomRatio -> {
+            if (cameraView == null || !cameraView.isInited()) {
+                return;
+            }
+            cameraView.setZoomRatio(zoomRatio);
+            syncCameraZoomFromRatio();
+            cameraLensSelectorView.setSelectedZoomRatio(zoomRatio, true);
+        });
+        container.addView(cameraLensSelectorView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 46, Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM));
 
         shutterButton = new ShutterButton(context);
         cameraPanel.addView(shutterButton, LayoutHelper.createFrame(84, 84, Gravity.CENTER));
@@ -1447,6 +1467,9 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             if (takingPhoto || cameraView == null || !cameraView.isInited()) {
                 return;
             }
+            cameraLensSelectorView.animate().cancel();
+            cameraLensSelectorView.setAlpha(0f);
+            cameraLensSelectorView.setVisibility(View.GONE);
             canSaveCameraPreview = false;
             cameraView.switchCamera();
             ObjectAnimator animator = ObjectAnimator.ofFloat(switchCameraButton, View.SCALE_X, 0.0f).setDuration(100);
@@ -1974,6 +1997,12 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             if (zoomControlView.getTag() != null && hitRect.contains((int) event.getX(), (int) event.getY())) {
                 return false;
             }
+            if (cameraLensSelectorView != null && cameraLensSelectorView.getVisibility() == View.VISIBLE) {
+                cameraLensSelectorView.getHitRect(hitRect);
+                if (hitRect.contains((int) event.getX(), (int) event.getY())) {
+                    return false;
+                }
+            }
             if (!takingPhoto) {
                 maybeStartDraging = true;
                 lastY = event.getY();
@@ -1997,15 +2026,20 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                         zoomWas = true;
                     }
                     if (zoomWas && cameraView != null) {
-                        cameraZoom += distanceDiff / dp(100);
-                        if (cameraZoom < 0.0f) {
-                            cameraZoom = 0.0f;
-                        } else if (cameraZoom > 1.0f) {
-                            cameraZoom = 1.0f;
+                        if (cameraView.supportsLensZoomRatios() && pinchStartDistance > 0f) {
+                            cameraView.setZoomRatio(cameraView.getZoomRatio() * newDistance / pinchStartDistance);
+                            syncCameraZoomFromRatio();
+                        } else {
+                            cameraZoom += distanceDiff / dp(100);
+                            if (cameraZoom < 0.0f) {
+                                cameraZoom = 0.0f;
+                            } else if (cameraZoom > 1.0f) {
+                                cameraZoom = 1.0f;
+                            }
+                            zoomControlView.setZoom(cameraZoom, false);
+                            cameraView.setZoom(cameraZoom);
                         }
-                        zoomControlView.setZoom(cameraZoom, false);
                         parentAlert.getSheetContainer().invalidate();
-                        cameraView.setZoom(cameraZoom);
                         showZoomControls(true, true);
                         pinchStartDistance = newDistance;
                     }
@@ -2031,6 +2065,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                                 AnimatorSet animatorSet = new AnimatorSet();
                                 animatorSet.playTogether(
                                     ObjectAnimator.ofFloat(cameraPanel, View.ALPHA, 0.0f),
+                                    ObjectAnimator.ofFloat(cameraLensSelectorView, View.ALPHA, 0.0f),
                                     ObjectAnimator.ofFloat(zoomControlView, View.ALPHA, 0.0f),
                                     ObjectAnimator.ofFloat(counterTextView, View.ALPHA, 0.0f),
                                     ObjectAnimator.ofFloat(flashModeButton[0], View.ALPHA, 0.0f),
@@ -2063,6 +2098,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                             animatorSet.playTogether(
                                 ObjectAnimator.ofFloat(cameraView, View.TRANSLATION_Y, 0.0f),
                                 ObjectAnimator.ofFloat(cameraPanel, View.ALPHA, 1.0f),
+                                ObjectAnimator.ofFloat(cameraLensSelectorView, View.ALPHA, cameraLensSelectorView.getVisibility() == View.VISIBLE ? 1.0f : 0.0f),
                                 ObjectAnimator.ofFloat(counterTextView, View.ALPHA, 1.0f),
                                 ObjectAnimator.ofFloat(flashModeButton[0], View.ALPHA, 1.0f),
                                 ObjectAnimator.ofFloat(flashModeButton[1], View.ALPHA, 1.0f),
@@ -2113,9 +2149,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         if (entry != null && !external && cameraPhotos.size() > 1) {
             updatePhotosCounter(false);
             if (cameraView != null) {
-                zoomControlView.setZoom(0.0f, false);
-                cameraZoom = 0.0f;
-                cameraView.setZoom(0.0f);
+                resetCameraZoom();
                 CameraController.getInstance().startPreview(cameraView.getCameraSessionObject());
             }
             return;
@@ -2199,9 +2233,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                             cameraView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_FULLSCREEN);
                         }
                     }, 1000);
-                    zoomControlView.setZoom(0.0f, false);
-                    cameraZoom = 0.0f;
-                    cameraView.setZoom(0.0f);
+                    resetCameraZoom();
                     CameraController.getInstance().startPreview(cameraView.getCameraSession());
                 }
                 if (cancelTakingPhotos && cameraPhotos.size() == 1) {
@@ -2331,6 +2363,48 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         if (parentAlert.isStickerMode) {
             PhotoViewer.getInstance().enableStickerMode(null, null, false, parentAlert.customStickerHandler);
             PhotoViewer.getInstance().prepareSegmentImage();
+        }
+    }
+
+    private void updateCameraLensSelector() {
+        if (cameraLensSelectorView == null || cameraView == null || !cameraView.isInited()) {
+            return;
+        }
+        boolean visible = cameraView.supportsLensZoomRatios() && !cameraView.isCurrentSessionFrontCamera();
+        if (visible) {
+            cameraLensSelectorView.setZoomRatios(cameraView.getAvailableLensZoomRatios());
+            cameraLensSelectorView.setSelectedZoomRatio(cameraView.getZoomRatio(), false);
+        }
+        cameraLensSelectorView.setVisibility(visible ? View.VISIBLE : View.GONE);
+        cameraLensSelectorView.setAlpha(visible && cameraOpened ? 1f : 0f);
+        requestLayout();
+    }
+
+    private void updateSelectedCameraLens(boolean animated) {
+        if (cameraLensSelectorView != null && cameraLensSelectorView.getVisibility() == View.VISIBLE && cameraView != null) {
+            cameraLensSelectorView.setSelectedZoomRatio(cameraView.getZoomRatio(), animated);
+        }
+    }
+
+    private void syncCameraZoomFromRatio() {
+        if (cameraView == null) {
+            return;
+        }
+        cameraZoom = cameraView.getZoomProgress();
+        zoomControlView.setZoom(cameraZoom, false);
+        updateSelectedCameraLens(false);
+    }
+
+    private void resetCameraZoom() {
+        if (cameraView != null) {
+            cameraView.setZoomRatio(1f);
+            cameraZoom = cameraView.supportsLensZoomRatios() ? cameraView.getZoomProgress() : 0f;
+        } else {
+            cameraZoom = 0f;
+        }
+        zoomControlView.setZoom(cameraZoom, false);
+        if (cameraLensSelectorView != null) {
+            cameraLensSelectorView.setSelectedZoomRatio(1f, false);
         }
     }
 
@@ -2516,6 +2590,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         }
         zoomControlView.setVisibility(View.VISIBLE);
         zoomControlView.setAlpha(0.0f);
+        updateCameraLensSelector();
         cameraPanel.setVisibility(View.VISIBLE);
         cameraPanel.setTag(null);
         animateCameraValues[0] = 0;
@@ -2539,6 +2614,9 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             ArrayList<Animator> animators = new ArrayList<>();
             animators.add(ObjectAnimator.ofFloat(this, "cameraOpenProgress", 0.0f, 1.0f));
             animators.add(ObjectAnimator.ofFloat(cameraPanel, View.ALPHA, 1.0f));
+            if (cameraLensSelectorView.getVisibility() == View.VISIBLE) {
+                animators.add(ObjectAnimator.ofFloat(cameraLensSelectorView, View.ALPHA, 1.0f));
+            }
             animators.add(ObjectAnimator.ofFloat(counterTextView, View.ALPHA, 1.0f));
             animators.add(ObjectAnimator.ofFloat(cameraPhotoRecyclerView, View.ALPHA, 1.0f));
             for (int a = 0; a < 2; a++) {
@@ -2575,6 +2653,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         } else {
             setCameraOpenProgress(1.0f);
             cameraPanel.setAlpha(1.0f);
+            cameraLensSelectorView.setAlpha(cameraLensSelectorView.getVisibility() == View.VISIBLE ? 1f : 0f);
             counterTextView.setAlpha(1.0f);
             cameraPhotoRecyclerView.setAlpha(1.0f);
             for (int a = 0; a < 2; a++) {
@@ -2669,6 +2748,8 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             cameraView.setDelegate(new CameraView.CameraViewDelegate() {
                 @Override
                 public void onCameraInit() {
+                    updateCameraLensSelector();
+                    syncCameraZoomFromRatio();
                     String current = cameraView.getCameraSession().getCurrentFlashMode();
                     String next = cameraView.getCameraSession().getNextFlashMode();
                     if (current == null || next == null) return;
@@ -2733,8 +2814,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             invalidate();
         }
         if (zoomControlView != null) {
-            zoomControlView.setZoom(0.0f, false);
-            cameraZoom = 0.0f;
+            resetCameraZoom();
         }
         if (!cameraOpened) {
             cameraView.setTranslationX(cameraViewLocation[0]);
@@ -2910,6 +2990,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             ArrayList<Animator> animators = new ArrayList<>();
             animators.add(ObjectAnimator.ofFloat(this, "cameraOpenProgress", 0.0f));
             animators.add(ObjectAnimator.ofFloat(cameraPanel, View.ALPHA, 0.0f));
+            animators.add(ObjectAnimator.ofFloat(cameraLensSelectorView, View.ALPHA, 0.0f));
             animators.add(ObjectAnimator.ofFloat(zoomControlView, View.ALPHA, 0.0f));
             animators.add(ObjectAnimator.ofFloat(counterTextView, View.ALPHA, 0.0f));
             animators.add(ObjectAnimator.ofFloat(cameraPhotoRecyclerView, View.ALPHA, 0.0f));
@@ -2949,6 +3030,9 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                         zoomControlView.setVisibility(View.GONE);
                         zoomControlView.setTag(null);
                     }
+                    if (cameraLensSelectorView != null) {
+                        cameraLensSelectorView.setVisibility(View.GONE);
+                    }
                     if (cameraPhotoRecyclerView != null) {
                         cameraPhotoRecyclerView.setVisibility(View.GONE);
                     }
@@ -2967,6 +3051,8 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             setCameraOpenProgress(0);
             cameraPanel.setAlpha(0);
             cameraPanel.setVisibility(View.GONE);
+            cameraLensSelectorView.setAlpha(0f);
+            cameraLensSelectorView.setVisibility(View.GONE);
             zoomControlView.setAlpha(0);
             zoomControlView.setTag(null);
             zoomControlView.setVisibility(View.GONE);
@@ -4244,6 +4330,17 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                 zoomControlView.measure(View.MeasureSpec.makeMeasureSpec(dp(50), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
             }
             return true;
+        } else if (view == cameraLensSelectorView) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                cameraLensSelectorView.measure(
+                        View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.AT_MOST),
+                        View.MeasureSpec.makeMeasureSpec(dp(46), View.MeasureSpec.EXACTLY));
+            } else if (isPortrait) {
+                cameraLensSelectorView.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(dp(46), View.MeasureSpec.EXACTLY));
+            } else {
+                cameraLensSelectorView.measure(View.MeasureSpec.makeMeasureSpec(dp(46), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
+            }
+            return true;
         } else if (view == cameraPhotoRecyclerView) {
             cameraPhotoRecyclerViewIgnoreLayout = true;
             if (isPortrait) {
@@ -4288,18 +4385,52 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                 }
             }
             return true;
+        } else if (view == cameraLensSelectorView) {
+            boolean expressive = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+            if (isPortrait) {
+                int panelTop = bottom - dp(126) - navbar;
+                if (cameraPhotoRecyclerView.getVisibility() == View.VISIBLE) {
+                    panelTop -= dp(96);
+                }
+                if (expressive) {
+                    int selectorWidth = cameraLensSelectorView.getMeasuredWidth();
+                    int selectorLeft = (width - selectorWidth) / 2;
+                    cameraLensSelectorView.layout(selectorLeft, panelTop - dp(46), selectorLeft + selectorWidth, panelTop);
+                } else {
+                    cameraLensSelectorView.layout(0, panelTop - dp(46), width, panelTop);
+                }
+            } else {
+                int panelLeft = right - dp(126) - navbar;
+                if (cameraPhotoRecyclerView.getVisibility() == View.VISIBLE) {
+                    panelLeft -= dp(96);
+                }
+                if (expressive) {
+                    int selectorWidth = cameraLensSelectorView.getMeasuredWidth();
+                    int selectorHeight = cameraLensSelectorView.getMeasuredHeight();
+                    int selectorLeft = Math.max(0, (panelLeft - selectorWidth) / 2);
+                    int selectorTop = Math.max(0, height - navbar - selectorHeight - dp(16));
+                    cameraLensSelectorView.layout(selectorLeft, selectorTop,
+                            selectorLeft + selectorWidth, selectorTop + selectorHeight);
+                } else {
+                    cameraLensSelectorView.layout(panelLeft - dp(46), 0, panelLeft, height - navbar);
+                }
+            }
+            return true;
         } else if (view == zoomControlView) {
+            int lensSelectorOffset = cameraLensSelectorView != null
+                    && cameraLensSelectorView.getVisibility() == View.VISIBLE
+                    && (isPortrait || !xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) ? 46 : 0;
             if (isPortrait) {
                 if (cameraPhotoRecyclerView.getVisibility() == View.VISIBLE) {
-                    zoomControlView.layout(0, bottom - dp(126 + 96 + 38 + 50) - navbar, width, bottom - dp(126 + 96 + 38) - navbar);
+                    zoomControlView.layout(0, bottom - dp(126 + 96 + 38 + lensSelectorOffset + 50) - navbar, width, bottom - dp(126 + 96 + 38 + lensSelectorOffset) - navbar);
                 } else {
-                    zoomControlView.layout(0, bottom - dp(126 + 50) - navbar, width, bottom - dp(126) - navbar);
+                    zoomControlView.layout(0, bottom - dp(126 + lensSelectorOffset + 50) - navbar, width, bottom - dp(126 + lensSelectorOffset) - navbar);
                 }
             } else {
                 if (cameraPhotoRecyclerView.getVisibility() == View.VISIBLE) {
-                    zoomControlView.layout(right - dp(126 + 96 + 38 + 50) - navbar, 0, right - dp(126 + 96 + 38), height - navbar);
+                    zoomControlView.layout(right - dp(126 + 96 + 38 + lensSelectorOffset + 50) - navbar, 0, right - dp(126 + 96 + 38 + lensSelectorOffset), height - navbar);
                 } else {
-                    zoomControlView.layout(right - dp(126 + 50) - navbar, 0, right - dp(126), height - navbar);
+                    zoomControlView.layout(right - dp(126 + lensSelectorOffset + 50) - navbar, 0, right - dp(126 + lensSelectorOffset), height - navbar);
                 }
             }
             return true;
