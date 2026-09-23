@@ -6,6 +6,7 @@ import static org.telegram.messenger.LocaleController.getString;
 import static org.telegram.ui.Components.Premium.LimitReachedBottomSheet.TYPE_ACCOUNTS;
 
 import android.animation.Animator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
@@ -140,6 +141,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     private UpdateLayoutWrapper updateLayoutWrapper;
     private FrameLayout tabsViewWrapper;
     private MainTabsLayout tabsView;
+    private ValueAnimator tabsWidthAnimator;
     private BlurredBackgroundDrawable tabsViewBackground;
     private View fadeView;
     private boolean lastHideContacts = NaConfig.INSTANCE.getMainTabsHideContacts().Bool();
@@ -1156,16 +1158,24 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
                 fadeView.setVisibility(View.VISIBLE);
             }
             final int mainTabsMargin = tw.nekomimi.nekogram.helpers.MainTabsHelper.getMainTabsMargin();
-            final int tabsViewWidth = dp(328 + DialogsActivity.MAIN_TABS_MARGIN * 2);
-            tabsView.setMaxWidth(tabsViewWidth);
+            final int expandedTabsViewWidthDp = 328 + DialogsActivity.MAIN_TABS_MARGIN * 2;
+            final int compactTabsViewWidthDp = Math.min(
+                    expandedTabsViewWidthDp,
+                    16 + tw.nekomimi.nekogram.helpers.MainTabsHelper.getFragmentsCount() * 76
+            );
+            final int tabsViewWidth = dp(
+                    xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && hideTitles
+                            ? compactTabsViewWidthDp
+                            : expandedTabsViewWidthDp
+            );
             FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) tabsView.getLayoutParams();
             if (lp != null) {
-                lp.width = tabsViewWidth;
                 lp.height = dp(tw.nekomimi.nekogram.helpers.MainTabsHelper.getMainTabsHeightWithMargins());
                 lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
                 lp.bottomMargin = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : 0;
                 tabsView.setLayoutParams(lp);
             }
+            setTabsViewWidth(tabsViewWidth, tabsView.isAttachedToWindow());
             final int paddingH = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(6) : dp(mainTabsMargin + 4);
             final int paddingV = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(4) : dp(mainTabsMargin + 4);
             tabsView.setPadding(paddingH, paddingV, paddingH, paddingV);
@@ -1255,6 +1265,38 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             checkUi_tabsPosition();
             checkUi_fadeView();
         }
+    }
+
+    private void setTabsViewWidth(int targetWidth, boolean animated) {
+        if (tabsView == null) {
+            return;
+        }
+        if (tabsWidthAnimator != null) {
+            tabsWidthAnimator.cancel();
+            tabsWidthAnimator = null;
+        }
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) tabsView.getLayoutParams();
+        if (layoutParams == null) {
+            return;
+        }
+        final int startWidth = layoutParams.width > 0 ? layoutParams.width : targetWidth;
+        if (!animated || startWidth == targetWidth) {
+            layoutParams.width = targetWidth;
+            tabsView.setMaxWidth(targetWidth);
+            tabsView.setLayoutParams(layoutParams);
+            return;
+        }
+        tabsWidthAnimator = ValueAnimator.ofInt(startWidth, targetWidth);
+        tabsWidthAnimator.setDuration(320);
+        tabsWidthAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+        tabsWidthAnimator.addUpdateListener(animation -> {
+            int width = (int) animation.getAnimatedValue();
+            FrameLayout.LayoutParams animatedLayoutParams = (FrameLayout.LayoutParams) tabsView.getLayoutParams();
+            animatedLayoutParams.width = width;
+            tabsView.setMaxWidth(width);
+            tabsView.setLayoutParams(animatedLayoutParams);
+        });
+        tabsWidthAnimator.start();
     }
 
     private void checkUi_fadeView() {

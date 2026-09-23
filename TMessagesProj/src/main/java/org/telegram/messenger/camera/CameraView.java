@@ -132,6 +132,7 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
     private boolean camera2Unavailable;
     private final CameraSessionWrapper[] cameraSession = new CameraSessionWrapper[2];
     private CameraSessionWrapper cameraSessionRecording;
+    private ValueAnimator zoomRatioAnimator;
 
     private boolean useMaxPreview;
 
@@ -992,6 +993,7 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
     }
 
     public void setZoom(float value) {
+        cancelZoomRatioAnimation();
         if (cameraSession[0] != null) {
             cameraSession[0].setZoom(value);
         }
@@ -1012,6 +1014,11 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
     }
 
     public void setZoomRatio(float zoomRatio) {
+        cancelZoomRatioAnimation();
+        setZoomRatioInternal(zoomRatio);
+    }
+
+    private void setZoomRatioInternal(float zoomRatio) {
         if (cameraSession[0] != null) {
             cameraSession[0].setZoomRatio(zoomRatio);
         }
@@ -1030,18 +1037,72 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
     }
 
     public void setZoomProgress(float progress) {
+        cancelZoomRatioAnimation();
+        setZoomProgressInternal(progress);
+    }
+
+    private void setZoomProgressInternal(float progress) {
         if (!supportsLensZoomRatios()) {
-            setZoom(progress);
+            if (cameraSession[0] != null) {
+                cameraSession[0].setZoom(progress);
+            }
             return;
         }
         progress = Math.max(0f, Math.min(1f, progress));
         float minZoom = getMinZoomRatio();
         float maxZoom = getMaxZoomRatio();
         if (minZoom <= 0f || maxZoom <= minZoom) {
-            setZoomRatio(1f);
+            setZoomRatioInternal(1f);
             return;
         }
-        setZoomRatio((float) (minZoom * Math.pow(maxZoom / minZoom, progress)));
+        setZoomRatioInternal((float) (minZoom * Math.pow(maxZoom / minZoom, progress)));
+    }
+
+    public void animateZoomRatio(float zoomRatio, Runnable onUpdate) {
+        if (!supportsLensZoomRatios()) {
+            setZoomRatio(zoomRatio);
+            if (onUpdate != null) {
+                onUpdate.run();
+            }
+            return;
+        }
+        cancelZoomRatioAnimation();
+        float startProgress = getZoomProgress();
+        float targetProgress = getZoomProgressForRatio(zoomRatio);
+        if (Math.abs(startProgress - targetProgress) < 0.001f) {
+            setZoomProgressInternal(targetProgress);
+            if (onUpdate != null) {
+                onUpdate.run();
+            }
+            return;
+        }
+        ValueAnimator animator = ValueAnimator.ofFloat(startProgress, targetProgress);
+        zoomRatioAnimator = animator;
+        animator.addUpdateListener(valueAnimator -> {
+            setZoomProgressInternal((float) valueAnimator.getAnimatedValue());
+            if (onUpdate != null) {
+                onUpdate.run();
+            }
+        });
+        animator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                if (zoomRatioAnimator == animator) {
+                    zoomRatioAnimator = null;
+                }
+            }
+        });
+        animator.setDuration(280L + Math.round(Math.abs(targetProgress - startProgress) * 120L));
+        animator.setInterpolator(CubicBezierInterpolator.EASE_BOTH);
+        animator.start();
+    }
+
+    private void cancelZoomRatioAnimation() {
+        if (zoomRatioAnimator != null) {
+            ValueAnimator animator = zoomRatioAnimator;
+            zoomRatioAnimator = null;
+            animator.cancel();
+        }
     }
 
     public float getZoomProgress() {

@@ -109,7 +109,7 @@ public class MainTabsCustomizeActivity extends BaseNekoXSettingsActivity {
                 textCheckCell.setChecked(checked);
             }
             if (previewCell != null) {
-                previewCell.refreshTabs(getContext());
+                previewCell.setTitlesVisible(checked, true);
             }
             NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.mainTabsLayoutChanged);
         } else if (row == bottomBarDisplayModeRow) {
@@ -343,8 +343,14 @@ public class MainTabsCustomizeActivity extends BaseNekoXSettingsActivity {
             rebuildTabs(context);
         }
 
-        public void refreshTabs(Context context) {
-            rebuildTabs(context);
+        public void setTitlesVisible(boolean visible, boolean animated) {
+            for (int i = 0; i < getChildCount(); i++) {
+                View child = getChildAt(i);
+                if (child instanceof GlassTabView) {
+                    ((GlassTabView) child).setTitleVisible(visible, animated);
+                }
+            }
+            requestLayout();
         }
 
         @Override
@@ -365,7 +371,7 @@ public class MainTabsCustomizeActivity extends BaseNekoXSettingsActivity {
                 MainTabsConfigManager.TabState state = tabs.get(i);
 
                 GlassTabView tabView = MainTabsConfigManager.createTabView(context, resourceProvider, currentAccount, state.type, true);
-                tabView.setSelected(false, false);
+                tabView.setSelected(state.type == MainTabsConfigManager.TabType.CHATS, false);
                 tabView.setGestureSelectedOverride(0, false);
                 applyEnabledVisual(tabView, state);
 

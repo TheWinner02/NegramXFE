@@ -4,6 +4,7 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.dpf2;
 import static org.telegram.messenger.AndroidUtilities.lerp;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -59,10 +60,48 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         }
     }
     public void setTitleVisible(boolean visible) {
-        if (textView != null) {
-            textView.setVisibility(visible ? VISIBLE : GONE);
-        }
+        setTitleVisible(visible, false);
     }
+
+    public void setTitleVisible(boolean visible, boolean animated) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            textView.setVisibility(visible ? VISIBLE : GONE);
+            return;
+        }
+        textView.setVisibility(VISIBLE);
+        final float target = visible ? 1f : 0f;
+        if (titleVisibilityAnimator != null) {
+            titleVisibilityAnimator.cancel();
+            titleVisibilityAnimator = null;
+        }
+        if (!animated || Math.abs(titleVisibilityFactor - target) < 0.001f) {
+            titleVisibilityFactor = target;
+            requestLayout();
+            invalidate();
+            return;
+        }
+        titleVisibilityAnimator = ValueAnimator.ofFloat(titleVisibilityFactor, target);
+        titleVisibilityAnimator.setDuration(320);
+        titleVisibilityAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+        titleVisibilityAnimator.addUpdateListener(animation -> {
+            titleVisibilityFactor = (float) animation.getAnimatedValue();
+            requestLayout();
+            invalidate();
+        });
+        titleVisibilityAnimator.start();
+    }
+
+    private ValueAnimator titleVisibilityAnimator;
+    private float titleVisibilityFactor = 1f;
+
+    public float getTitleVisibilityFactor() {
+        return titleVisibilityFactor;
+    }
+
+    public float getFullTitleTextWidth() {
+        return defaultTextPaint.measureText(textView.getText().toString());
+    }
+
     private final TextView textView;
     private final RLottieImageView imageView;
     private BackupImageView backupImageView;
@@ -176,7 +215,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         int h = bottom - top;
         boolean isSelected = isTabSelected();
 
-        float textW = textView.getPaint().measureText(textView.getText() != null ? textView.getText().toString() : "");
+        float textW = textView.getPaint().measureText(textView.getText() != null ? textView.getText().toString() : "") * titleVisibilityFactor;
         int iconW = dp(24);
         int iconH = dp(24);
         int gap = dp(6);
@@ -212,7 +251,11 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
                 paintCounterBackground.setColor(Theme.multAlpha(colorSelected, 0.25f * alpha));
                 float pillHeight = Math.min(dp(38), getHeight() - dp(6));
                 float pillPaddingH = dp(2);
-                tmpRectF.set(pillPaddingH, (getHeight() - pillHeight) / 2f, getWidth() - pillPaddingH, (getHeight() + pillHeight) / 2f);
+                float expandedPillWidth = getWidth() - pillPaddingH * 2f;
+                float compactPillWidth = Math.min(dp(44), expandedPillWidth);
+                float pillWidth = lerp(compactPillWidth, expandedPillWidth, titleVisibilityFactor);
+                float pillLeft = (getWidth() - pillWidth) / 2f;
+                tmpRectF.set(pillLeft, (getHeight() - pillHeight) / 2f, pillLeft + pillWidth, (getHeight() + pillHeight) / 2f);
                 final float r = pillHeight / 2f;
                 final float s = lerp(0.85f, 1f, selectedFactor);
                 canvas.save();
@@ -232,9 +275,10 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         }
 
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-            textView.setAlpha(selectedFactor);
-            textView.setScaleX(lerp(0.6f, 1f, selectedFactor));
-            textView.setScaleY(lerp(0.6f, 1f, selectedFactor));
+            textView.setAlpha(selectedFactor * titleVisibilityFactor);
+            final float textScale = lerp(0.6f, 1f, selectedFactor) * lerp(0.8f, 1f, titleVisibilityFactor);
+            textView.setScaleX(textScale);
+            textView.setScaleY(textScale);
         }
 
         final float hasCounter = (usePremiumCounter ? 1f : isHasCounterAnimator.getFloatValue()) * attachScale;
@@ -611,7 +655,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         if (textView.getVisibility() != VISIBLE) {
             return 0;
         }
-        return defaultTextPaint.measureText(textView.getText().toString());
+        return defaultTextPaint.measureText(textView.getText().toString()) * titleVisibilityFactor;
     }
 
     private TextPaint scaledTextPaint;
@@ -622,7 +666,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
             scaledTextPaint = new TextPaint(defaultTextPaint);
         }
         scaledTextPaint.setTextSize(dp(textSizeDp));
-        return scaledTextPaint.measureText(textView.getText().toString());
+        return scaledTextPaint.measureText(textView.getText().toString()) * titleVisibilityFactor;
     }
 
     @Override
@@ -771,7 +815,22 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
 
     }
 
+    private boolean mainTabsCompact;
+    private boolean mainTabsCompactSet;
+
     public void setMainTabsCompact(boolean compact) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (mainTabsCompactSet && mainTabsCompact == compact) {
+                return;
+            }
+            mainTabsCompactSet = true;
+            mainTabsCompact = compact;
+            setTitleVisible(!compact, isAttachedToWindow());
+            setContentDescription(compact ? textView.getText() : null);
+            requestLayout();
+            invalidate();
+            return;
+        }
         if (textView.getVisibility() == (compact ? GONE : VISIBLE)) {
             return;
         }

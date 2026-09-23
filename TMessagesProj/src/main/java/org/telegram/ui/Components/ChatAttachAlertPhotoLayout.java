@@ -1297,8 +1297,10 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             if (cameraView == null || !cameraView.isInited()) {
                 return;
             }
-            cameraView.setZoomRatio(zoomRatio);
-            syncCameraZoomFromRatio();
+            cameraView.animateZoomRatio(zoomRatio, () -> {
+                cameraZoom = cameraView.getZoomProgress();
+                zoomControlView.setZoom(cameraZoom, false);
+            });
             cameraLensSelectorView.setSelectedZoomRatio(zoomRatio, true);
         });
         container.addView(cameraLensSelectorView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 46, Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM));

@@ -86,11 +86,36 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             if (visibleCount == 0) visibleCount = 1;
 
             int totalTabsWidth = maxTotalWidthForTabs;
+            if (selectedIndex < 0) {
+                int equalWidth = Math.max(dp(44), totalTabsWidth / visibleCount);
+                int l = 0;
+                for (int a = 0, N = getChildCount(); a < N; a++) {
+                    final View child = getChildAt(a);
+                    if (!isViewVisible(child)) {
+                        tabsWidth[a] = 0;
+                        continue;
+                    }
+                    tabsWidth[a] = equalWidth;
+                    tabsLeftPos[a] = l;
+                    l += equalWidth;
+                }
+                setMeasuredDimension(l + getPaddingLeft() + getPaddingRight(), height);
+                for (int a = 0, N = getChildCount(); a < N; a++) {
+                    final View child = getChildAt(a);
+                    child.measure(
+                            MeasureSpec.makeMeasureSpec(tabsWidth[a], MeasureSpec.EXACTLY),
+                            MeasureSpec.makeMeasureSpec(tabHeight, MeasureSpec.EXACTLY));
+                }
+                calculateTotalSizesAfterMeasure();
+                return;
+            }
             int unselectedCount = Math.max(1, visibleCount - 1);
-
-            float activeTextW = selectedIndex >= 0 ? tabsTextWidth[selectedIndex] : 0;
-            int activeWidth = Math.round(dp(24) + dp(6) + activeTextW + dp(28));
-            activeWidth = Math.min(activeWidth, totalTabsWidth - dp(44) * unselectedCount);
+            int equalWidth = totalTabsWidth / visibleCount;
+            GlassTabView selectedTab = (GlassTabView) getChildAt(selectedIndex);
+            float titleFactor = selectedTab.getTitleVisibilityFactor();
+            int expandedActiveWidth = Math.round(dp(24) + dp(6) + selectedTab.getFullTitleTextWidth() + dp(28));
+            expandedActiveWidth = Math.min(expandedActiveWidth, totalTabsWidth - dp(44) * unselectedCount);
+            int activeWidth = Math.round(lerp(equalWidth, expandedActiveWidth, titleFactor));
             int inactiveWidth = Math.max(dp(44), (totalTabsWidth - activeWidth) / unselectedCount);
 
             int l = 0;

@@ -2991,9 +2991,10 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             if (cameraView == null || !cameraView.isInited()) {
                 return;
             }
-            cameraView.setZoomRatio(zoomRatio);
-            cameraZoom = cameraView.getZoomProgress();
-            zoomControlView.setZoom(cameraZoom, false);
+            cameraView.animateZoomRatio(zoomRatio, () -> {
+                cameraZoom = cameraView.getZoomProgress();
+                zoomControlView.setZoom(cameraZoom, false);
+            });
             cameraLensSelectorView.setSelectedZoomRatio(zoomRatio, true);
         });
         controlContainer.addView(cameraLensSelectorView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 46,
