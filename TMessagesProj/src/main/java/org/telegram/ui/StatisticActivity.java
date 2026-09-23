@@ -626,7 +626,23 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
 
         tabs = tabViews.toArray(new GlassTabView[0]);
         tabsView = new MainTabsLayout(context, resourceProvider);
-        tabsView.setPadding(dp(DialogsActivity.MAIN_TABS_MARGIN + 4), dp(DialogsActivity.MAIN_TABS_MARGIN + 4), dp(DialogsActivity.MAIN_TABS_MARGIN + 4), dp(DialogsActivity.MAIN_TABS_MARGIN + 4));
+        final boolean m3Expressive = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+        final int tabsPaddingH = m3Expressive ? dp(23) : dp(DialogsActivity.MAIN_TABS_MARGIN + 4);
+        final int tabsPaddingV = m3Expressive ? dp(4) : dp(DialogsActivity.MAIN_TABS_MARGIN + 4);
+        tabsView.setPadding(tabsPaddingH, tabsPaddingV, tabsPaddingH, tabsPaddingV);
+
+        int tabsViewWidthDp = 328 + DialogsActivity.MAIN_TABS_MARGIN * 2;
+        if (m3Expressive) {
+            float longestTitleWidth = 0;
+            for (GlassTabView tab : tabs) {
+                longestTitleWidth = Math.max(longestTitleWidth, tab.getFullTitleTextWidth());
+            }
+            int contentAwareWidth = 104
+                    + (tabs.length - 1) * 56
+                    + (int) Math.ceil(longestTitleWidth / AndroidUtilities.density);
+            tabsViewWidthDp = Math.min(tabsViewWidthDp, Math.max(274, contentAwareWidth));
+        }
+        tabsView.setMaxWidth(dp(tabsViewWidthDp));
 
         for (int index = 0; index < tabs.length; index++) {
             final GlassTabView view = tabs[index];
@@ -781,7 +797,7 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
         contentLayout.addView(viewPagerFixed, LayoutHelper.createFrameMatchParent());
         contentLayout.addView(actionBar);
         if (showTabs) {
-            contentLayout.addView(tabsView, LayoutHelper.createFrame(328 + DialogsActivity.MAIN_TABS_MARGIN * 2, DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
+            contentLayout.addView(tabsView, LayoutHelper.createFrame(tabsViewWidthDp, DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
             Bulletin.addDelegate(this, new Bulletin.Delegate() {
                 @Override
                 public int getBottomOffset(int tag) {
@@ -3575,17 +3591,27 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
             tabsView.setTranslationY(-navbar);
         }
 
-        final int pt = ActionBar.getCurrentActionBarHeight() + statusbar;
+        final int expandedExtra = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()
+                && actionBar != null && actionBar.isM3LargeFlexible()
+                ? actionBar.getM3ExpandedExtraHeight()
+                : 0;
+        final int pt = ActionBar.getCurrentActionBarHeight() + statusbar + expandedExtra;
         final int pb = (showTabs ? dp(DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS) : 0) + navbar;
 
         if (recyclerListView != null) {
-            recyclerListView.setPadding(0, pt, 0, pb);
+            setListPadding(recyclerListView, pt, pb);
         }
         if (boostLayout != null) {
-            boostLayout.listView.setPadding(0, pt, 0, pb);
+            setListPadding(boostLayout.listView, pt, pb);
         }
         if (monetizationLayout != null) {
-            monetizationLayout.listView.setPadding(0, pt, 0, pb);
+            setListPadding(monetizationLayout.listView, pt, pb);
+        }
+    }
+
+    private void setListPadding(RecyclerView list, int top, int bottom) {
+        if (list.getPaddingTop() != top || list.getPaddingBottom() != bottom) {
+            list.setPadding(0, top, 0, bottom);
         }
     }
 
@@ -3598,6 +3624,7 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
         } else {
             actionBar.setAdaptiveBackground(recyclerListView);
         }
+        checkUi_listPaddings();
     }
 
     public void selectTab(int position, boolean animated) {
