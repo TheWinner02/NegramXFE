@@ -125,6 +125,7 @@ final class CameraDiagnostics {
             for (String cameraId : cameraIds) {
                 logCamera2(manager, cameraId);
             }
+            Camera2Topology.logSnapshot(Camera2Topology.get(context));
         } catch (Exception e) {
             FileLog.e(PREFIX + "Camera2 inventory failed", e);
         }

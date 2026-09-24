@@ -2483,14 +2483,13 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
             if (cameraSession[i] == null || cameraSession[i].camera2Session != failedSession) {
                 return;
             }
-            camera2Unavailable = true;
-            FileLog.e("CameraView Camera2 failed, falling back to Camera1");
+            FileLog.e("CameraView Camera2 route failed, trying the next validated route");
             cameraSession[i] = null;
             failedSession.destroy(true, () -> {
                 previewSize[i] = null;
                 pictureSize[i] = null;
                 info[i] = null;
-                createCamera1(surfaceTexture, i);
+                createCamera(surfaceTexture, i);
             });
         });
     }

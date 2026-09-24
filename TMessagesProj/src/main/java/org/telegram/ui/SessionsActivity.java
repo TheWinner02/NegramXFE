@@ -1140,7 +1140,16 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
             buttonTextView.setText(spannableStringBuilder);
 
             buttonTextView.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText));
-            buttonTextView.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(24), Theme.getColor(Theme.key_featuredStickers_addButton), Theme.getColor(Theme.key_featuredStickers_addButtonPressed)));
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                buttonTextView.setBackground(Theme.createM3ExpressiveButtonDrawableByKey(
+                        Theme.key_featuredStickers_addButton,
+                        Theme.key_featuredStickers_buttonText));
+            } else {
+                buttonTextView.setBackground(Theme.createSimpleSelectorRoundRectDrawable(
+                        dp(24),
+                        Theme.getColor(Theme.key_featuredStickers_addButton),
+                        Theme.getColor(Theme.key_featuredStickers_addButtonPressed)));
+            }
             ScaleStateListAnimator.apply(buttonTextView, .02f, 1.2f);
 
             buttonTextView.setOnClickListener(view -> {

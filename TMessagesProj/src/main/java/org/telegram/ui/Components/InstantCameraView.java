@@ -1234,10 +1234,47 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
     }
 
     private void attachCamera2ErrorFallback(Camera2Session session) {
-        session.setErrorCallback(() -> {
-            if (useCamera2) {
-                fallbackToCamera1AfterOpen();
+        session.setErrorCallback(() -> retryCamera2OrFallback(session));
+    }
+
+    private void retryCamera2OrFallback(Camera2Session failedSession) {
+        AndroidUtilities.runOnUIThread(() -> {
+            if (!useCamera2) {
+                return;
             }
+            if (failedSession != camera2SessionCurrent) {
+                for (int i = 0; i < camera2Sessions.length; i++) {
+                    if (camera2Sessions[i] == failedSession) {
+                        failedSession.setErrorCallback(null);
+                        failedSession.destroy(true);
+                        camera2Sessions[i] = null;
+                        bothCameras = false;
+                        break;
+                    }
+                }
+                return;
+            }
+
+            FileLog.e("InstantCamera Camera2 route failed, trying the next validated route");
+            destroyCamera2Sessions();
+            int size = MessagesController.getInstance(UserConfig.selectedAccount).roundVideoSize;
+            Camera2Session replacement = Camera2Session.create(isFrontface, size, size);
+            if (replacement == null) {
+                fallbackToCamera1AfterOpen();
+                return;
+            }
+            int index = isFrontface ? 0 : 1;
+            camera2SessionCurrent = camera2Sessions[index] = replacement;
+            replacement.setRecordingVideo(true);
+            attachCamera2ErrorFallback(replacement);
+            previewSize[0] = new Size(replacement.getPreviewWidth(), replacement.getPreviewHeight());
+            if (cameraThread != null) {
+                cameraThread.setCurrentSession(replacement);
+                cameraReady = false;
+                cameraThread.reinitForNewCamera();
+            }
+            restoreLockedCamera2Zoom();
+            updateCameraLensSelector();
         });
     }
 

@@ -16174,9 +16174,18 @@ public class ChatActivity extends BaseFragment implements
                 final SimpleTextView replyObjectTextView = replyLayout.current().obj;
                 final SimpleTextView replyObjectHintTextView = replyLayout.current().objHint;
 
+                boolean initializingForward = messagePreviewParams == null || messagePreviewParams.forwardMessages == null;
                 if (messagePreviewParams == null) {
-                    messagePreviewParams = new MessagePreviewParams(currentEncryptedChat != null, isPeerNoForwards(), ChatObject.isMonoForum(currentChat));
+                    messagePreviewParams = new MessagePreviewParams(
+                            currentEncryptedChat != null,
+                            isPeerNoForwards(),
+                            ChatObject.isMonoForum(currentChat),
+                            noForwardQuote,
+                            noForwardCaption);
                     messagePreviewParams.attach(forwardingPreviewView);
+                } else if (initializingForward) {
+                    messagePreviewParams.setHideForwardSendersName(noForwardQuote);
+                    messagePreviewParams.hideCaption = noForwardCaption;
                 }
                 messagePreviewParams.updateForward(messageObjectsToForward, dialog_id);
                 if (messagePreviewParams.isEmpty() && editingMessageObject == null) {
@@ -36484,7 +36493,7 @@ public class ChatActivity extends BaseFragment implements
                         params.suggestionParams = messageSuggestionParams;
                         getSendMessagesHelper().sendMessage(params);
                     }
-                    getSendMessagesHelper().sendMessage(fmessages, did, false, false, notify, scheduleDate, scheduleRepeatPeriod, null, -1, price == null ? 0 : price, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
+                    getSendMessagesHelper().sendMessage(fmessages, did, noForwardQuote, noForwardCaption, notify, scheduleDate, scheduleRepeatPeriod, null, -1, price == null ? 0 : price, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
                 }
                 fragment.finishFragment();
                 createUndoView();

@@ -149,16 +149,23 @@ public class Camera2Session {
     public static Camera2Session create(boolean front, int viewWidth, int viewHeight) {
         final Context context = ApplicationLoader.applicationContext;
         final CameraManager cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+        final int requestedFacing = front
+                ? CameraCharacteristics.LENS_FACING_FRONT
+                : CameraCharacteristics.LENS_FACING_BACK;
+        final Camera2Topology.Snapshot topology = Camera2Topology.get(context);
+        final String profileMainCameraId = topology.getMainCameraId(requestedFacing);
 
-        float bestAspectRatio = 0;
+        double bestScore = Double.NEGATIVE_INFINITY;
         Size bestSize = null;
         Size bestPictureSize = null;
         String cameraId = null;
-        boolean bestIsLogicalMultiCamera = false;
         try {
             String[] cameraIds = cameraManager.getCameraIdList();
             for (int i = 0; i < cameraIds.length; ++i) {
                 final String id = cameraIds[i];
+                if (!topology.isCameraUsable(id)) {
+                    continue;
+                }
                 CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(id);
                 if (characteristics == null) continue;
                 Integer lensFacing = characteristics.get(CameraCharacteristics.LENS_FACING);
@@ -175,18 +182,17 @@ public class Camera2Session {
                     cameraAspectRatio = 1f / cameraAspectRatio;
                 }
                 boolean isLogicalMultiCamera = isLogicalMultiCamera(characteristics);
-                if (bestAspectRatio <= 0
-                        || (isLogicalMultiCamera && !bestIsLogicalMultiCamera)
-                        || (isLogicalMultiCamera == bestIsLogicalMultiCamera
-                        && Math.abs((float) viewWidth / viewHeight - bestAspectRatio) > Math.abs((float) viewWidth / viewHeight - cameraAspectRatio))) {
+                double score = (id.equals(profileMainCameraId) ? 10_000d : 0d)
+                        + (isLogicalMultiCamera ? 1_000d : 0d)
+                        - Math.abs((float) viewWidth / viewHeight - cameraAspectRatio) * 100d;
+                if (score > bestScore) {
                     if (confMap != null) {
                         Size size = choosePreviewSize(confMap.getOutputSizes(SurfaceTexture.class), viewWidth, viewHeight, getMaxPreviewPixels());
                         if (size != null) {
-                            bestAspectRatio = cameraAspectRatio;
+                            bestScore = score;
                             cameraId = id;
                             bestSize = size;
                             bestPictureSize = choosePictureSize(confMap.getOutputSizes(ImageFormat.JPEG), size, getMaxPicturePixels());
-                            bestIsLogicalMultiCamera = isLogicalMultiCamera;
                         }
                     }
                 }
@@ -264,6 +270,7 @@ public class Camera2Session {
                 Camera2Session.this.lastTime = System.currentTimeMillis();
                 try {
                     updateCaptureRequest();
+                    Camera2Topology.markCameraValidated(context, cameraId);
                     AndroidUtilities.runOnUIThread(() -> {
                         isSuccess = true;
                         if (doneCallback != null) {
@@ -395,6 +402,36 @@ public class Camera2Session {
         if (availableLensZoomRatios.isEmpty()) {
             addLensZoomRatio(1f);
         }
+        if (logicalMultiCamera) {
+            int facing = isFront
+                    ? CameraCharacteristics.LENS_FACING_FRONT
+                    : CameraCharacteristics.LENS_FACING_BACK;
+            List<Camera2Topology.LensPreset> profilePresets = Camera2Topology
+                    .get(ApplicationLoader.applicationContext)
+                    .getPresets(facing);
+            ArrayList<Float> validatedRatios = new ArrayList<>();
+            for (Camera2Topology.LensPreset preset : profilePresets) {
+                if (cameraId.equals(preset.cameraId)
+                        && preset.route == Camera2Topology.Route.LOGICAL_ZOOM
+                        && preset.displayRatio >= minZoom
+                        && preset.displayRatio <= maxZoom) {
+                    boolean duplicate = false;
+                    for (float ratio : validatedRatios) {
+                        if (Math.abs(ratio - preset.displayRatio) < 0.1f) {
+                            duplicate = true;
+                            break;
+                        }
+                    }
+                    if (!duplicate) {
+                        validatedRatios.add(preset.displayRatio);
+                    }
+                }
+            }
+            if (!validatedRatios.isEmpty()) {
+                availableLensZoomRatios.clear();
+                availableLensZoomRatios.addAll(validatedRatios);
+            }
+        }
         Collections.sort(availableLensZoomRatios);
         FileLog.d("[CameraLens] logical=" + cameraId
                 + " multiCamera=" + logicalMultiCamera
@@ -514,6 +551,9 @@ public class Camera2Session {
             FileLog.e("Camera2Session camera #" + cameraId + ' ' + message);
         }
         isError = true;
+        if (!isSuccess) {
+            Camera2Topology.markCameraRejected(ApplicationLoader.applicationContext, cameraId);
+        }
         if (errorDispatched) {
             return;
         }
