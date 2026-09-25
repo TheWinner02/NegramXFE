@@ -341,8 +341,8 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         tabsView = new MainTabsLayout(context, resourceProvider);
         tabsView.setClipChildren(false);
-        final int paddingH = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(6) : dp(mainTabsMargin + 4);
-        final int paddingV = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(4) : dp(mainTabsMargin + 4);
+        final int paddingH = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? dp(6) : dp(mainTabsMargin + 4);
+        final int paddingV = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? dp(4) : dp(mainTabsMargin + 4);
         tabsView.setPadding(paddingH, paddingV, paddingH, paddingV);
         tabsView.setMaxWidth(dp(328 + DialogsActivity.MAIN_TABS_MARGIN * 2));
 
@@ -435,7 +435,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         iBlur3FactoryFade.setSourceRootView(viewPositionWatcher, contentView);
 
         fadeView = new View(context);
-        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             BlurredBackgroundWithFadeDrawable fadeDrawable = new BlurredBackgroundWithFadeDrawable(iBlur3FactoryFade.create(fadeView, null));
             fadeDrawable.setFadeHeight(dp(60), true);
             fadeView.setBackground(fadeDrawable);
@@ -445,7 +445,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         tabsViewWrapper = new FrameLayout(context);
         tabsViewWrapper.setOnClickListener(v -> {});
-        int bottomMargin = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : 0;
+        int bottomMargin = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? dp(16) : 0;
         tabsViewWrapper.addView(tabsView, LayoutHelper.createFrame(tabsViewWidth, MainTabsHelper.getMainTabsHeightWithMargins(), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0, 0, bottomMargin));
         tabsViewWrapper.setClipToPadding(false);
         contentView.addView(tabsViewWrapper, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM));
@@ -516,11 +516,13 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
                 NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.callTabsVisibleToggled);
             });
         }
-        o.setBlur(tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool());
+        o.setBlur(tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass());
         o.translate(0, -dp(4));
-        final ShapeDrawable bg = Theme.createRoundRectDrawable(dp(28), getThemedColor(Theme.key_windowBackgroundWhite));
-        bg.getPaint().setShadowLayer(dp(6), 0, dp(1), Theme.multAlpha(0xFF000000, 0.15f));
-        o.setScrimViewBackground(bg);
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            final ShapeDrawable bg = Theme.createRoundRectDrawable(dp(28), getThemedColor(Theme.key_windowBackgroundWhite));
+            bg.getPaint().setShadowLayer(dp(6), 0, dp(1), Theme.multAlpha(0xFF000000, 0.15f));
+            o.setScrimViewBackground(bg);
+        }
         o.show();
         return true;
     }
@@ -533,6 +535,13 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         if (filters == null || filters.size() <= 1) return false;
 
         final ItemOptions o = ItemOptions.makeOptions(this, anchor);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            o.add(R.drawable.msg_edit, LocaleController.getString(R.string.FilterEditAll), () -> {
+                o.dismiss();
+                presentFragment(new FiltersSetupActivity());
+            });
+            o.addGap();
+        }
         for (int i = 0; i < filters.size(); i++) {
             final MessagesController.DialogFilter folder = filters.get(i);
             final ActionBarMenuSubItem folderItem = new ActionBarMenuSubItem(getParentActivity(), 2, false, false, getResourceProvider());
@@ -577,12 +586,14 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         }
         o.addGap();
         addChatsMenuItems(o, anchor);
-        o.setBlur(tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool());
+        o.setBlur(tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass());
         o.translate(-dp(8), -dp(4));
         o.setMaxHeight(Math.min(dp(560), Math.max(dp(320), AndroidUtilities.displaySize.y - dp(120))));
-        final ShapeDrawable bg = Theme.createRoundRectDrawable(dp(28), getThemedColor(Theme.key_windowBackgroundWhite));
-        bg.getPaint().setShadowLayer(dp(6), 0, dp(1), Theme.multAlpha(0xFF000000, 0.15f));
-        o.setScrimViewBackground(bg);
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            final ShapeDrawable bg = Theme.createRoundRectDrawable(dp(28), getThemedColor(Theme.key_windowBackgroundWhite));
+            bg.getPaint().setShadowLayer(dp(6), 0, dp(1), Theme.multAlpha(0xFF000000, 0.15f));
+            o.setScrimViewBackground(bg);
+        }
         o.setGravity(Gravity.LEFT);
         o.show();
 
@@ -643,12 +654,17 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             final float left = x + dp(5);
             final float centerY = (top + bottom) / 2f + dp(1);
             final float halfHeight = dp(HEIGHT_DP) / 2f;
-            backgroundPaint.setColor(getThemedColor(
-                hasUnmutedUnreadDialogs ?
-                    Theme.key_featuredStickers_addButton :
-                    Theme.key_chats_tabUnreadUnactiveBackground
-            ));
-            textPaint.setColor(getThemedColor(Theme.key_actionBarDefault));
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                backgroundPaint.setColor(0xFF007AFF);
+                textPaint.setColor(0xFFFFFFFF);
+            } else {
+                backgroundPaint.setColor(getThemedColor(
+                    hasUnmutedUnreadDialogs ?
+                        Theme.key_featuredStickers_addButton :
+                        Theme.key_chats_tabUnreadUnactiveBackground
+                ));
+                textPaint.setColor(getThemedColor(Theme.key_actionBarDefault));
+            }
             AndroidUtilities.rectTmp.set(left, centerY - halfHeight, left + counterWidth, centerY + halfHeight);
             canvas.drawRoundRect(AndroidUtilities.rectTmp, halfHeight, halfHeight, backgroundPaint);
             final Paint.FontMetrics fontMetrics = textPaint.getFontMetrics();
@@ -1164,7 +1180,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
                     16 + tw.nekomimi.nekogram.helpers.MainTabsHelper.getFragmentsCount() * 76
             );
             final int tabsViewWidth = dp(
-                    xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && hideTitles
+                    xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() && hideTitles
                             ? compactTabsViewWidthDp
                             : expandedTabsViewWidthDp
             );
@@ -1172,12 +1188,12 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             if (lp != null) {
                 lp.height = dp(tw.nekomimi.nekogram.helpers.MainTabsHelper.getMainTabsHeightWithMargins());
                 lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-                lp.bottomMargin = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : 0;
+                lp.bottomMargin = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? dp(16) : 0;
                 tabsView.setLayoutParams(lp);
             }
             setTabsViewWidth(tabsViewWidth, tabsView.isAttachedToWindow());
-            final int paddingH = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(6) : dp(mainTabsMargin + 4);
-            final int paddingV = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(4) : dp(mainTabsMargin + 4);
+            final int paddingH = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? dp(6) : dp(mainTabsMargin + 4);
+            final int paddingV = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? dp(4) : dp(mainTabsMargin + 4);
             tabsView.setPadding(paddingH, paddingV, paddingH, paddingV);
             if (tabsViewBackground != null) {
                 tabsViewBackground.setRadius(dp(tw.nekomimi.nekogram.helpers.MainTabsHelper.getMainTabsHeight() / 2f));
@@ -1577,11 +1593,13 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     }
 
     private void setupPopupMenuStyle(ItemOptions options) {
-        options.setBlur(tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool());
+        options.setBlur(tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass());
         options.translate(0, -dp(4));
-        final ShapeDrawable bg = Theme.createRoundRectDrawable(dp(28), getThemedColor(Theme.key_windowBackgroundWhite));
-        bg.getPaint().setShadowLayer(dp(6), 0, dp(1), Theme.multAlpha(0xFF000000, 0.15f));
-        options.setScrimViewBackground(bg);
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            final ShapeDrawable bg = Theme.createRoundRectDrawable(dp(28), getThemedColor(Theme.key_windowBackgroundWhite));
+            bg.getPaint().setShadowLayer(dp(6), 0, dp(1), Theme.multAlpha(0xFF000000, 0.15f));
+            options.setScrimViewBackground(bg);
+        }
     }
 
 }

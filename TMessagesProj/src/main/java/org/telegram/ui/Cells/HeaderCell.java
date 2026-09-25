@@ -80,7 +80,7 @@ public class HeaderCell extends FrameLayout {
         super(context);
         this.resourcesProvider = resourcesProvider;
         this.padding = padding;
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             height = Math.max(height, 44);
             topMargin = Math.max(topMargin, 10);
             bottomMargin = Math.max(bottomMargin, 2);

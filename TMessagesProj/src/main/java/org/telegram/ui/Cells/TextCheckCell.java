@@ -443,8 +443,8 @@ public class TextCheckCell extends FrameLayout {
             Paint dividerPaint = resourcesProvider != null ? resourcesProvider.getPaint(Theme.key_paint_divider) : Theme.dividerPaint;
             if (dividerPaint != null) {
                 int alpha = dividerPaint.getAlpha();
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                    dividerPaint.setAlpha((int) (alpha * 0.38f));
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    dividerPaint.setAlpha((int) (alpha * (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.45f : 0.38f)));
                 }
                 if (imageView != null) {
                     canvas.drawLine(LocaleController.isRTL ? 0 : padding, getMeasuredHeight() - 1, getMeasuredWidth() - (LocaleController.isRTL ? padding : 0), getMeasuredHeight() - 1, dividerPaint);

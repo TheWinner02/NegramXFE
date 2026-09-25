@@ -64,7 +64,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
     }
 
     public void setTitleVisible(boolean visible, boolean animated) {
-        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             textView.setVisibility(visible ? VISIBLE : GONE);
             return;
         }
@@ -174,7 +174,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
     }
 
     private void checkVisualWidth() {
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             imageView.setTranslationX(0);
             textView.setTranslationX(0);
             return;
@@ -207,7 +207,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             super.onLayout(changed, left, top, right, bottom);
             return;
         }
@@ -246,9 +246,10 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         final float selectedFactor = hasGestureSelectedOverride ? gestureSelectedOverride : isSelectedAnimator.getFloatValue();
         if (selectedFactor > 0 && !skipDrawSelector) {
             final float alpha = AnimatorUtils.DECELERATE_INTERPOLATOR.getInterpolation(selectedFactor);
-            boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-            if (isM3) {
-                paintCounterBackground.setColor(Theme.multAlpha(colorSelected, 0.25f * alpha));
+            boolean floatingBars = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars();
+            if (floatingBars) {
+                float selectedAlpha = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.18f : 0.25f;
+                paintCounterBackground.setColor(Theme.multAlpha(colorSelected, selectedAlpha * alpha));
                 float pillHeight = Math.min(dp(38), getHeight() - dp(6));
                 float pillPaddingH = dp(2);
                 float expandedPillWidth = getWidth() - pillPaddingH * 2f;
@@ -274,7 +275,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
             }
         }
 
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             textView.setAlpha(selectedFactor * titleVisibilityFactor);
             final float textScale = lerp(0.6f, 1f, selectedFactor) * lerp(0.8f, 1f, titleVisibilityFactor);
             textView.setScaleX(textScale);
@@ -293,9 +294,9 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
             canvas.save();
 
             final float gap = dpf2(1.33f);
-            boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-            final float cx = isM3 ? (imageView.getLeft() + imageView.getWidth() - dp(2)) : (viewWidth / 2f + dpf2(11));
-            final float cy = isM3 ? (imageView.getTop() + dp(4)) : dpf2(10);
+            boolean floatingBars = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars();
+            final float cx = floatingBars ? (imageView.getLeft() + imageView.getWidth() - dp(2)) : (viewWidth / 2f + dpf2(11));
+            final float cy = floatingBars ? (imageView.getTop() + dp(4)) : dpf2(10);
             final float height = dpf2(16);
             final float width = Math.max(height, counter.getCurrentWidth() + dp(8));
             final float rOuter = dpf2(9.333f);
@@ -323,7 +324,11 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
                 premiumStarDrawable.setBounds(x, y, x + dp(14), y + dp(14));
                 premiumStarDrawable.draw(canvas);
             } else {
-                paintCounterBackground.setColor(ColorUtils.blendARGB(Theme.getColor(Theme.key_telegram_color), Theme.getColor(Theme.key_fill_RedNormal), isHasCounterErrorAnimator.getFloatValue()));
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    paintCounterBackground.setColor(0xFFFF3B30);
+                } else {
+                    paintCounterBackground.setColor(ColorUtils.blendARGB(Theme.getColor(Theme.key_telegram_color), Theme.getColor(Theme.key_fill_RedNormal), isHasCounterErrorAnimator.getFloatValue()));
+                }
                 canvas.drawRoundRect(tmpRectF, rInner, rInner, paintCounterBackground);
                 counter.setBounds(tmpRectF);
                 counter.draw(canvas);
@@ -354,7 +359,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         checkPlayAnimation(animated);
 
         textView.setTypeface(selected ? AndroidUtilities.getTypeface(AndroidUtilities.TYPEFACE_ROBOTO_EXTRA_BOLD) : AndroidUtilities.bold());
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && changed) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() && changed) {
             requestLayout();
         }
     }
@@ -386,10 +391,21 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         textView.setTextColor(colorText);
     }
 
+    public void initThemeColors() {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            boolean isDark = Theme.isCurrentThemeDark();
+            colorDefault = isDark ? 0x99FFFFFF : 0x8A000000;
+            colorSelected = 0xFF007AFF;
+            colorSelectedText = 0xFF007AFF;
+        } else {
+            colorDefault = Theme.getColor(Theme.key_glass_tabUnselected, resourcesProvider);
+            colorSelected = Theme.getColor(Theme.key_glass_tabSelected, resourcesProvider);
+            colorSelectedText = Theme.getColor(Theme.key_glass_tabSelectedText, resourcesProvider);
+        }
+    }
+
     public void updateColorsLottie() {
-        colorDefault = Theme.getColor(Theme.key_glass_tabUnselected, resourcesProvider);
-        colorSelected = Theme.getColor(Theme.key_glass_tabSelected, resourcesProvider);
-        colorSelectedText = Theme.getColor(Theme.key_glass_tabSelectedText, resourcesProvider);
+        initThemeColors();
         updateColors();
         invalidate();
     }
@@ -526,9 +542,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         tab.textView.setText(LocaleController.getString(stringRes));
         tab.checkPlayAnimation(false);
         tab.imageView.setLayoutParams(LayoutHelper.createFrame(24, 24, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 0, 4, 0, 0));
-        tab.colorDefault = Theme.getColor(Theme.key_glass_tabUnselected, resourcesProvider);
-        tab.colorSelected = Theme.getColor(Theme.key_glass_tabSelected, resourcesProvider);
-        tab.colorSelectedText = Theme.getColor(Theme.key_glass_tabSelectedText, resourcesProvider);
+        tab.initThemeColors();
         tab.updateColors();
         return tab;
     }
@@ -547,9 +561,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         tab.backupImageView = backupImageView;
 
         tab.addView(backupImageView, LayoutHelper.createFrame(22, 22, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 0, 5, 0, 0));
-        tab.colorDefault = Theme.getColor(Theme.key_glass_tabUnselected, resourcesProvider);
-        tab.colorSelected = Theme.getColor(Theme.key_glass_tabSelected, resourcesProvider);
-        tab.colorSelectedText = Theme.getColor(Theme.key_glass_tabSelectedText, resourcesProvider);
+        tab.initThemeColors();
         tab.updateColors();
         return tab;
     }
@@ -565,16 +577,14 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         tab.resourcesProvider = resourcesProvider;
         tab.selfMeasure = true;
         tab.textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             tab.textView.setPadding(0, 0, 0, 0);
         } else {
             tab.textView.setPadding(dp(8), 0, dp(8), 0);
         }
         tab.checkPlayAnimation(false);
         tab.imageView.setLayoutParams(LayoutHelper.createFrame(24, 24, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 0, 4, 0, 0));
-        tab.colorDefault = Theme.getColor(Theme.key_glass_tabUnselected, resourcesProvider);
-        tab.colorSelected = Theme.getColor(Theme.key_glass_tabSelected, resourcesProvider);
-        tab.colorSelectedText = Theme.getColor(Theme.key_glass_tabSelectedText, resourcesProvider);
+        tab.initThemeColors();
         tab.updateColors();
         return tab;
     }
@@ -584,7 +594,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         tab.resourcesProvider = resourcesProvider;
         tab.selfMeasure = true;
         tab.textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             tab.textView.setPadding(0, 0, 0, 0);
         } else {
             tab.textView.setPadding(dp(8), 0, dp(8), 0);
@@ -593,9 +603,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         tab.checkPlayAnimation(false);
         tab.backupImageView = new BackupImageView(context);
         tab.addView(tab.backupImageView, LayoutHelper.createFrame(24, 24, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 0, 4, 0, 0));
-        tab.colorDefault = Theme.getColor(Theme.key_glass_tabUnselected, resourcesProvider);
-        tab.colorSelected = Theme.getColor(Theme.key_glass_tabSelected, resourcesProvider);
-        tab.colorSelectedText = Theme.getColor(Theme.key_glass_tabSelectedText, resourcesProvider);
+        tab.initThemeColors();
         tab.updateColors();
         return tab;
     }
@@ -613,7 +621,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
     }
 
     public float measureAttachTabWidth() {
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             if (isTabSelected()) {
                 final float textWidth = textView.getPaint().measureText(textView.getText() != null ? textView.getText().toString() : "");
                 return dp(24) + dp(6) + textWidth + dp(28);
@@ -819,7 +827,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
     private boolean mainTabsCompactSet;
 
     public void setMainTabsCompact(boolean compact) {
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             if (mainTabsCompactSet && mainTabsCompact == compact) {
                 return;
             }

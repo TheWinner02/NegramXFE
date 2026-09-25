@@ -18,6 +18,7 @@ import androidx.dynamicanimation.animation.SpringForce;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.ui.ActionBar.Theme;
+import xyz.nextalone.nagram.ui.UIStyleEngine;
 
 public class M3ConnectedButtonGroup extends View {
 
@@ -108,8 +109,88 @@ public class M3ConnectedButtonGroup extends View {
         final int columns = Math.max(1, (int) Math.ceil(count / (float) rows));
         final float[] columnWidths = getColumnWidths(columns, gap);
         final float segmentHeight = (getHeight() - getPaddingTop() - getPaddingBottom() - gap * (rows - 1)) / rows;
+        final boolean liquidGlass = UIStyleEngine.isIosLiquidGlass();
+        if (liquidGlass) {
+            final boolean isDark = Theme.isCurrentThemeDark();
+            final float containerRad = AndroidUtilities.dp(10);
+            final float thumbRad = AndroidUtilities.dp(8);
+            final int containerBg = isDark ? 0x24767680 : 0x14767680;
+            final int thumbBg = isDark ? 0xFF636366 : 0xFFFFFFFF;
+            final int activeTextColor = isDark ? 0xFFFFFFFF : 0xFF000000;
+            final int inactiveTextColor = isDark ? 0xFF8E8E93 : 0xFF6E6E73;
+
+            for (int r = 0; r < rows; r++) {
+                float rowTop = getPaddingTop() + r * (segmentHeight + gap);
+                float rowBottom = rowTop + segmentHeight;
+                rect.set(getPaddingLeft(), rowTop, getWidth() - getPaddingRight(), rowBottom);
+                backgroundPaint.setColor(containerBg);
+                canvas.drawRoundRect(rect, containerRad, containerRad, backgroundPaint);
+                strokePaint.setColor(isDark ? 0x25FFFFFF : 0x35FFFFFF);
+                strokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.66f));
+                canvas.drawRoundRect(rect, containerRad, containerRad, strokePaint);
+            }
+
+            for (int visualIndex = 0; visualIndex < count; visualIndex++) {
+                int row = visualIndex / columns;
+                int column = visualIndex % columns;
+                int visualColumn = rtl ? columns - column - 1 : column;
+                int itemIndex = row * columns + (rtl ? visualColumn : column);
+                if (itemIndex < 0 || itemIndex >= count) {
+                    continue;
+                }
+                float left = getColumnLeft(columnWidths, visualColumn, gap);
+                float right = left + columnWidths[visualColumn];
+                float top = getPaddingTop() + row * (segmentHeight + gap);
+                float bottom = top + segmentHeight;
+                rect.set(left, top, right, bottom);
+
+                boolean selected = itemIndex == selectedIndex;
+                boolean pressed = itemIndex == pressedIndex;
+
+                if (selected) {
+                    RectF thumbRect = AndroidUtilities.rectTmp;
+                    thumbRect.set(left + AndroidUtilities.dp(2), top + AndroidUtilities.dp(2), right - AndroidUtilities.dp(2), bottom - AndroidUtilities.dp(2));
+                    backgroundPaint.setColor(thumbBg);
+                    if (!isDark) {
+                        backgroundPaint.setShadowLayer(AndroidUtilities.dp(2.5f), 0, AndroidUtilities.dp(1f), 0x22000000);
+                    } else {
+                        backgroundPaint.setShadowLayer(0, 0, 0, 0);
+                    }
+                    canvas.drawRoundRect(thumbRect, thumbRad, thumbRad, backgroundPaint);
+                    backgroundPaint.setShadowLayer(0, 0, 0, 0);
+
+                    strokePaint.setColor(isDark ? 0x30FFFFFF : 0x40FFFFFF);
+                    strokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.66f));
+                    canvas.drawRoundRect(thumbRect, thumbRad, thumbRad, strokePaint);
+
+                    textPaint.setColor(activeTextColor);
+                    textPaint.setTypeface(AndroidUtilities.bold());
+                } else {
+                    if (pressed) {
+                        RectF pressRect = AndroidUtilities.rectTmp;
+                        pressRect.set(left + AndroidUtilities.dp(2), top + AndroidUtilities.dp(2), right - AndroidUtilities.dp(2), bottom - AndroidUtilities.dp(2));
+                        backgroundPaint.setColor(isDark ? 0x1AFFFFFF : 0x0D000000);
+                        canvas.drawRoundRect(pressRect, thumbRad, thumbRad, backgroundPaint);
+                    }
+                    if (visualColumn < columns - 1) {
+                        int nextItemIndex = row * columns + (rtl ? columns - (column + 1) - 1 : column + 1);
+                        if (nextItemIndex >= 0 && nextItemIndex < count && nextItemIndex != selectedIndex && !selected) {
+                            strokePaint.setColor(isDark ? 0x20FFFFFF : 0x18000000);
+                            strokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.66f));
+                            canvas.drawLine(right + gap / 2f, top + AndroidUtilities.dp(7), right + gap / 2f, bottom - AndroidUtilities.dp(7), strokePaint);
+                        }
+                    }
+                    textPaint.setColor(inactiveTextColor);
+                    textPaint.setTypeface(null);
+                }
+                drawLabel(canvas, items[itemIndex], rect);
+            }
+            return;
+        }
+
         final int surfaceColor = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
-        final int selectedColor = Theme.getColor(Theme.key_switch2TrackChecked, resourcesProvider);
+        final int accentColor = Theme.getColor(Theme.key_switch2TrackChecked, resourcesProvider);
+        final int selectedColor = accentColor;
         final int outlineColor = ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon, resourcesProvider), 80);
         final int selectorColor = Theme.getColor(Theme.key_listSelector, resourcesProvider);
         final int unselectedColor = ColorUtils.blendARGB(surfaceColor, Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider), 0.05f);
@@ -132,7 +213,9 @@ public class M3ConnectedButtonGroup extends View {
             boolean pressed = itemIndex == pressedIndex;
             boolean morphing = itemIndex == morphIndex;
             int fillColor = selected ? selectedColor : unselectedColor;
-            if (pressed && !selected) {
+            if (liquidGlass && pressed) {
+                fillColor = ColorUtils.blendARGB(fillColor, Theme.multAlpha(accentColor, 0.22f), 0.55f);
+            } else if (pressed && !selected) {
                 fillColor = ColorUtils.blendARGB(fillColor, selectorColor, 0.45f);
             } else if (pressed) {
                 fillColor = ColorUtils.blendARGB(fillColor, Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider), 0.12f);
@@ -141,12 +224,14 @@ public class M3ConnectedButtonGroup extends View {
             backgroundPaint.setColor(fillColor);
             buildSegmentPath(row, visualColumn, rows, columns, morphing ? pressedProgress : 0f);
             canvas.drawPath(path, backgroundPaint);
-            if (!selected) {
+            if (!selected || liquidGlass) {
                 strokePaint.setColor(outlineColor);
                 canvas.drawPath(path, strokePaint);
             }
 
-            textPaint.setColor(selected ? Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider) : Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
+            textPaint.setColor(selected
+                    ? (liquidGlass ? accentColor : Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider))
+                    : Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
             drawLabel(canvas, items[itemIndex], rect);
         }
     }
@@ -251,9 +336,10 @@ public class M3ConnectedButtonGroup extends View {
     }
 
     private void buildSegmentPath(int row, int column, int rows, int columns, float progress) {
-        float outer = AndroidUtilities.dp(24);
-        float inner = AndroidUtilities.dp(8);
-        float pressed = AndroidUtilities.dp(16);
+        boolean liquidGlass = UIStyleEngine.isIosLiquidGlass();
+        float outer = AndroidUtilities.dp(liquidGlass ? 21 : 24);
+        float inner = AndroidUtilities.dp(liquidGlass ? 10 : 8);
+        float pressed = AndroidUtilities.dp(liquidGlass ? 15 : 16);
         boolean top = row == 0;
         boolean bottom = row == rows - 1;
         boolean left = column == 0;

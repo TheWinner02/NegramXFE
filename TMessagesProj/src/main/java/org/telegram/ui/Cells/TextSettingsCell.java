@@ -406,8 +406,8 @@ public class TextSettingsCell extends FrameLayout {
         if (needDivider) {
             int offset = AndroidUtilities.dp(imageView.getVisibility() == View.VISIBLE ? 58 : 20);
             int alpha = Theme.dividerPaint.getAlpha();
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                Theme.dividerPaint.setAlpha((int) (alpha * 0.38f));
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                Theme.dividerPaint.setAlpha((int) (alpha * (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.45f : 0.38f)));
             }
             canvas.drawLine(LocaleController.isRTL ? 0 : offset, getMeasuredHeight() - 1, getMeasuredWidth() - (LocaleController.isRTL ? offset : 0), getMeasuredHeight() - 1, Theme.dividerPaint);
             Theme.dividerPaint.setAlpha(alpha);

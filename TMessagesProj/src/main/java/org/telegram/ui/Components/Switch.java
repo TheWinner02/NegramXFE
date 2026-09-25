@@ -409,6 +409,9 @@ public class Switch extends View {
         int switchStyle = NaConfig.INSTANCE.getSwitchStyle().Int();
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             switchStyle = SWITCH_STYLE_MD3;
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            drawIosSwitch(canvas);
+            return;
         }
         if (switchStyle != SWITCH_STYLE_DEFAULT) {
             drawCustomSwitch(canvas, switchStyle);
@@ -606,6 +609,43 @@ public class Switch extends View {
         }
         this.separateTrackColorKey = separateTrackColorKey;
         invalidate();
+    }
+
+    private void drawIosSwitch(Canvas canvas) {
+        boolean isDark = Theme.isCurrentThemeDark();
+        int width = AndroidUtilities.dp(44);
+        float trackHeight = AndroidUtilities.dpf2(26);
+        int x = (getMeasuredWidth() - width) / 2;
+        float y = (getMeasuredHeight() - trackHeight) / 2f;
+        float trackRadius = trackHeight / 2f;
+
+        int offTrackColor = isDark ? 0xFF39393D : 0xFFE9E9EB;
+        int onTrackColor = Theme.getColor(trackCheckedColorKey, resourcesProvider);
+        int trackColor = ColorUtils.blendARGB(offTrackColor, onTrackColor, progress);
+
+        rectF.set(x, y, x + width, y + trackHeight);
+        paint.setColor(trackColor);
+        paint.setShadowLayer(0, 0, 0, 0);
+        canvas.drawRoundRect(rectF, trackRadius, trackRadius, paint);
+
+        googleBorderPaint.setColor(isDark ? 0x22FFFFFF : 0x12000000);
+        googleBorderPaint.setStrokeWidth(AndroidUtilities.dpf2(0.66f));
+        canvas.drawRoundRect(rectF, trackRadius, trackRadius, googleBorderPaint);
+
+        float thumbRadius = AndroidUtilities.dpf2(11);
+        float thumbStartX = x + trackRadius;
+        float thumbEndX = x + width - trackRadius;
+        float thumbX = AndroidUtilities.lerp(thumbStartX, thumbEndX, progress);
+        float thumbY = getMeasuredHeight() / 2f;
+
+        paint.setColor(0xFFFFFFFF);
+        paint.setShadowLayer(AndroidUtilities.dpf2(2.5f), 0, AndroidUtilities.dpf2(1.2f), 0x28000000);
+        canvas.drawCircle(thumbX, thumbY, thumbRadius, paint);
+        paint.setShadowLayer(0, 0, 0, 0);
+
+        googleBorderPaint.setColor(isDark ? 0x30FFFFFF : 0x0A000000);
+        googleBorderPaint.setStrokeWidth(AndroidUtilities.dpf2(0.5f));
+        canvas.drawCircle(thumbX, thumbY, thumbRadius, googleBorderPaint);
     }
 
     private void drawCustomSwitch(Canvas canvas, int switchStyle) {

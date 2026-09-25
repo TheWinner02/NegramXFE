@@ -289,7 +289,7 @@ public class CheckBoxBase {
                 }
             }
         });
-        checkAnimator.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? xyz.nextalone.nagram.ui.UIStyleEngine.getBouncyInterpolator() : CubicBezierInterpolator.EASE_OUT);
+        checkAnimator.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? xyz.nextalone.nagram.ui.UIStyleEngine.getBouncyInterpolator() : CubicBezierInterpolator.EASE_OUT));
         checkAnimator.setDuration(animationDuration);
         checkAnimator.start();
     }

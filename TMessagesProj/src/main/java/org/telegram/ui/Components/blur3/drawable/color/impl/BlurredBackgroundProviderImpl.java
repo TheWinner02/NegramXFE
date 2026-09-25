@@ -21,32 +21,42 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider mainTabs(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) -> {
-                final float alpha = tw.nekomimi.nekogram.NekoConfig.mainTabsGlassAlpha.Int() / 100f;
+                final float alpha = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                        ? xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity()
+                        : (tw.nekomimi.nekogram.NekoConfig.mainTabsGlassAlpha.Int() / 100f);
                 final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                 final int colorTarget = Theme.getColor(Theme.key_glass_targetMainTabs, r);
                 return solveSrcColor(colorBg, colorTarget, alpha);
             })
-            .setStrokeColorTop(0x11000000, 0x06FFFFFF)
-            .setStrokeColorBottom(0x20000000, 0x11FFFFFF)
-            .setShadowColor(0x20000000, 0x04FFFFFF)
-            .setShadowLayer(dpf2(2.667f), 0, dpf2(0.85f))
-            .setStrokeWidth(dpf2(0.4f), dpf2(0.4f))
+            .setStrokeColorTop(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x95FFFFFF : 0x11000000,
+                               xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x75FFFFFF : 0x06FFFFFF)
+            .setStrokeColorBottom(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x2E000000 : 0x20000000,
+                                  xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x1EFFFFFF : 0x11FFFFFF)
+            .setShadowColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x28000000 : 0x20000000, 0x04FFFFFF)
+            .setShadowLayer(dpf2(3.5f), 0, dpf2(1f))
+            .setStrokeWidth(dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.4f),
+                            dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.4f))
             .build();
     }
 
     public static BlurredBackgroundProvider topPanel(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) -> {
-                final float alpha = tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f;
+                final float alpha = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                        ? xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity()
+                        : (tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f);
                 final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                 final int colorTarget = Theme.getColor(Theme.key_glass_targetMainTopPanel, r);
                 return solveSrcColor(colorBg, colorTarget, alpha);
             })
-            .setStrokeColorTop(0x11000000, 0x06FFFFFF)
-            .setStrokeColorBottom(0x20000000, 0x11FFFFFF)
-            .setShadowColor(0x20000000, 0x04FFFFFF)
-            .setShadowLayer(dpf2(2.667f), 0, dpf2(0.85f))
-            .setStrokeWidth(dpf2(0.4f), dpf2(0.4f))
+            .setStrokeColorTop(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x95FFFFFF : 0x11000000,
+                               xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x75FFFFFF : 0x06FFFFFF)
+            .setStrokeColorBottom(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x2E000000 : 0x20000000,
+                                  xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x1EFFFFFF : 0x11FFFFFF)
+            .setShadowColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x28000000 : 0x20000000, 0x04FFFFFF)
+            .setShadowLayer(dpf2(3.5f), 0, dpf2(1f))
+            .setStrokeWidth(dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.4f),
+                            dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.4f))
             .build();
     }
 
@@ -87,28 +97,43 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider messageMenuBackground(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        final float alpha = xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity();
+                        return Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, r), alpha);
+                    }
                     if (!LiteMode.isEnabled(LiteMode.FLAG_CHAT_BLUR)) {
                         return Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground);
                     }
                     return Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), isDark ? 0.85f : 0.825f);
                 })
-                .setStrokeColorTop(0x44FFFFFF, 0)
-                .setStrokeColorBottom(0x22FFFFFF, 0)
-                .setShadowColor(0x38000000, 0)
-                .setShadowLayer(dpf2(3.5f), 0, 0)
-                .setStrokeWidth(dpf2(2 / 3f), dpf2(2 / 3f))
+                .setStrokeColorTop(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x95FFFFFF : 0x60FFFFFF,
+                                   xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x75FFFFFF : 0x50FFFFFF)
+                .setStrokeColorBottom(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x2E000000 : 0x18FFFFFF,
+                                      xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x1EFFFFFF : 0x20000000)
+                .setShadowColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x28000000 : 0x28000000, 0x04FFFFFF)
+                .setShadowLayer(dpf2(3.5f), 0, dpf2(1f))
+                .setStrokeWidth(dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.75f),
+                                dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.75f))
                 .build();
     }
 
     public static BlurredBackgroundProvider scrimMenuBackground(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
-            .setBackgroundColor((r, isDark) ->
-                Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), isDark ? 0.85f : 0.825f))
-            .setStrokeColorTop(0x44FFFFFF, 0)
-            .setStrokeColorBottom(0x22FFFFFF, 0)
-            .setShadowColor(0x26000000, 0)
-            .setShadowLayer(dpf2(4f), 0, 0)
-            .setStrokeWidth(dpf2(2 / 3f), dpf2(2 / 3f))
+            .setBackgroundColor((r, isDark) -> {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    final float alpha = xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity();
+                    return Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, r), alpha);
+                }
+                return Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), isDark ? 0.85f : 0.825f);
+            })
+            .setStrokeColorTop(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x95FFFFFF : 0x60FFFFFF,
+                               xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x75FFFFFF : 0x50FFFFFF)
+            .setStrokeColorBottom(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x2E000000 : 0x18FFFFFF,
+                                  xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x1EFFFFFF : 0x20000000)
+            .setShadowColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x28000000 : 0x26000000, 0x04FFFFFF)
+            .setShadowLayer(dpf2(3.5f), 0, dpf2(1f))
+            .setStrokeWidth(dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.75f),
+                            dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.75f))
             .build();
     }
 
@@ -129,11 +154,14 @@ public class BlurredBackgroundProviderImpl {
 
     public static BlurredBackgroundProvider searchFloatingDate(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
-                .setBackgroundColor((r, isDark) -> 0x33000000)
-                .setStrokeColorTop(0x17000000, 0x17FFFFFF)
-                .setStrokeColorBottom(0x17000000, 0x17FFFFFF)
+                .setBackgroundColor((r, isDark) -> {
+                    int alpha = (int) (255 * (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity() : 0.20f));
+                    return (alpha << 24);
+                })
+                .setStrokeColorTop(0x60FFFFFF, 0x30FFFFFF)
+                .setStrokeColorBottom(0x18FFFFFF, 0x14FFFFFF)
                 .setShadowColor(0, 0)
-                .setStrokeWidth(1, 1)
+                .setStrokeWidth(dpf2(0.75f), dpf2(0.75f))
                 .build();
     }
 
@@ -144,21 +172,29 @@ public class BlurredBackgroundProviderImpl {
                         return ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_chat_messagePanelBackground, r), 255);
                     }
 
-                    final float alpha = tw.nekomimi.nekogram.NekoConfig.mainTabsGlassAlpha.Int() / 100f;
+                    final float alpha = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                            ? xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity()
+                            : (tw.nekomimi.nekogram.NekoConfig.mainTabsGlassAlpha.Int() / 100f);
                     final int colorBg = Theme.getColor(Theme.key_chat_messagePanelBackground, r);
                     return Theme.multAlpha(colorBg, alpha);
                 })
-                .setStrokeColorTop(0xFFFFFFFF, 0x28FFFFFF)
-                .setStrokeColorBottom(0xFFFFFFFF, 0x14FFFFFF)
-                .setShadowColor(0x20000000, 0)
-                //.setShadowLayer(dpf2(10 / 3f), 0, dpf2(2 / 3f))
-                .setStrokeWidth(dpf2(0.5f), dpf2(0.5f))
+                .setStrokeColorTop(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x95FFFFFF : 0x80FFFFFF,
+                                   xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x75FFFFFF : 0x60FFFFFF)
+                .setStrokeColorBottom(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x2E000000 : 0x20000000,
+                                      xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x1EFFFFFF : 0x18FFFFFF)
+                .setShadowColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x26000000 : 0x20000000, 0)
+                .setStrokeWidth(dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.75f),
+                                dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.75f))
                 .build();
     }
 
     public static BlurredBackgroundProvider topPanelChatActivity(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        int baseColor = isDark ? 0xFF1C1C1E : 0xFFFFFFFF;
+                        return Theme.multAlpha(baseColor, xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity());
+                    }
                     if (!checkBlurEnabled(resourcesProvider)) {
                         return ColorUtils.setAlphaComponent(Theme.getColor(isDark ?
                             Theme.key_actionBarDefault : Theme.key_chat_topPanelBackground, r), 255);
@@ -168,11 +204,13 @@ public class BlurredBackgroundProviderImpl {
                     final int colorBg = Theme.getColor(Theme.key_chat_topPanelBackground, r);
                     return Theme.multAlpha(colorBg, alpha);
                 })
-                .setStrokeColorTop(0xFFFFFFFF, 0x20FFFFFF)
-                .setStrokeColorBottom(0xFFFFFFFF, 0x14FFFFFF)
-                .setShadowColor(0x20000000, 0)
-                //.setShadowLayer(dpf2(10 / 3f), 0, dpf2(2 / 3f))
-                .setStrokeWidth(dpf2(0.55f), dpf2(0.55f))
+                .setStrokeColorTop(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x95FFFFFF : 0x80FFFFFF,
+                                   xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x75FFFFFF : 0x60FFFFFF)
+                .setStrokeColorBottom(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x2E000000 : 0x20000000,
+                                      xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x1EFFFFFF : 0x18FFFFFF)
+                .setShadowColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x26000000 : 0x20000000, 0)
+                .setStrokeWidth(dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.75f),
+                                dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.75f))
                 .build();
     }
 
@@ -200,15 +238,19 @@ public class BlurredBackgroundProviderImpl {
                             Theme.key_actionBarDefault : Theme.key_chat_topPanelBackground, r), 255);
                 }
 
-                final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                final float alpha = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                        ? xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity()
+                        : (tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f);
                 final int colorBg = Theme.getColor(Theme.key_chat_topPanelBackground, r);
                 return Theme.multAlpha(colorBg, alpha);
             })
-            .setStrokeColorTop(0, 0)
-            .setStrokeColorBottom(0, 0)
-            .setShadowColor(0, 0)
-            .setShadowLayer(0, 0, 0)
-            .setStrokeWidth(0, 0)
+            .setStrokeColorTop(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x95FFFFFF : 0x80FFFFFF,
+                               xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x75FFFFFF : 0x60FFFFFF)
+            .setStrokeColorBottom(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x2E000000 : 0x20000000,
+                                  xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x1EFFFFFF : 0x18FFFFFF)
+            .setShadowColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0x26000000 : 0x20000000, 0)
+            .setStrokeWidth(dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.75f),
+                            dpf2(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0.85f : 0.75f))
             .build();
     }
 
@@ -230,15 +272,16 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider bulletin(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) -> {
-                final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                final float alpha = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                        ? xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity()
+                        : (LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f);
                 final int colorBg = Theme.getColor(Theme.key_undo_background, r);
                 return Theme.multAlpha(colorBg, alpha);
             })
-            //.setStrokeColorTop(0xFFFFFFFF, 0x28FFFFFF)
-            //.setStrokeColorBottom(0xFFFFFFFF, 0x14FFFFFF)
-            //.setShadowColor(0x20000000, 0)
-            //.setShadowLayer(dpf2(10 / 3f), 0, dpf2(2 / 3f))
-            .setStrokeWidth(dpf2(0.5f), dpf2(0.5f))
+            .setStrokeColorTop(0x60FFFFFF, 0x30FFFFFF)
+            .setStrokeColorBottom(0x18FFFFFF, 0x14FFFFFF)
+            .setShadowColor(0x20000000, 0x08FFFFFF)
+            .setStrokeWidth(dpf2(0.75f), dpf2(0.75f))
             .build();
     }
 
@@ -249,16 +292,17 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider inputFieldShareAlert(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
-                    final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                    final float alpha = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                            ? xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity()
+                            : (LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f);
                     final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                     final int colorTarget = Theme.getColor(Theme.key_chat_messagePanelBackground, r);
                     return solveSrcColor(colorBg, colorTarget, alpha);
                 })
-                .setStrokeColorTop(0x28FFFFFF, 0x28FFFFFF)
-                .setStrokeColorBottom(0x14FFFFFF, 0x14FFFFFF)
+                .setStrokeColorTop(0x80FFFFFF, 0x60FFFFFF)
+                .setStrokeColorBottom(0x20000000, 0x18FFFFFF)
                 .setShadowColor(0x20000000, 0)
-                .setShadowLayer(dpf2(10 / 3f), 0, dpf2(2 / 3f))
-                .setStrokeWidth(dpf2(1), dpf2(2 / 3f))
+                .setStrokeWidth(dpf2(0.75f), dpf2(0.75f))
                 .build();
     }
 
@@ -344,6 +388,7 @@ public class BlurredBackgroundProviderImpl {
     public static boolean checkBlurEnabled(int currentAccount, Theme.ResourcesProvider resourcesProvider) {
         return tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool()
             || tw.nekomimi.nekogram.NekoConfig.forceMainTabsBlur.Bool()
-            || tw.nekomimi.nekogram.NekoConfig.forceActionBarBlur.Bool();
+            || tw.nekomimi.nekogram.NekoConfig.forceActionBarBlur.Bool()
+            || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
     }
 }

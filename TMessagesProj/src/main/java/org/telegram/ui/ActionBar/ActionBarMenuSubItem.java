@@ -8,6 +8,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
@@ -45,6 +46,7 @@ public class ActionBarMenuSubItem extends FrameLayout {
     private int iconColor;
     private PorterDuff.Mode iconColorMode;
     private int selectorColor;
+    private Paint iosDividerPaint;
 
     int selectorRad = 12;
     boolean top;
@@ -77,14 +79,14 @@ public class ActionBarMenuSubItem extends FrameLayout {
         this.top = top;
         this.bottom = bottom;
 
-        boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+        boolean floatingBars = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars();
         textColor = getThemedColor(Theme.key_actionBarDefaultSubmenuItem);
         iconColor = getThemedColor(Theme.key_actionBarDefaultSubmenuItemIcon);
         iconColorMode = PorterDuff.Mode.MULTIPLY;
         selectorColor = getThemedColor(Theme.key_dialogButtonSelector);
 
         updateBackground();
-        setPadding(dp(isM3 ? 14 : 18), 0, dp(isM3 ? 14 : 18), 0);
+        setPadding(dp(floatingBars ? 14 : 18), 0, dp(floatingBars ? 14 : 18), 0);
 
         imageView = new RLottieImageView(context);
         imageView.setScaleType(ImageView.ScaleType.CENTER);
@@ -97,8 +99,8 @@ public class ActionBarMenuSubItem extends FrameLayout {
         textView.setGravity(Gravity.LEFT);
         textView.setEllipsize(TextUtils.TruncateAt.END);
         textView.setTextColor(textColor);
-        textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, isM3 ? 15 : 16);
-        if (isM3) {
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, floatingBars ? 15 : 16);
+        if (floatingBars) {
             textView.setTypeface(AndroidUtilities.bold());
         }
         addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL));
@@ -452,7 +454,30 @@ public class ActionBarMenuSubItem extends FrameLayout {
 
     @Override
     protected void dispatchDraw(Canvas canvas) {
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            float progress = pressedMorphProgress.getProgress();
+            if (progress > 0 || isPressed()) {
+                morphClipRect.set(dp(6), dp(2), getMeasuredWidth() - dp(6), getMeasuredHeight() - dp(2));
+                float r = dp(12);
+                boolean isDark = Theme.isCurrentThemeDark();
+                int pressColor = isDark ? 0x24FFFFFF : 0x14000000;
+                morphBgPaint.setColor(Theme.multAlpha(pressColor, Math.max(progress, isPressed() ? 1f : 0f)));
+                canvas.drawRoundRect(morphClipRect, r, r, morphBgPaint);
+            }
+            super.dispatchDraw(canvas);
+            if (!bottom) {
+                if (iosDividerPaint == null) {
+                    iosDividerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                }
+                boolean isDark = Theme.isCurrentThemeDark();
+                iosDividerPaint.setColor(isDark ? 0x1AFFFFFF : 0x12000000);
+                iosDividerPaint.setStrokeWidth(dp(0.66f));
+                float startX = dp(54);
+                float endX = getWidth() - dp(16);
+                float y = getHeight() - dp(0.33f);
+                canvas.drawLine(startX, y, endX, y, iosDividerPaint);
+            }
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             float progress = pressedMorphProgress.getProgress();
             float topR = AndroidUtilities.lerp(top ? dp(16) : dp(4), dp(16), progress);
             float bottomR = AndroidUtilities.lerp(bottom ? dp(16) : dp(4), dp(16), progress);
@@ -486,7 +511,9 @@ public class ActionBarMenuSubItem extends FrameLayout {
     }
 
     public void updateBackground() {
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            setBackground(null);
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             int topR = top ? AndroidUtilities.dp(16) : AndroidUtilities.dp(4);
             int bottomR = bottom ? AndroidUtilities.dp(16) : AndroidUtilities.dp(4);
             setBackground(Theme.createRadSelectorDrawable(selectorColor, topR, bottomR));

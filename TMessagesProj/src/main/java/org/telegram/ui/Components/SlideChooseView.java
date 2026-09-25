@@ -286,10 +286,23 @@ public class SlideChooseView extends View {
         }
 
         float cx = sideSide + (lineSize + gapSize * 2 + circleSize) * selectedIndexAnimated + circleSize / 2;
-        paint.setColor(ColorUtils.setAlphaComponent(getThemedColor(Theme.key_switchTrackChecked), 80));
-        canvas.drawCircle(cx, cy, AndroidUtilities.dp(12 * movingAnimated), paint);
-        paint.setColor(getThemedColor(Theme.key_switchTrackChecked));
-        canvas.drawCircle(cx, cy, AndroidUtilities.dp(6), paint);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            boolean isDark = Theme.isCurrentThemeDark();
+            paint.setColor(0xFFFFFFFF);
+            paint.setShadowLayer(AndroidUtilities.dp(2.5f), 0, AndroidUtilities.dp(1.2f), 0x28000000);
+            canvas.drawCircle(cx, cy, AndroidUtilities.dp(12), paint);
+            paint.setShadowLayer(0, 0, 0, 0);
+            paint.setColor(isDark ? 0x30FFFFFF : 0x0A000000);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(AndroidUtilities.dpf2(0.5f));
+            canvas.drawCircle(cx, cy, AndroidUtilities.dp(12), paint);
+            paint.setStyle(Paint.Style.FILL);
+        } else {
+            paint.setColor(ColorUtils.setAlphaComponent(getThemedColor(Theme.key_switchTrackChecked), 80));
+            canvas.drawCircle(cx, cy, AndroidUtilities.dp(12 * movingAnimated), paint);
+            paint.setColor(getThemedColor(Theme.key_switchTrackChecked));
+            canvas.drawCircle(cx, cy, AndroidUtilities.dp(6), paint);
+        }
     }
 
     @Override

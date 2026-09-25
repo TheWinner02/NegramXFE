@@ -9,7 +9,11 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
+import android.graphics.Paint;
 import android.graphics.PorterDuff;
+import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.text.Editable;
@@ -69,14 +73,15 @@ public class FragmentSearchField extends FrameLayout implements FactorAnimator.T
     private boolean closeButtonForcedVisible;
     public final EditTextBoldCursor editText;
     private BlurredBackgroundDrawable blurredBackgroundDrawable;
+    private Paint glassStrokePaint;
 
     public FragmentSearchField(Context context, Theme.ResourcesProvider resourcesProvider) {
         super(context);
         this.resourcesProvider = resourcesProvider;
 
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-            animatorCloseIconVisible.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getBouncyInterpolator());
-            animatorSearchIconVisible.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getBouncyInterpolator());
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
+            animatorCloseIconVisible.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : xyz.nextalone.nagram.ui.UIStyleEngine.getBouncyInterpolator());
+            animatorSearchIconVisible.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : xyz.nextalone.nagram.ui.UIStyleEngine.getBouncyInterpolator());
         }
 
         editText = new EditTextBoldCursor(context) {
@@ -137,11 +142,11 @@ public class FragmentSearchField extends FrameLayout implements FactorAnimator.T
         searchIcon = new ImageView(context);
         searchIcon.setScaleType(ImageView.ScaleType.CENTER);
         searchIcon.setImageResource(R.drawable.outline_search_1_24);
-        int iconSize = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 36 : 24;
-        int iconMargin = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 8 : 12;
+        int iconSize = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? 36 : 24;
+        int iconMargin = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? 8 : 12;
         addView(searchIcon, LayoutHelper.createFrame(iconSize, iconSize, Gravity.CENTER_VERTICAL | (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT), iconMargin, 0, iconMargin, 0));
         searchIcon.setOnClickListener(v -> {
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && isSearchActive) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() && isSearchActive) {
                 if (onCloseSearch != null) {
                     onCloseSearch.run();
                 }
@@ -150,7 +155,7 @@ public class FragmentSearchField extends FrameLayout implements FactorAnimator.T
                 AndroidUtilities.showKeyboard(editText);
             }
         });
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             org.telegram.ui.Components.ScaleStateListAnimator.apply(searchIcon, 0.06f, 1.2f);
         }
 
@@ -179,10 +184,10 @@ public class FragmentSearchField extends FrameLayout implements FactorAnimator.T
                 onCloseSearch.run();
             }
         });
-        int closeSize = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 36 : 24;
-        int closeMargin = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 8 : 12;
+        int closeSize = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? 36 : 24;
+        int closeMargin = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? 8 : 12;
         addView(closeIcon, LayoutHelper.createFrame(closeSize, closeSize, Gravity.CENTER_VERTICAL | (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT), closeMargin, 0, closeMargin, 0));
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
             org.telegram.ui.Components.ScaleStateListAnimator.apply(closeIcon, 0.06f, 1.2f);
         }
 
@@ -228,7 +233,28 @@ public class FragmentSearchField extends FrameLayout implements FactorAnimator.T
                     (getHeight() - getPaddingBottom()) + dp(4));
             blurredBackgroundDrawable.draw(canvas);
         }
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && isSearchActive) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (glassStrokePaint == null) {
+                glassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                glassStrokePaint.setStyle(Paint.Style.STROKE);
+            }
+            boolean isDark = resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark();
+            glassStrokePaint.setStrokeWidth(dp(0.85f));
+            float strokeRadius = (getHeight() - getPaddingTop() - getPaddingBottom()) / 2.0f;
+            RectF strokeRect = AndroidUtilities.rectTmp;
+            strokeRect.set(getPaddingLeft(), getPaddingTop(), getWidth() - getPaddingRight(), getHeight() - getPaddingBottom());
+            glassStrokePaint.setShader(new LinearGradient(
+                strokeRect.left, strokeRect.top, strokeRect.left, strokeRect.bottom,
+                new int[]{
+                    xyz.nextalone.nagram.ui.UIStyleEngine.getLiquidGlassBubbleStrokeTopColor(isDark),
+                    xyz.nextalone.nagram.ui.UIStyleEngine.getLiquidGlassBubbleStrokeBottomColor(isDark)
+                },
+                null,
+                Shader.TileMode.CLAMP
+            ));
+            canvas.drawRoundRect(strokeRect, strokeRadius, strokeRadius, glassStrokePaint);
+        }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() && isSearchActive) {
             dividerPaint.setColor(getThemedColor(Theme.key_divider));
             dividerPaint.setStrokeWidth(dp(1));
             canvas.drawLine(0, getHeight() - dp(1), getWidth(), getHeight() - dp(1), dividerPaint);
@@ -238,7 +264,7 @@ public class FragmentSearchField extends FrameLayout implements FactorAnimator.T
     }
 
     public void setupBlurredBackground(BlurredBackgroundDrawable drawable) {
-        drawable.setRadius(dp(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 24 : 20));
+        drawable.setRadius(dp(xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? 24 : 20));
         drawable.setPadding(dp(4));
         blurredBackgroundDrawable = drawable;
     }
@@ -271,8 +297,8 @@ public class FragmentSearchField extends FrameLayout implements FactorAnimator.T
 
     private void checkUi_editTextPaddings() {
         final int filtersWidth = (int) animatorSearchFiltersWidth.getFactor() + dp(6); //searchFilterLayout.getWidth();
-        final int pStart = Math.max(filtersWidth, dp(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 52 : 48));
-        final int pEnd = dp(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 52 : 48) + additionalIconsLayout.getMeasuredWidth();
+        final int pStart = Math.max(filtersWidth, dp(xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? 52 : 48));
+        final int pEnd = dp(xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? 52 : 48) + additionalIconsLayout.getMeasuredWidth();
 
         final int pLeft = LocaleController.isRTL ? pEnd : pStart;
         final int pRight = LocaleController.isRTL ? pStart : pEnd;
@@ -303,8 +329,20 @@ public class FragmentSearchField extends FrameLayout implements FactorAnimator.T
     @Override
     public void updateColors() {
         final boolean isDark = resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark();
-        boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-        if (isM3) {
+        boolean floatingBars = xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars();
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            float glassAlpha = xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity();
+            int glassBg = isDark
+                ? androidx.core.graphics.ColorUtils.setAlphaComponent(0xFFFFFFFF, (int) (255 * (glassAlpha * 0.22f)))
+                : androidx.core.graphics.ColorUtils.setAlphaComponent(0xFFFFFFFF, (int) (255 * (glassAlpha * 0.65f)));
+            bg = Theme.createRoundRectDrawable(dp(24), glassBg);
+            searchIcon.setColorFilter(getThemedColor(Theme.key_windowBackgroundWhiteBlackText, 0.75f), PorterDuff.Mode.MULTIPLY);
+            closeIcon.setColorFilter(getThemedColor(Theme.key_windowBackgroundWhiteBlackText, 0.75f), PorterDuff.Mode.MULTIPLY);
+            closeIcon.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(24)));
+            editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            editText.setHintTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText, 0.55f));
+            editText.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText));
+        } else if (floatingBars) {
             bg = Theme.createRoundRectDrawable(dp(24), isWhiteBackground ? getThemedColor(Theme.key_windowBackgroundWhite) : getThemedColor(Theme.key_windowBackgroundGray));
             searchIcon.setColorFilter(getThemedColor(Theme.key_windowBackgroundWhiteBlackText, 0.75f), PorterDuff.Mode.MULTIPLY);
             closeIcon.setColorFilter(getThemedColor(Theme.key_windowBackgroundWhiteBlackText, 0.75f), PorterDuff.Mode.MULTIPLY);
@@ -388,7 +426,7 @@ public class FragmentSearchField extends FrameLayout implements FactorAnimator.T
     public void setSearchActive(boolean active) {
         if (isSearchActive != active) {
             isSearchActive = active;
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
                 if (active) {
                     searchIcon.setImageResource(R.drawable.ic_ab_back);
                     searchIcon.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(18)));
@@ -420,7 +458,7 @@ public class FragmentSearchField extends FrameLayout implements FactorAnimator.T
             FragmentFloatingButton.setAnimatedVisibility(closeIcon, factor);
             closeIcon.setRotation((1 - factor) * 90);
         } else if (id == ANIMATOR_ID_SEARCH_ICON_VISIBLE) {
-            if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (!xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars()) {
                 FragmentFloatingButton.setAnimatedVisibility(searchIcon, factor);
             }
         } else if (id == ANIMATOR_ID_SEARCH_FILTERS_WIDTH) {

@@ -239,7 +239,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         glassMode = true;
         glassModeIsForum = isForum;
 
-        float rad = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(20) : dp(23);
+        float rad = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(20) : xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(22) : dp(23);
 
         glassDrawable = factory.create(this)
             .setColorProvider(colorProvider)
@@ -265,7 +265,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             menu.setGlassMode(true);
         }
         if (actionMode != null) {
-            actionMode.setTranslationX(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 0 : -dp(10));
+            actionMode.setTranslationX(xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? 0 : -dp(10));
             actionMode.setGlassMode(true);
         }
         if (backButtonImageView != null) {
@@ -281,7 +281,11 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     }
 
     public Drawable createAdaptiveSelectorDrawable(int color) {
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            return Theme.createSelectorDrawable(color);
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseGlassActions()) {
+            return org.telegram.ui.Components.LiquidGlassButtonDrawable.createForAction(color);
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             return new org.telegram.ui.Components.M3ExpressiveButtonDrawable(
                 0,
                 Theme.multAlpha(color, 0.40f),
@@ -295,11 +299,17 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     }
 
     private Drawable createExpressiveActionButtonDrawable(int iconColor, int fallbackBackgroundColor) {
-        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            return Theme.createSelectorDrawable(fallbackBackgroundColor != 0 ? fallbackBackgroundColor : Theme.getColor(Theme.key_actionBarDefaultSelector));
+        }
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && !xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseGlassActions()) {
             return Theme.createSelectorDrawable(fallbackBackgroundColor);
         }
         if (iconColor == 0) {
             iconColor = Theme.getColor(Theme.key_actionBarDefaultIcon);
+        }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseGlassActions()) {
+            return org.telegram.ui.Components.LiquidGlassButtonDrawable.createForAction(iconColor);
         }
         org.telegram.ui.Components.M3ExpressiveButtonDrawable drawable = new org.telegram.ui.Components.M3ExpressiveButtonDrawable(
             Theme.multAlpha(iconColor, 0.14f),
@@ -871,7 +881,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 }
             }
         };
-        actionMode.setTranslationX(glassMode && !xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? -dp(10) : 0);
+        actionMode.setTranslationX(glassMode && !xyz.nextalone.nagram.ui.UIStyleEngine.shouldUseFloatingBars() ? -dp(10) : 0);
         actionMode.setGlassMode(glassMode);
         actionMode.isActionMode = true;
         actionMode.setClickable(true);
@@ -2371,7 +2381,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     }
 
     public void setDrawBlurBackground(SizeNotifierFrameLayout contentView) {
-        if (!tw.nekomimi.nekogram.NekoConfig.forceActionBarBlur.Bool() && !tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool()) {
+        if (!tw.nekomimi.nekogram.NekoConfig.forceActionBarBlur.Bool() && !tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             return;
         }
         blurredBackground = true;
@@ -2493,71 +2503,96 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         final int t = getHeight() - (getCurrentActionBarHeight() + s) / 2 - p;
         final int b = t + s + p * 2;
 
-        if (glassDrawable != null && !glassOnlyBack) {
-            float morphProgress = 0f;
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                morphProgress = chatAvatarContainer != null ? chatAvatarContainer.getMorphProgress() : 0f;
-                float rad = AndroidUtilities.lerp(dp(20), dp(11), morphProgress);
-                if (glassModeIsForum) {
-                    float radInner = AndroidUtilities.lerp(dp(18.33f), dp(9f), morphProgress);
-                    glassDrawable.setRadius(radInner, rad, rad, radInner);
-                } else {
-                    glassDrawable.setRadius(rad);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && chatAvatarContainer == null) {
+            if (glassDrawable != null && !glassOnlyBack) {
+                glassDrawable.setRadius(0);
+                glassDrawable.setBounds(0, 0, getWidth(), b);
+                glassDrawable.draw(canvas);
+            }
+        } else {
+            if (glassDrawable != null && !glassOnlyBack) {
+                float morphProgress = 0f;
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                    morphProgress = chatAvatarContainer != null ? chatAvatarContainer.getMorphProgress() : 0f;
+                    float rad = AndroidUtilities.lerp(dp(20), dp(11), morphProgress);
+                    if (glassModeIsForum) {
+                        float radInner = AndroidUtilities.lerp(dp(18.33f), dp(9f), morphProgress);
+                        glassDrawable.setRadius(radInner, rad, rad, radInner);
+                    } else {
+                        glassDrawable.setRadius(rad);
+                    }
+                } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    morphProgress = chatAvatarContainer != null ? chatAvatarContainer.getMorphProgress() : 0f;
+                    float rad = AndroidUtilities.lerp(dp(22), dp(16), morphProgress);
+                    if (glassModeIsForum) {
+                        float radInner = AndroidUtilities.lerp(dp(18.33f), dp(14f), morphProgress);
+                        glassDrawable.setRadius(radInner, rad, rad, radInner);
+                    } else {
+                        glassDrawable.setRadius(rad);
+                    }
                 }
-            }
-            final int menuWidthWithPadding = menuWidth + ((hasForcedMenuWidth || hasForcedMenuMinWidth) ? (menuWidth > 0 ? p : 0) : (int) (p * Math.max(animatorHasMenuItems.getFloatValue(), actionModeFactor)));
-            final int rightOffset = lerp(menuWidthWithPadding, Math.max(menuWidthWithPadding, p + s), chatAvatarContainer == null ? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
+                final int menuWidthWithPadding = menuWidth + ((hasForcedMenuWidth || hasForcedMenuMinWidth) ? (menuWidth > 0 ? p : 0) : (int) (p * Math.max(animatorHasMenuItems.getFloatValue(), actionModeFactor)));
+                final int rightOffset = lerp(menuWidthWithPadding, Math.max(menuWidthWithPadding, p + s), chatAvatarContainer == null ? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
 
-            final int leftDefault = lerp(hasBackButton ? s + p : 0, s + p, chatAvatarContainer == null? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
-            final int rightDefault = getWidth() - rightOffset;
-            final int widthDefault = rightDefault - leftDefault;
-            final int left, right;
-            if (chatAvatarContainer != null) {
-                final int width = lerp(Math.min(widthDefault, (int) animatorAvatarContainerWidth.getFactor() + p * 2), widthDefault, Math.max(searchFactor, actionModeFactor));
-                left = (rightDefault + leftDefault - width) / 2;
-                right = left + width;
+                final int leftDefault = lerp(hasBackButton ? s + p : 0, s + p, chatAvatarContainer == null? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
+                final int rightDefault = getWidth() - rightOffset;
+                final int widthDefault = rightDefault - leftDefault;
+                final int left, right;
+                if (chatAvatarContainer != null) {
+                    final int width = lerp(Math.min(widthDefault, (int) animatorAvatarContainerWidth.getFactor() + p * 2), widthDefault, Math.max(searchFactor, actionModeFactor));
+                    left = (rightDefault + leftDefault - width) / 2;
+                    right = left + width;
 
-                final float translationX = left
-                    - ((MarginLayoutParams)(chatAvatarContainer.getLayoutParams())).leftMargin
-                    - chatAvatarContainer.getLeftPadding()
-                    + p + dp(3);
-                chatAvatarContainer.setTranslationX(translationX);
-                chatAvatarContainer.setPivotX((chatAvatarContainer.getMeasuredWidth()) / 2f - translationX );
-            } else {
-                left = leftDefault;
-                right = rightDefault;
-            }
+                    final float translationX = left
+                        - ((MarginLayoutParams)(chatAvatarContainer.getLayoutParams())).leftMargin
+                        - chatAvatarContainer.getLeftPadding()
+                        + p + dp(3);
+                    chatAvatarContainer.setTranslationX(translationX);
+                    chatAvatarContainer.setPivotX((chatAvatarContainer.getMeasuredWidth()) / 2f - translationX );
+                } else {
+                    left = leftDefault;
+                    right = rightDefault;
+                }
 
-            int insetX = (int) (morphProgress * dp(1.5f));
-            int insetY = (int) (morphProgress * dp(1.0f));
-            glassDrawable.setBounds(left + insetX, t + insetY, right - insetX, b - insetY);
-            glassDrawable.draw(canvas);
-        }
-        if (glassDrawableBack != null && hasBackButton) {
-            float morphProgress = 0f;
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                morphProgress = glassBackMorphHelper.getProgress();
-                float rad = AndroidUtilities.lerp(dp(20), dp(11), morphProgress);
-                glassDrawableBack.setRadius(rad);
+                int insetX = (int) (morphProgress * dp(1.5f));
+                int insetY = (int) (morphProgress * dp(1.0f));
+                glassDrawable.setBounds(left + insetX, t + insetY, right - insetX, b - insetY);
+                glassDrawable.draw(canvas);
             }
-            int insetX = (int) (morphProgress * dp(1.5f));
-            int insetY = (int) (morphProgress * dp(1.0f));
-            glassDrawableBack.setBounds(0, t + insetY, s + p * 2 - insetX, b - insetY);
-            glassDrawableBack.draw(canvas);
-        }
-        if (glassDrawableMenu != null && menuWidth > 0 && !glassOnlyBack && !doNotDrawGlassMenu) {
-            float morphProgress = 0f;
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                morphProgress = glassMenuMorphHelper.getProgress();
-                float rad = AndroidUtilities.lerp(dp(20), dp(11), morphProgress);
-                glassDrawableMenu.setRadius(rad);
+            if (glassDrawableBack != null && hasBackButton) {
+                float morphProgress = 0f;
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                    morphProgress = glassBackMorphHelper.getProgress();
+                    float rad = AndroidUtilities.lerp(dp(20), dp(11), morphProgress);
+                    glassDrawableBack.setRadius(rad);
+                } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    morphProgress = glassBackMorphHelper.getProgress();
+                    float rad = AndroidUtilities.lerp(dp(22), dp(16), morphProgress);
+                    glassDrawableBack.setRadius(rad);
+                }
+                int insetX = (int) (morphProgress * dp(1.5f));
+                int insetY = (int) (morphProgress * dp(1.0f));
+                glassDrawableBack.setBounds(0, t + insetY, s + p * 2 - insetX, b - insetY);
+                glassDrawableBack.draw(canvas);
             }
-            int insetX = (int) (morphProgress * dp(1.5f));
-            int insetY = (int) (morphProgress * dp(1.0f));
-            glassDrawableMenu.setBounds(getWidth() - Math.max(s, menuWidth) - p * 2 + insetX, t + insetY, getWidth(), b - insetY);
-            float alphaFactor = hasForcedMenuWidth ? 1f : Math.max(animatorHasMenuItems.getFloatValue(), actionModeFactor);
-            glassDrawableMenu.setAlpha((int) (255 * alphaFactor));
-            glassDrawableMenu.draw(canvas);
+            if (glassDrawableMenu != null && menuWidth > 0 && !glassOnlyBack && !doNotDrawGlassMenu) {
+                float morphProgress = 0f;
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                    morphProgress = glassMenuMorphHelper.getProgress();
+                    float rad = AndroidUtilities.lerp(dp(20), dp(11), morphProgress);
+                    glassDrawableMenu.setRadius(rad);
+                } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    morphProgress = glassMenuMorphHelper.getProgress();
+                    float rad = AndroidUtilities.lerp(dp(22), dp(16), morphProgress);
+                    glassDrawableMenu.setRadius(rad);
+                }
+                int insetX = (int) (morphProgress * dp(1.5f));
+                int insetY = (int) (morphProgress * dp(1.0f));
+                glassDrawableMenu.setBounds(getWidth() - Math.max(s, menuWidth) - p * 2 + insetX, t + insetY, getWidth(), b - insetY);
+                float alphaFactor = hasForcedMenuWidth ? 1f : Math.max(animatorHasMenuItems.getFloatValue(), actionModeFactor);
+                glassDrawableMenu.setAlpha((int) (255 * alphaFactor));
+                glassDrawableMenu.draw(canvas);
+            }
         }
 
         if (blurredBackground && actionBarColor != Color.TRANSPARENT) {

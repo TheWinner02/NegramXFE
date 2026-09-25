@@ -22,6 +22,7 @@ import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
+import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
@@ -74,6 +75,7 @@ import org.telegram.ui.Components.AnimatedFloat;
 import org.telegram.ui.Components.AttachableDrawable;
 import org.telegram.ui.Components.EffectsTextView;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.LiquidGlassButtonDrawable;
 import org.telegram.ui.Components.LineProgressView;
 import org.telegram.ui.Components.M3ExpressiveButtonDrawable;
 import org.telegram.ui.Components.RLottieDrawable;
@@ -242,7 +244,24 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
     }
 
     private void applyM3DialogButtonStyle(TextView button) {
-        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            return;
+        }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            int textColor = getThemedColor(Theme.key_dialogButton);
+            if (textColor == 0) {
+                textColor = 0xFF007AFF;
+            }
+            button.setTextColor(textColor);
+            button.setTypeface(AndroidUtilities.bold());
+            button.setBackground(Theme.createSimpleSelectorRoundRectDrawable(
+                dp(12),
+                Theme.multAlpha(textColor, 0.12f),
+                Theme.multAlpha(textColor, 0.22f)
+            ));
+            button.setAlpha(1.0f);
+            button.setVisibility(View.VISIBLE);
+            ScaleStateListAnimator.apply(button, .035f, 1.4f, true);
             return;
         }
         int textColor = M3ColorRoles.get(M3ColorRoles.Role.ON_SURFACE, getThemedColor(Theme.key_dialogTextBlack));
@@ -271,7 +290,13 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
             super(context);
             this.resourcesProvider = resourcesProvider;
 
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                setBackground(Theme.createSimpleSelectorRoundRectDrawable(
+                    dp(12),
+                    0x00000000,
+                    Theme.multAlpha(getThemedColor(Theme.key_dialogTextBlack), 0.10f)
+                ));
+            } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                 M3ExpressiveButtonDrawable selector = new M3ExpressiveButtonDrawable(
                         Color.TRANSPARENT,
                         Theme.multAlpha(getThemedColor(Theme.key_dialogTextBlack), .10f),
@@ -344,11 +369,14 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
         final boolean isDark = AndroidUtilities.computePerceivedBrightness(backgroundColor) < 0.721f;
         blurredNativeBackground = supportsNativeBlur() && progressViewStyle == ALERT_TYPE_MESSAGE;
         blurredBackground = (blurredNativeBackground || !supportsNativeBlur() && SharedConfig.getDevicePerformanceClass() >= SharedConfig.PERFORMANCE_CLASS_HIGH && LiteMode.isEnabled(LiteMode.FLAG_CHAT_BLUR)) && isDark;
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            blurredBackground = true;
+        }
 
         backgroundPaddings = new Rect();
         if (progressStyle != ALERT_TYPE_SPINNER || blurredBackground) {
             shadowDrawable = context.getResources().getDrawable(R.drawable.popup_fixed_alert4).mutate();
-            blurOpacity = progressStyle == ALERT_TYPE_SPINNER ? 0.55f : (isDark ? 0.80f : 0.985f);
+            blurOpacity = progressStyle == ALERT_TYPE_SPINNER ? 0.55f : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity() : (isDark ? 0.80f : 0.985f));
             shadowDrawable.setColorFilter(new PorterDuffColorFilter(backgroundColor, PorterDuff.Mode.MULTIPLY));
             shadowDrawable.getPadding(backgroundPaddings);
         }
@@ -370,14 +398,14 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                 .setInterpolator(new OvershootInterpolator(1.3f))
                 .setDuration(190)
                 .start();
-        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && containerView != null) {
+        } else if ((xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) && containerView != null) {
             containerView.setScaleX(0.90f);
             containerView.setScaleY(0.90f);
             containerView.setAlpha(0.0f);
             containerView.animate()
                 .scaleX(1.0f).scaleY(1.0f).alpha(1.0f)
-                .setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getExpressiveSpringInterpolator())
-                .setDuration(280)
+                .setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : xyz.nextalone.nagram.ui.UIStyleEngine.getExpressiveSpringInterpolator())
+                .setDuration(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 340 : 280)
                 .start();
         }
         shownAt = System.currentTimeMillis();
@@ -603,6 +631,7 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
 
         private AnimatedFloat blurPaintAlpha = new AnimatedFloat(0, this);
         private Paint backgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private Paint glassStrokePaint;
 
         @Override
         public void draw(Canvas canvas) {
@@ -619,7 +648,7 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                             (getHeight() + h) / 2f
                     );
                 } else {
-                    r = dp(20);
+                    r = (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? (int) xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius() : dp(20);
                     AndroidUtilities.rectTmp.set(getPaddingLeft(), getPaddingTop(), getMeasuredWidth() - getPaddingRight(), getMeasuredHeight() - getPaddingBottom());
                 }
 
@@ -631,16 +660,40 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                 }
 
                 // draw dim above blur
-                if (dimBlurPaint == null) {
-                    dimBlurPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-                    dimBlurPaint.setColor(ColorUtils.setAlphaComponent(0xff000000, (int) (0xFF * dimAlpha)));
+                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    if (dimBlurPaint == null) {
+                        dimBlurPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                        dimBlurPaint.setColor(ColorUtils.setAlphaComponent(0xff000000, (int) (0xFF * dimAlpha)));
+                    }
+                    canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, dimBlurPaint);
                 }
-                canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, dimBlurPaint);
 
                 // draw background
-                backgroundPaint.setColor(backgroundColor);
-                backgroundPaint.setAlpha((int) (backgroundPaint.getAlpha() * (blurAlpha * (blurOpacity - 1f) + 1f)));
+                boolean isIos = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+                if (isIos) {
+                    boolean isDark = Theme.isCurrentThemeDark() || AndroidUtilities.computePerceivedBrightness(backgroundColor) < 0.721f;
+                    backgroundPaint.setColor(isDark ? 0xFF1C1C1E : 0xFFFFFFFF);
+                    backgroundPaint.setAlpha((int) (255 * xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity()));
+                } else {
+                    backgroundPaint.setColor(backgroundColor);
+                    backgroundPaint.setAlpha((int) (backgroundPaint.getAlpha() * (blurAlpha * (blurOpacity - 1f) + 1f)));
+                }
                 canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, backgroundPaint);
+
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    if (glassStrokePaint == null) {
+                        glassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                        glassStrokePaint.setStyle(Paint.Style.STROKE);
+                    }
+                    glassStrokePaint.setStrokeWidth(dp(0.85f));
+                    glassStrokePaint.setShader(new LinearGradient(
+                        0, AndroidUtilities.rectTmp.top, 0, AndroidUtilities.rectTmp.bottom,
+                        new int[]{xyz.nextalone.nagram.ui.UIStyleEngine.getLiquidGlassBubbleStrokeTopColor(), xyz.nextalone.nagram.ui.UIStyleEngine.getLiquidGlassBubbleStrokeBottomColor()},
+                        new float[]{0.0f, 1.0f},
+                        Shader.TileMode.CLAMP
+                    ));
+                    canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, glassStrokePaint);
+                }
             }
             super.draw(canvas);
         }
@@ -707,7 +760,7 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                 containerView.setPadding(0, 0, 0, 0);
                 containerView.setBackground(shadowDrawable);
 
-                int dialogRadius = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? (int) xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius() : dp(20);
+                int dialogRadius = (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? (int) xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius() : dp(20);
                 containerView.setOutlineProvider(ViewOutlineProviderImpl.boundsWithPaddingRoundRect(dp(8), dialogRadius));
                 containerView.setClipToOutline(true);
 
@@ -869,7 +922,7 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
             shadow[0].setCallback(this);
             shadow[1].setCallback(this);
 
-            boolean useM3ExpressiveSections = items != null && xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+            boolean useM3ExpressiveSections = items != null && (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass());
             scrollContainer = useM3ExpressiveSections ? new SectionsScrollView.SectionsLinearLayout(getContext()) : new LinearLayout(getContext());
             scrollContainer.setOrientation(LinearLayout.VERTICAL);
             if (useM3ExpressiveSections) {
@@ -1199,14 +1252,14 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                 textView.setTypeface(AndroidUtilities.bold());
                 textView.setText(positiveButtonText);
                 textView.setBackground(Theme.getRoundRectSelectorDrawable(dp(20), getThemedColor(dialogButtonColorKey)));
-                int btnPad = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : dp(12);
+                int btnPad = (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? dp(16) : dp(12);
                 textView.setPadding(btnPad, 0, btnPad, 0);
                 if (verticalButtons) {
                     buttonsLayout.addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 40, Gravity.FILL_HORIZONTAL));
                 } else {
                     buttonsLayout.addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 40, Gravity.TOP | Gravity.RIGHT));
                 }
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     applyM3DialogButtonStyle(textView);
                 }
                 textView.setOnClickListener(v -> {
@@ -1244,14 +1297,14 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                 textView.setSingleLine(true);
                 textView.setText(negativeButtonText.toString());
                 textView.setBackground(Theme.getRoundRectSelectorDrawable(dp(20), getThemedColor(dialogButtonColorKey)));
-                int btnPad = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : dp(12);
+                int btnPad = (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? dp(16) : dp(12);
                 textView.setPadding(btnPad, 0, btnPad, 0);
                 if (verticalButtons) {
                     buttonsLayout.addView(textView, 0, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 40, Gravity.FILL_HORIZONTAL));
                 } else {
                     buttonsLayout.addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 40, Gravity.TOP | Gravity.RIGHT));
                 }
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     applyM3DialogButtonStyle(textView);
                 }
                 textView.setOnClickListener(v -> {
@@ -1289,14 +1342,14 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                 textView.setSingleLine(true);
                 textView.setText(neutralButtonText.toString());
                 textView.setBackground(Theme.getRoundRectSelectorDrawable(dp(20), getThemedColor(dialogButtonColorKey)));
-                int btnPad = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : dp(12);
+                int btnPad = (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? dp(16) : dp(12);
                 textView.setPadding(btnPad, 0, btnPad, 0);
                 if (verticalButtons) {
                     buttonsLayout.addView(textView, 1, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 40, Gravity.FILL_HORIZONTAL));
                 } else {
                     buttonsLayout.addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 40, Gravity.TOP | Gravity.LEFT));
                 }
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     applyM3DialogButtonStyle(textView);
                 }
                 textView.setOnClickListener(v -> {
@@ -1334,14 +1387,14 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                 textView.setSingleLine(true);
                 textView.setText(negative2ButtonText.toString());
                 textView.setBackground(Theme.getRoundRectSelectorDrawable(dp(20), getThemedColor(dialogButtonColorKey)));
-                int btnPad = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : dp(12);
+                int btnPad = (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? dp(16) : dp(12);
                 textView.setPadding(btnPad, 0, btnPad, 0);
                 if (verticalButtons) {
                     buttonsLayout.addView(textView, 0, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 40, Gravity.FILL_HORIZONTAL));
                 } else {
                     buttonsLayout.addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 40, Gravity.TOP | Gravity.RIGHT));
                 }
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     applyM3DialogButtonStyle(textView);
                 }
                 textView.setOnClickListener(v -> {
@@ -1439,6 +1492,10 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                     containerView.invalidate();
                 }, 8);
             }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && (blurBehind || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
+            params.flags |= WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
+            params.setBlurBehindRadius(AndroidUtilities.dp(xyz.nextalone.nagram.ui.UIStyleEngine.getGlassBlurRadius()));
         }
 
         window.setAttributes(params);
@@ -1832,6 +1889,17 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
     }
 
     private static int getM3DialogColor(int key, int fallbackColor) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (key == Theme.key_dialogBackground) {
+                int onSurface = Theme.getColor(Theme.key_dialogTextBlack);
+                int color = ColorUtils.blendARGB(fallbackColor, onSurface, 0.04f);
+                int targetAlpha = (int) (255 * xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity());
+                return ColorUtils.setAlphaComponent(color, targetAlpha);
+            } else if (key == Theme.key_dialogButton || key == Theme.key_dialogTextLink || key == Theme.key_dialogLineProgress) {
+                return fallbackColor;
+            }
+            return fallbackColor;
+        }
         if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             return fallbackColor;
         }

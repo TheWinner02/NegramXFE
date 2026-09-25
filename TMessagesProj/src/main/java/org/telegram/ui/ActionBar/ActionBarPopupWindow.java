@@ -20,9 +20,12 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
+import androidx.core.graphics.ColorUtils;
+import android.graphics.LinearGradient;
 import android.graphics.Outline;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Shader;
 import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
@@ -143,6 +146,9 @@ public class ActionBarPopupWindow extends PopupWindow {
         Rect rect;
         private final Path m3ClipPath = new Path();
         private final RectF m3ClipRect = new RectF();
+        private final Paint glassShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint glassFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint glassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         public Rect getPadding() {
             return bgPaddings;
@@ -296,7 +302,13 @@ public class ActionBarPopupWindow extends PopupWindow {
 
         public void setBackgroundColor(int color) {
             if (backgroundColor != color && backgroundDrawable != null) {
-                backgroundDrawable.setColorFilter(new PorterDuffColorFilter(backgroundColor = color, PorterDuff.Mode.MULTIPLY));
+                int resolvedColor = color;
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    float alpha = xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity();
+                    int targetAlpha = (int) (alpha * 255);
+                    resolvedColor = (color & 0x00FFFFFF) | (targetAlpha << 24);
+                }
+                backgroundDrawable.setColorFilter(new PorterDuffColorFilter(backgroundColor = resolvedColor, PorterDuff.Mode.MULTIPLY));
             }
         }
 
@@ -471,7 +483,7 @@ public class ActionBarPopupWindow extends PopupWindow {
                 int start = gapStartY - (scrollView == null ? 0 : scrollView.getScrollY());
                 int end = gapEndY - (scrollView == null ? 0 : scrollView.getScrollY());
                 boolean hasGap = false;
-                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     for (int i = 0; i < linearLayout.getChildCount(); i++) {
                         if (linearLayout.getChildAt(i) instanceof GapView && linearLayout.getChildAt(i).getVisibility() == View.VISIBLE) {
                             hasGap = true;
@@ -534,10 +546,47 @@ public class ActionBarPopupWindow extends PopupWindow {
                         AndroidUtilities.lerp(rect, AndroidUtilities.rectTmp2, reactionsEnterProgress, AndroidUtilities.rectTmp2);
                     }
                     backgroundDrawable.setBounds(AndroidUtilities.rectTmp2);
-                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                         m3ClipPath.rewind();
                         m3ClipRect.set(AndroidUtilities.rectTmp2.left + bgPaddings.left, AndroidUtilities.rectTmp2.top + bgPaddings.top, AndroidUtilities.rectTmp2.right - bgPaddings.right, AndroidUtilities.rectTmp2.bottom - bgPaddings.bottom);
-                        m3ClipPath.addRoundRect(m3ClipRect, dp(18), dp(18), Path.Direction.CW);
+                        float radius = dp(18);
+                        m3ClipPath.addRoundRect(m3ClipRect, radius, radius, Path.Direction.CW);
+
+                        boolean isDark = Theme.isCurrentThemeDark();
+                        float alphaFraction = (backAlpha / 255f);
+
+                        glassShadowPaint.setShadowLayer(dp(12), 0, dp(4), Theme.multAlpha(0x30000000, alphaFraction));
+                        glassShadowPaint.setColor(0);
+                        canvas.drawRoundRect(m3ClipRect, radius, radius, glassShadowPaint);
+
+                        float glassAlpha = xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity();
+                        int glassBg;
+                        if (isDark) {
+                            int bgBase = Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider);
+                            glassBg = Theme.multAlpha(bgBase, glassAlpha);
+                        } else {
+                            glassBg = ColorUtils.setAlphaComponent(0xFFFFFFFF, (int) (255 * (glassAlpha * 0.85f)));
+                        }
+                        glassFillPaint.setColor(Theme.multAlpha(glassBg, alphaFraction));
+                        canvas.drawRoundRect(m3ClipRect, radius, radius, glassFillPaint);
+
+                        glassStrokePaint.setStyle(Paint.Style.STROKE);
+                        glassStrokePaint.setStrokeWidth(dp(0.85f));
+                        glassStrokePaint.setShader(new LinearGradient(
+                            m3ClipRect.left, m3ClipRect.top, m3ClipRect.left, m3ClipRect.bottom,
+                            new int[]{
+                                Theme.multAlpha(xyz.nextalone.nagram.ui.UIStyleEngine.getLiquidGlassBubbleStrokeTopColor(isDark), alphaFraction),
+                                Theme.multAlpha(xyz.nextalone.nagram.ui.UIStyleEngine.getLiquidGlassBubbleStrokeBottomColor(isDark), alphaFraction)
+                            },
+                            null,
+                            Shader.TileMode.CLAMP
+                        ));
+                        canvas.drawPath(m3ClipPath, glassStrokePaint);
+                    } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                        m3ClipPath.rewind();
+                        m3ClipRect.set(AndroidUtilities.rectTmp2.left + bgPaddings.left, AndroidUtilities.rectTmp2.top + bgPaddings.top, AndroidUtilities.rectTmp2.right - bgPaddings.right, AndroidUtilities.rectTmp2.bottom - bgPaddings.bottom);
+                        float radius = dp(18);
+                        m3ClipPath.addRoundRect(m3ClipRect, radius, radius, Path.Direction.CW);
                         canvas.save();
                         canvas.clipPath(m3ClipPath);
                         backgroundDrawable.draw(canvas);
@@ -592,10 +641,11 @@ public class ActionBarPopupWindow extends PopupWindow {
                 canvas.saveLayerAlpha((float) AndroidUtilities.rectTmp2.left, (float) AndroidUtilities.rectTmp2.top, AndroidUtilities.rectTmp2.right, AndroidUtilities.rectTmp2.bottom, (int) (255 * reactionsEnterProgress), Canvas.ALL_SAVE_FLAG);
                 float scale = 0.5f + reactionsEnterProgress * 0.5f;
                 canvas.scale(scale, scale, AndroidUtilities.rectTmp2.right, AndroidUtilities.rectTmp2.top);
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     m3ClipPath.rewind();
                     m3ClipRect.set(AndroidUtilities.rectTmp2.left + bgPaddings.left, AndroidUtilities.rectTmp2.top + bgPaddings.top, AndroidUtilities.rectTmp2.right - bgPaddings.right, AndroidUtilities.rectTmp2.bottom - bgPaddings.bottom);
-                    m3ClipPath.addRoundRect(m3ClipRect, dp(18), dp(18), Path.Direction.CW);
+                    float radius = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(18) : dp(18);
+                    m3ClipPath.addRoundRect(m3ClipRect, radius, radius, Path.Direction.CW);
                     canvas.save();
                     canvas.clipPath(m3ClipPath);
                     super.dispatchDraw(canvas);
@@ -605,10 +655,11 @@ public class ActionBarPopupWindow extends PopupWindow {
                 }
                 canvas.restore();
             } else {
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     m3ClipPath.rewind();
                     m3ClipRect.set(AndroidUtilities.rectTmp2.left + bgPaddings.left, AndroidUtilities.rectTmp2.top + bgPaddings.top, AndroidUtilities.rectTmp2.right - bgPaddings.right, AndroidUtilities.rectTmp2.bottom - bgPaddings.bottom);
-                    m3ClipPath.addRoundRect(m3ClipRect, dp(18), dp(18), Path.Direction.CW);
+                    float radius = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(18) : dp(18);
+                    m3ClipPath.addRoundRect(m3ClipRect, radius, radius, Path.Direction.CW);
                     canvas.save();
                     canvas.clipPath(m3ClipPath);
                     super.dispatchDraw(canvas);
@@ -828,9 +879,11 @@ public class ActionBarPopupWindow extends PopupWindow {
         if (p != null) {
             p.flags |= WindowManager.LayoutParams.FLAG_DIM_BEHIND;
             p.dimAmount = amount;
-            if (Build.VERSION.SDK_INT >= 31 && tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool()) {
+            if (Build.VERSION.SDK_INT >= 31 && (tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
                 p.flags |= WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
-                p.setBlurBehindRadius(AndroidUtilities.dp(tw.nekomimi.nekogram.NekoConfig.blurRadiusGlobal.Int()));
+                int radius = tw.nekomimi.nekogram.NekoConfig.blurRadiusGlobal.Int();
+                if (radius <= 0) radius = 16;
+                p.setBlurBehindRadius(AndroidUtilities.dp(radius));
             }
             try {
                 wm.updateViewLayout(container, p);
@@ -879,7 +932,7 @@ public class ActionBarPopupWindow extends PopupWindow {
         try {
             super.showAsDropDown(anchor, xoff, yoff);
             registerListener(anchor);
-            if (Build.VERSION.SDK_INT >= 31 && tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool()) {
+            if (Build.VERSION.SDK_INT >= 31 && (tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
                 dimBehind(0.2f);
             }
         } catch (Exception e) {
@@ -941,7 +994,12 @@ public class ActionBarPopupWindow extends PopupWindow {
                 ObjectAnimator.ofInt(content, "backAlpha", 0, 255),
                 childtranslations
         );
-        windowAnimatorSet.setDuration(150 + 16 * visibleCount);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            windowAnimatorSet.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator());
+            windowAnimatorSet.setDuration(220 + 16 * visibleCount);
+        } else {
+            windowAnimatorSet.setDuration(150 + 16 * visibleCount);
+        }
         windowAnimatorSet.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
@@ -1026,7 +1084,12 @@ public class ActionBarPopupWindow extends PopupWindow {
             windowAnimatorSet.playTogether(
                     ObjectAnimator.ofFloat(content, "backScaleY", 0.0f, finalScaleY),
                     ObjectAnimator.ofInt(content, "backAlpha", 0, 255));
-            windowAnimatorSet.setDuration(150 + 16 * visibleCount);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                windowAnimatorSet.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator());
+                windowAnimatorSet.setDuration(220 + 16 * visibleCount);
+            } else {
+                windowAnimatorSet.setDuration(150 + 16 * visibleCount);
+            }
             windowAnimatorSet.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
@@ -1074,7 +1137,7 @@ public class ActionBarPopupWindow extends PopupWindow {
     public void showAtLocation(View parent, int gravity, int x, int y) {
         super.showAtLocation(parent, gravity, x, y);
         unregisterListener();
-        if (Build.VERSION.SDK_INT >= 31 && tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool()) {
+        if (Build.VERSION.SDK_INT >= 31 && (tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
             dimBehind(0.2f);
         }
     }
@@ -1184,7 +1247,10 @@ public class ActionBarPopupWindow extends PopupWindow {
 
         public GapView(Context context, int color, int shadowColor) {
             super(context);
-            if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                boolean isDark = Theme.isCurrentThemeDark();
+                setBackgroundColor(isDark ? 0x18FFFFFF : 0x12000000);
+            } else if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                 this.shadowDrawable = Theme.getThemedDrawable(getContext(), R.drawable.greydivider, shadowColor);
                 setBackgroundColor(color);
             }

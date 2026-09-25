@@ -23,6 +23,7 @@ import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
+import android.graphics.LinearGradient;
 import android.graphics.Insets;
 import android.graphics.Outline;
 import android.graphics.Paint;
@@ -84,6 +85,7 @@ import org.telegram.ui.Components.AnimatedEmojiSpan;
 import org.telegram.ui.Components.AnimationProperties;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
+import org.telegram.ui.Components.LiquidGlassButtonDrawable;
 import org.telegram.ui.Components.M3ExpressiveButtonDrawable;
 import org.telegram.ui.Components.ScaleStateListAnimator;
 import org.telegram.ui.Components.CubicBezierInterpolator;
@@ -1063,7 +1065,13 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
 
             currentType = type;
             if (type != Builder.CELL_TYPE_CALL) {
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    setBackground(Theme.createSimpleSelectorRoundRectDrawable(
+                            dp(12),
+                            0x00000000,
+                            Theme.multAlpha(getThemedColor(Theme.key_dialogTextBlack), .10f)
+                    ));
+                } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                     M3ExpressiveButtonDrawable selector = new M3ExpressiveButtonDrawable(
                             Color.TRANSPARENT,
                             Theme.multAlpha(getThemedColor(Theme.key_dialogTextBlack), .10f),
@@ -1109,7 +1117,13 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                 textView.setTextColor(getThemedColor(Theme.key_featuredStickers_buttonText));
                 textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
                 textView.setTypeface(AndroidUtilities.bold());
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    textView.setBackground(Theme.createLiquidGlassButtonDrawableByKey(
+                            Theme.key_featuredStickers_addButton,
+                            Theme.key_featuredStickers_buttonText
+                    ));
+                    ScaleStateListAnimator.apply(textView, .035f, 1.4f, true);
+                } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                     textView.setBackground(M3ExpressiveButtonDrawable.createPrimary(
                             getThemedColor(Theme.key_featuredStickers_addButton),
                             Theme.multAlpha(getThemedColor(Theme.key_featuredStickers_buttonText), .16f),
@@ -1243,14 +1257,20 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
 
         Rect padding = new Rect();
         shadowDrawable = context.getResources().getDrawable(R.drawable.sheet_shadow_round).mutate();
-        shadowDrawable.setColorFilter(new PorterDuffColorFilter(internalBackgroundColor = getThemedColor(Theme.key_dialogBackground), PorterDuff.Mode.MULTIPLY));
+        int dialogBg = getThemedColor(Theme.key_dialogBackground);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            boolean isDark = Theme.isCurrentThemeDark() || AndroidUtilities.computePerceivedBrightness(dialogBg) < 0.721f;
+            dialogBg = isDark ? 0xFF1C1C1E : 0xFFFFFFFF;
+            dialogBg = Theme.multAlpha(dialogBg, xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity());
+        }
+        shadowDrawable.setColorFilter(new PorterDuffColorFilter(internalBackgroundColor = dialogBg, PorterDuff.Mode.MULTIPLY));
         shadowDrawable.getPadding(padding);
         backgroundPaddingLeft = padding.left;
         backgroundPaddingTop = padding.top;
 
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-            openInterpolator = xyz.nextalone.nagram.ui.UIStyleEngine.getExpressiveSpringInterpolator();
-            openDuration = 360;
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            openInterpolator = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : xyz.nextalone.nagram.ui.UIStyleEngine.getExpressiveSpringInterpolator();
+            openDuration = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 420 : 360;
         }
 
         container = new ContainerView(getContext()) {
@@ -1410,6 +1430,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
             containerView = new FrameLayout(getContext()) {
                 private final Paint m3HandlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
                 private final RectF m3HandleRect = new RectF();
+                private Paint glassStrokePaint;
 
                 @Override
                 public boolean hasOverlappingRendering() {
@@ -1428,8 +1449,8 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                 @Override
                 protected void dispatchDraw(Canvas canvas) {
                     super.dispatchDraw(canvas);
-                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && shouldDrawM3DragHandle()) {
-                        int w = AndroidUtilities.dp(32);
+                    if ((xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) && shouldDrawM3DragHandle()) {
+                        int w = AndroidUtilities.dp(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 36 : 32);
                         int h = AndroidUtilities.dp(4);
                         int y = backgroundPaddingTop + AndroidUtilities.dp(10);
                         float left = (getWidth() - w) / 2.0f;
@@ -1438,10 +1459,31 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                         m3HandlePaint.setColor(color);
                         canvas.drawRoundRect(m3HandleRect, AndroidUtilities.dp(2), AndroidUtilities.dp(2), m3HandlePaint);
                     }
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        if (glassStrokePaint == null) {
+                            glassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                            glassStrokePaint.setStyle(Paint.Style.STROKE);
+                        }
+                        glassStrokePaint.setStrokeWidth(dp(0.85f));
+                        float rad = xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius();
+                        org.telegram.messenger.AndroidUtilities.rectTmp.set(
+                            backgroundPaddingLeft,
+                            backgroundPaddingTop,
+                            getWidth() - backgroundPaddingLeft,
+                            getHeight() + (int) rad
+                        );
+                        glassStrokePaint.setShader(new LinearGradient(
+                            0, org.telegram.messenger.AndroidUtilities.rectTmp.top, 0, org.telegram.messenger.AndroidUtilities.rectTmp.top + dp(120),
+                            new int[]{xyz.nextalone.nagram.ui.UIStyleEngine.getLiquidGlassBubbleStrokeTopColor(), xyz.nextalone.nagram.ui.UIStyleEngine.getLiquidGlassBubbleStrokeBottomColor()},
+                            new float[]{0.0f, 1.0f},
+                            Shader.TileMode.CLAMP
+                        ));
+                        canvas.drawRoundRect(org.telegram.messenger.AndroidUtilities.rectTmp, rad, rad, glassStrokePaint);
+                    }
                 }
             };
             containerView.setBackgroundDrawable(shadowDrawable);
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 containerView.setOutlineProvider(new ViewOutlineProvider() {
                     @Override
                     public void getOutline(View view, Outline outline) {
@@ -1457,7 +1499,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                 });
                 containerView.setClipToOutline(true);
             }
-            int extraTopPadding = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && shouldDrawM3DragHandle() ? dp(14) : 0;
+            int extraTopPadding = (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) && shouldDrawM3DragHandle() ? dp(14) : 0;
             containerView.setPadding(backgroundPaddingLeft, (applyTopPadding ? dp(8) : 0) + backgroundPaddingTop - 1 + extraTopPadding, backgroundPaddingLeft, (applyBottomPadding ? dp(8) : 0));
         }
         containerView.setVisibility(View.INVISIBLE);
@@ -1632,6 +1674,9 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
 
     private int internalBackgroundColor;
     public void setBackgroundColor(int color) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            color = Theme.multAlpha(color, xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity());
+        }
         shadowDrawable.setColorFilter(color, PorterDuff.Mode.MULTIPLY);
         if (internalBackgroundColor != color) {
             internalBackgroundColor = color;
@@ -1654,10 +1699,10 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
             super.show();
         }
         setShowing(true);
-        if (getWindow() != null && Build.VERSION.SDK_INT >= 31 && tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool()) {
+        if (getWindow() != null && Build.VERSION.SDK_INT >= 31 && (tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
             WindowManager.LayoutParams params = getWindow().getAttributes();
-            params.setBlurBehindRadius(AndroidUtilities.dp(tw.nekomimi.nekogram.NekoConfig.blurRadiusGlobal.Int()));
+            params.setBlurBehindRadius(AndroidUtilities.dp(xyz.nextalone.nagram.ui.UIStyleEngine.getGlassBlurRadius()));
             getWindow().setAttributes(params);
         }
         if (focusable) {
@@ -2231,7 +2276,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
     }
 
     protected void onContainerViewTranslation() {
-        if (Build.VERSION.SDK_INT >= 31 && tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool()) {
+        if (Build.VERSION.SDK_INT >= 31 && (tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
             float progress = 0;
             if (containerView != null) {
                 if (transitionFromRight) {
@@ -2546,6 +2591,15 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
     }
 
     private static int getM3BottomSheetColor(int key, int fallbackColor) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (key == Theme.key_dialogBackground || key == Theme.key_dialogBackgroundGray) {
+                int onSurface = Theme.getColor(Theme.key_dialogTextBlack);
+                int color = ColorUtils.blendARGB(fallbackColor, onSurface, key == Theme.key_dialogBackgroundGray ? 0.06f : 0.04f);
+                int targetAlpha = (int) (255 * xyz.nextalone.nagram.ui.UIStyleEngine.getGlassOpacity());
+                return ColorUtils.setAlphaComponent(color, targetAlpha);
+            }
+            return fallbackColor;
+        }
         if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             return fallbackColor;
         }

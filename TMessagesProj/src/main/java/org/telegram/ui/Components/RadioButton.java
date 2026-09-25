@@ -167,16 +167,16 @@ public class RadioButton extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             float cx = getMeasuredWidth() / 2f;
             float cy = getMeasuredHeight() / 2f;
             float effectiveSize = Math.max(size, AndroidUtilities.dp(20));
-            float strokeWidth = AndroidUtilities.dp(2);
+            float strokeWidth = AndroidUtilities.dp(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 1.5f : 2);
             float outerRadius = effectiveSize / 2f - strokeWidth / 2f;
 
             float clampedP = Math.max(0f, Math.min(1f, progress));
-            int resolvedColor = resolveM3Color(M3ColorRoles.Role.OUTLINE, color);
-            int resolvedCheckedColor = resolveM3Color(M3ColorRoles.Role.PRIMARY, checkedColor);
+            int resolvedColor = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? (Theme.isCurrentThemeDark() ? 0x60FFFFFF : 0x30000000) : resolveM3Color(M3ColorRoles.Role.OUTLINE, color);
+            int resolvedCheckedColor = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0xFF007AFF : resolveM3Color(M3ColorRoles.Role.PRIMARY, checkedColor);
             int blendedColor = ColorUtils.blendARGB(resolvedColor, resolvedCheckedColor, clampedP);
 
             paint.setColor(blendedColor);
@@ -193,7 +193,7 @@ public class RadioButton extends View {
                 if (progress > 0f) {
                     checkedPaint.setColor(resolvedCheckedColor);
                     checkedPaint.setStyle(Paint.Style.FILL);
-                    float targetDotRadius = effectiveSize / 4f;
+                    float targetDotRadius = effectiveSize / 4f + (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dp(1) : 0);
                     float currentDotRadius = Math.max(0f, targetDotRadius * progress);
                     canvas.drawCircle(cx, cy, currentDotRadius, checkedPaint);
                 }
