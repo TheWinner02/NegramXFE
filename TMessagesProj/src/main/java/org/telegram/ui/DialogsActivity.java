@@ -5669,7 +5669,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             FilesMigrationService.checkBottomSheet(this);
         }
-        actionBar.setDrawBlurBackground(contentView);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            actionBar.setupGlass(iBlur3FactoryLiquidGlass, org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl.topPanel(resourceProvider));
+        } else {
+            actionBar.setDrawBlurBackground(contentView);
+        }
 
         rightSlidingDialogContainer = new RightSlidingDialogContainer(context) {
 

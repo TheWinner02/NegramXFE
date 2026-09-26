@@ -130,8 +130,11 @@ import org.telegram.ui.Components.UniversalAdapter;
 import org.telegram.ui.Components.UniversalRecyclerView;
 import org.telegram.ui.Components.blur3.DownscaleScrollableNoiseSuppressor;
 import org.telegram.ui.Components.blur3.ViewGroupPartRenderer;
+import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
+import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode;
+import org.telegram.ui.Components.chat.ViewPositionWatcher;
 import org.telegram.ui.Components.voip.VoIPHelper;
 import org.telegram.ui.Stars.StarsController;
 import org.telegram.ui.Stars.StarsIntroActivity;
@@ -400,7 +403,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             private final Paint blurScrimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             @Override
             protected void onDraw(@NonNull Canvas canvas) {
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     return;
                 }
                 int top = actionBar.getHeight();
@@ -414,7 +417,15 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         };
         contentView.addView(actionBarBackground, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 200, Gravity.TOP));
         contentView.addView(actionBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.FILL_HORIZONTAL | Gravity.TOP));
-        actionBar.setDrawBlurBackground(contentView);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && iBlur3SourceGlass != null) {
+            final ViewPositionWatcher vw = new ViewPositionWatcher(contentView);
+            final BlurredBackgroundDrawableViewFactory factory = new BlurredBackgroundDrawableViewFactory(iBlur3SourceGlass);
+            factory.setSourceRootView(vw, contentView);
+            actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
+        } else {
+            actionBar.setDrawBlurBackground(contentView);
+        }
+
 
         imageUpdater = new ImageUpdater(true, ImageUpdater.FOR_TYPE_USER, true);
         imageUpdater.setOpenWithFrontfaceCamera(true);

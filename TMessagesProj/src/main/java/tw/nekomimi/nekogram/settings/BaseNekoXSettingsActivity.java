@@ -12,6 +12,8 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
+import org.telegram.ui.Components.SizeNotifierFrameLayout;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -107,8 +109,14 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
             }
         });
 
-        fragmentView = new FrameLayout(context);
-        fragmentView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            SizeNotifierFrameLayout sizeNotifier = new SizeNotifierFrameLayout(context);
+            fragmentView = sizeNotifier;
+            actionBar.setDrawBlurBackground(sizeNotifier);
+        } else {
+            fragmentView = new FrameLayout(context);
+            fragmentView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+        }
         FrameLayout frameLayout = (FrameLayout) fragmentView;
 
         listView = createListView(context);

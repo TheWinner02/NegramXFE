@@ -1893,7 +1893,7 @@ public class SharedConfig {
     }
 
     public static boolean chatBlurEnabled() {
-        return canBlurChat();
+        return xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || canBlurChat();
     }
 
     public static class BackgroundActivityPrefs {
