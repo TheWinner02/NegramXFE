@@ -21,6 +21,7 @@ import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
+import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -29,6 +30,7 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.TransitionDrawable;
 import android.os.Build;
@@ -3371,10 +3373,14 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         boolean topPadding
     ) {
         boolean m3Expressive = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+        boolean iosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
         m3ExpressivePressedSelector = m3Expressive;
         m3ExpressiveSections = m3Expressive;
         if (m3Expressive) {
             padding = Math.max(padding, dp(12));
+            roundRadius = Math.max(roundRadius, xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius());
+        } else if (iosGlass) {
+            padding = Math.max(padding, dp(16));
             roundRadius = Math.max(roundRadius, xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius());
         }
         if (m3ExpressivePressedSelector && selectorRadius == 0) {
@@ -3772,6 +3778,7 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                 }
             }
         }
+
     }
 
     private void drawM3ExpressiveSectionItemBackgrounds(Canvas canvas) {
@@ -3865,10 +3872,18 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
 
     private final static Paint sectionBackgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final static Paint sectionBackgroundStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final static Paint sectionGlassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    static {
+        sectionGlassStrokePaint.setStyle(Paint.Style.STROKE);
+    }
     private final static Path sectionBackgroundPath = new Path();
     private final static float[] radii = new float[8];
     public static void drawBackgroundRect(Canvas canvas, RectF rect, float topRadius, float bottomRadius, float alpha, Theme.ResourcesProvider resourcesProvider) {
-        if (SharedConfig.shadowsInSections) {
+        final boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        final boolean isDark = Theme.isCurrentThemeDark();
+        if (isIosGlass) {
+            sectionBackgroundPaint.setShadowLayer(dpf2(2.5f), 0, dpf2(0.66f), multAlpha(isDark ? 0x22000000 : 0x08000000, alpha));
+        } else if (SharedConfig.shadowsInSections) {
             sectionBackgroundStrokePaint.setShadowLayer(dpf2(0.33f), 0, 0, multAlpha(0x0c000000, alpha));
             sectionBackgroundStrokePaint.setColor(0);
             sectionBackgroundPaint.setShadowLayer(dpf2(2), 0, dpf2(0.33f), multAlpha(0x0a000000, alpha));
@@ -3883,22 +3898,31 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                 0.18f
             );
             backgroundColor = M3ColorRoles.surfaceContainer(fallbackColor);
+        } else if (isIosGlass) {
+            sectionGlassStrokePaint.setStrokeWidth(dpf2(0.5f));
+            sectionGlassStrokePaint.setColor(multAlpha(isDark ? 0x14FFFFFF : 0x06000000, alpha));
         }
         sectionBackgroundPaint.setColor(multAlpha(backgroundColor, alpha));
         if (topRadius == bottomRadius) {
-            if (SharedConfig.shadowsInSections) {
+            if (SharedConfig.shadowsInSections && !isIosGlass) {
                 canvas.drawRoundRect(rect, topRadius, topRadius, sectionBackgroundStrokePaint);
             }
             canvas.drawRoundRect(rect, topRadius, topRadius, sectionBackgroundPaint);
+            if (isIosGlass) {
+                canvas.drawRoundRect(rect, topRadius, topRadius, sectionGlassStrokePaint);
+            }
         } else {
             sectionBackgroundPath.rewind();
             radii[0] = radii[1] = radii[2] = radii[3] = topRadius;
             radii[4] = radii[5] = radii[6] = radii[7] = bottomRadius;
             sectionBackgroundPath.addRoundRect(rect, radii, Path.Direction.CW);
-            if (SharedConfig.shadowsInSections) {
+            if (SharedConfig.shadowsInSections && !isIosGlass) {
                 canvas.drawPath(sectionBackgroundPath, sectionBackgroundStrokePaint);
             }
             canvas.drawPath(sectionBackgroundPath, sectionBackgroundPaint);
+            if (isIosGlass) {
+                canvas.drawPath(sectionBackgroundPath, sectionGlassStrokePaint);
+            }
         }
     }
     public void drawBackgroundRect(Canvas canvas, RectF rect, float topRadius, float bottomRadius, float alpha) {

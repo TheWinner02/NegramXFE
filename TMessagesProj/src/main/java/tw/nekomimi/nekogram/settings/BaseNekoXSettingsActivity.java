@@ -111,6 +111,7 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
 
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             SizeNotifierFrameLayout sizeNotifier = new SizeNotifierFrameLayout(context);
+            sizeNotifier.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
             fragmentView = sizeNotifier;
             actionBar.setDrawBlurBackground(sizeNotifier);
         } else {
@@ -183,6 +184,17 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
                 listView::drawBackgroundRect,
                 true
             );
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            listView.setPadding(0, 0, 0, dp(80));
+            actionBar.setAdaptiveBackground(listView);
+            listView.setSections(
+                this::isM3SettingsSectionView,
+                this::isM3SettingsSectionViewType,
+                dp(16),
+                xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
+                listView::drawBackgroundRect,
+                true
+            );
         } else {
             listView.setPadding(0, 0, 0, dp(80));
             actionBar.setAdaptiveBackground(listView);
@@ -206,7 +218,19 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
             viewType == CellGroup.ITEM_TYPE_TEXT_CHECK_ICON ||
             viewType == CellGroup.ITEM_TYPE_CHECK2 ||
             viewType == CellGroup.ITEM_TYPE_CHECK_BOX ||
-            viewType == CellGroup.ITEM_TYPE_TEXT_DETAIL_ICON;
+            viewType == CellGroup.ITEM_TYPE_TEXT_DETAIL_ICON ||
+            viewType == CellGroup.ITEM_TYPE_CONNECTED_BUTTON_GROUP ||
+            viewType == ConfigCellCustom.CUSTOM_ITEM_BlurRadiusDrawer ||
+            viewType == ConfigCellCustom.CUSTOM_ITEM_BlurRadiusGlobal ||
+            viewType == ConfigCellCustom.CUSTOM_ITEM_MainTabsGlassAlpha ||
+            viewType == ConfigCellCustom.CUSTOM_ITEM_MainTabsBlurRadius ||
+            viewType == ConfigCellCustom.CUSTOM_ITEM_ActionBarGlassAlpha ||
+            viewType == ConfigCellCustom.CUSTOM_ITEM_ActionBarBlurRadius ||
+            viewType == ConfigCellCustom.CUSTOM_ITEM_StickerSize ||
+            viewType == ConfigCellCustom.CUSTOM_ITEM_Temperature ||
+            viewType == ConfigCellCustom.CUSTOM_ITEM_AttachmentSizeLimit ||
+            viewType == ConfigCellCustom.CUSTOM_ITEM_EmojiSet ||
+            viewType == ConfigCellCustom.CUSTOM_ITEM_DeletedMessagesColorPicker;
     }
 
     private int getM3HeaderTopPadding() {
@@ -479,12 +503,17 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
     }
 
     protected void styleTextInfoPrivacyCell(TextInfoPrivacyCell cell) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            cell.setBackground(null);
+        }
     }
 
     @Override
     public ArrayList<ThemeDescription> getThemeDescriptions() {
         ArrayList<ThemeDescription> themeDescriptions = new ArrayList<>();
-        themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_CELLBACKGROUNDCOLOR, new Class[]{EmptyCell.class, TextSettingsCell.class, TextCheckCell.class, HeaderCell.class, TextDetailSettingsCell.class, NotificationsCheckCell.class}, null, null, null, Theme.key_windowBackgroundWhite));
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_CELLBACKGROUNDCOLOR, new Class[]{EmptyCell.class, TextSettingsCell.class, TextCheckCell.class, HeaderCell.class, TextDetailSettingsCell.class, NotificationsCheckCell.class}, null, null, null, Theme.key_windowBackgroundWhite));
+        }
         themeDescriptions.add(new ThemeDescription(fragmentView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundGray));
 
         themeDescriptions.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_avatar_backgroundActionBarBlue));
@@ -608,7 +637,11 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
                 view = createDefaultViewByType(viewType);
             }
             if (viewType == CellGroup.ITEM_TYPE_TEXT && view instanceof TextInfoPrivacyCell textInfoPrivacyCell) {
-                styleTextInfoPrivacyCell(textInfoPrivacyCell);
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    textInfoPrivacyCell.setBackground(null);
+                } else {
+                    styleTextInfoPrivacyCell(textInfoPrivacyCell);
+                }
             }
             // noinspection ConstantConditions
             view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
@@ -659,6 +692,13 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
                 case CellGroup.ITEM_TYPE_CONNECTED_BUTTON_GROUP:
                     view = new M3ConnectedButtonGroupCell(mContext);
                     break;
+            }
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                if (view != null && isM3SettingsSectionViewType(viewType)) {
+                    view.setBackgroundColor(0x00000000);
+                } else if (viewType == CellGroup.ITEM_TYPE_HEADER && view != null) {
+                    view.setBackgroundColor(0x00000000);
+                }
             }
             return view;
         }

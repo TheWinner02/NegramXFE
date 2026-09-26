@@ -86,6 +86,11 @@ public class HeaderCell extends LinearLayout {
         // produces only horizontal padding motion (no vertical jump). Aligns with AyuGram, whose
         // default topMargin is 6 in both states. Convenience constructors above now also default
         // to 6 to match AyuGram's baseline.
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (textColorKey == Theme.key_windowBackgroundWhiteBlueHeader) {
+                textColorKey = Theme.key_windowBackgroundWhiteGrayText2;
+            }
+        }
         int effectiveTopMargin = topMargin;
 
         setOrientation(LinearLayout.VERTICAL);

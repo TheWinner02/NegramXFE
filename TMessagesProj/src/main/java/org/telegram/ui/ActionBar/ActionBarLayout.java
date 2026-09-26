@@ -3894,7 +3894,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     }
 
     public boolean isActionBarInCrossfade() {
-        if (!USE_ACTIONBAR_CROSSFADE) {
+        if (!USE_ACTIONBAR_CROSSFADE || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             return false;
         }
         boolean crossfadeNoFragments = SharedConfig.animationsEnabled() && !isInPreviewMode() && (isSwipeInProgress() || isTransitionAnimationInProgress()) && currentAnimation == null;

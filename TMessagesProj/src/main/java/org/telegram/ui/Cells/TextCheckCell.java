@@ -442,8 +442,12 @@ public class TextCheckCell extends FrameLayout {
         if (needDivider) {
             Paint dividerPaint = resourcesProvider != null ? resourcesProvider.getPaint(Theme.key_paint_divider) : Theme.dividerPaint;
             if (dividerPaint != null) {
+                int origColor = dividerPaint.getColor();
                 int alpha = dividerPaint.getAlpha();
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    boolean isDark = Theme.isCurrentThemeDark();
+                    dividerPaint.setColor(isDark ? 0x24FFFFFF : 0x1F000000);
+                } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                     dividerPaint.setAlpha((int) (alpha * 0.38f));
                 }
                 if (imageView != null) {
@@ -451,7 +455,11 @@ public class TextCheckCell extends FrameLayout {
                 } else {
                     canvas.drawLine(LocaleController.isRTL ? 0 : AndroidUtilities.dp(20), getMeasuredHeight() - 1, getMeasuredWidth() - (LocaleController.isRTL ? AndroidUtilities.dp(20) : 0), getMeasuredHeight() - 1, dividerPaint);
                 }
-                dividerPaint.setAlpha(alpha);
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    dividerPaint.setColor(origColor);
+                } else {
+                    dividerPaint.setAlpha(alpha);
+                }
             }
         }
     }

@@ -1033,7 +1033,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
             rightSlidingDialogContainer.setCurrentTop(top + actionBarHeight);
             float storiesAlpha = 1f;
-            if (whiteActionBar) {
+            if (whiteActionBar && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 if (searchAnimationProgress == 1f) {
                     actionBarSearchPaint.setColor(getThemedColor(Theme.key_windowBackgroundWhite));
                 } else if (searchAnimationProgress == 0) {
@@ -1056,7 +1056,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         fragmentSearchField.setTranslationY(top + actionBarHeight - (actionBar.getHeight() + (filterTabsView != null ? filterTabsView.getMeasuredHeight() : 0)) + getSearchFieldAdditionOffset());
                     }
                 }
-            } else if (!inPreviewMode) {
+            } else if (!inPreviewMode && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 if (progressToActionMode > 0) {
                     actionBarSearchPaint.setColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     blurBounds.set(0, Math.max(0, top), getMeasuredWidth(), top + actionBarHeight - dp(2 * searchAnimationProgress));
@@ -4949,6 +4949,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         topBubblesFadeView = new DialogsActivityTopBubblesFadeView(context);
         topBubblesFadeView.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            topBubblesFadeView.setVisibility(View.GONE);
+        }
         contentView.addView(topBubblesFadeView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 100, Gravity.TOP));
 
         searchViewPagerIndex = contentView.getChildCount();
@@ -6887,10 +6890,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         if (topBubblesFadeView != null) {
-            topBubblesFadeView.setTranslationY(fadeViewT - searchOffset);
-            final float s = lerp(dp(7), dp(50), Math.min(topPanelsVisibility, filtersTabVisibility));
-            topBubblesFadeView.setPosition(s, Math.min(dp(40), topPanelsHeight + filtersTabHeight - s));
-            topBubblesFadeView.setAlpha(Math.max(filtersTabVisibility, topPanelsVisibility));
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                topBubblesFadeView.setVisibility(View.GONE);
+            } else {
+                topBubblesFadeView.setTranslationY(fadeViewT - searchOffset);
+                final float s = lerp(dp(7), dp(50), Math.min(topPanelsVisibility, filtersTabVisibility));
+                topBubblesFadeView.setPosition(s, Math.min(dp(40), topPanelsHeight + filtersTabHeight - s));
+                topBubblesFadeView.setAlpha(Math.max(filtersTabVisibility, topPanelsVisibility));
+            }
         }
     }
 
@@ -14864,7 +14871,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void drawHeaderShadow(Canvas canvas, int sy) {
-        if (parentLayout == null || actionBar == null /*|| !actionBar.getCastShadows()*/) {
+        if (parentLayout == null || actionBar == null || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() /*|| !actionBar.getCastShadows()*/) {
             return;
         }
 

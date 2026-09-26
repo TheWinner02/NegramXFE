@@ -213,6 +213,16 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
                 searchListView::drawBackgroundRect,
                 true
             );
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            searchListView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+            searchListView.setSections(
+                v -> v instanceof SettingsSearchCell,
+                t -> t == 0,
+                dp(16),
+                xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
+                searchListView::drawBackgroundRect,
+                true
+            );
         }
 
         searchAdapter = new RecyclerListView.SelectionAdapter() {

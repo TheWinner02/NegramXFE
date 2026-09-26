@@ -1456,6 +1456,10 @@ public class CacheControlActivity extends BaseFragment implements NotificationCe
 
         frameLayout.addView(actionBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            actionBar.applyIosLiquidGlassTopBar();
+        }
+
         nestedSizeNotifierLayout.setTargetListView(listView);
         return fragmentView;
     }
@@ -1503,7 +1507,11 @@ public class CacheControlActivity extends BaseFragment implements NotificationCe
             actionBarAnimator.addUpdateListener(anm -> {
                 actionBarShownT = (float) anm.getAnimatedValue();
                 actionBar.setTitleColor(ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), (int) (255 * actionBarShownT)));
-                actionBar.setBackgroundColor(ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_windowBackgroundWhite), (int) (255 * actionBarShownT)));
+                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    actionBar.setBackgroundColor(ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_windowBackgroundWhite), (int) (255 * actionBarShownT)));
+                } else {
+                    actionBar.invalidate();
+                }
                 fragmentView.invalidate();
             });
             actionBarAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);

@@ -47,7 +47,7 @@ object UIStyleEngine {
     fun getCardCornerRadius(): Float {
         return when {
             isMaterial3Expressive() -> AndroidUtilities.dp(24f).toFloat()
-            isIosLiquidGlass() -> AndroidUtilities.dp(16f).toFloat()
+            isIosLiquidGlass() -> AndroidUtilities.dp(32f).toFloat()
             else -> AndroidUtilities.dp(12f).toFloat()
         }
     }

@@ -671,12 +671,14 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         if (!animated) {
             actionBar.getTitlesContainer().setAlpha(visible ? 1.0f : 0.0f);
             actionBarBackground.setAlpha(visible ? 1.0f : 0.0f);
+            actionBar.invalidate();
         } else {
             actionBarVisibleAnimator = ValueAnimator.ofFloat(actionBar.getTitlesContainer().getAlpha(), visible ? 1.0f : 0.0f);
             actionBarVisibleAnimator.addUpdateListener(a -> {
                 final float t = (float) a.getAnimatedValue();
                 actionBar.getTitlesContainer().setAlpha(t);
                 actionBarBackground.setAlpha(t);
+                actionBar.invalidate();
             });
             actionBarVisibleAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
             actionBarVisibleAnimator.setDuration(420);

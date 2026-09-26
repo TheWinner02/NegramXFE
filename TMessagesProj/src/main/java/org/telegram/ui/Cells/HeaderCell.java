@@ -87,6 +87,10 @@ public class HeaderCell extends FrameLayout {
             if (textColorKey == Theme.key_windowBackgroundWhiteBlueHeader) {
                 textColorKey = Theme.key_windowBackgroundWhiteGrayText2;
             }
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (textColorKey == Theme.key_windowBackgroundWhiteBlueHeader) {
+                textColorKey = Theme.key_windowBackgroundWhiteGrayText2;
+            }
         }
         this.bottomMargin = bottomMargin;
         this.animated = animated;

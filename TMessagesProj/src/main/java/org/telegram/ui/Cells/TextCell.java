@@ -860,12 +860,20 @@ public class TextCell extends FrameLayout {
             if (paint == null) {
                 paint = Theme.dividerPaint;
             }
+            int origColor = paint.getColor();
             int alpha = paint.getAlpha();
-            if (isM3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                boolean isDark = Theme.isCurrentThemeDark();
+                paint.setColor(isDark ? 0x24FFFFFF : 0x1F000000);
+            } else if (isM3Expressive()) {
                 paint.setAlpha((int) (alpha * 0.38f));
             }
             canvas.drawLine(LocaleController.isRTL ? 0 : dp(imageView.getVisibility() == VISIBLE ? (inDialogs ? 72 : 58) : 20), getMeasuredHeight() - 1, getMeasuredWidth() - (LocaleController.isRTL ? dp(imageView.getVisibility() == VISIBLE ? (inDialogs ? 72 : 58) : 20) : 0), getMeasuredHeight() - 1, paint);
-            paint.setAlpha(alpha);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                paint.setColor(origColor);
+            } else {
+                paint.setAlpha(alpha);
+            }
         }
     }
 

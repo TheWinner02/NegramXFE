@@ -405,12 +405,20 @@ public class TextSettingsCell extends FrameLayout {
 
         if (needDivider) {
             int offset = AndroidUtilities.dp(imageView.getVisibility() == View.VISIBLE ? 58 : 20);
+            int origColor = Theme.dividerPaint.getColor();
             int alpha = Theme.dividerPaint.getAlpha();
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                boolean isDark = Theme.isCurrentThemeDark();
+                Theme.dividerPaint.setColor(isDark ? 0x24FFFFFF : 0x1F000000);
+            } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                 Theme.dividerPaint.setAlpha((int) (alpha * 0.38f));
             }
             canvas.drawLine(LocaleController.isRTL ? 0 : offset, getMeasuredHeight() - 1, getMeasuredWidth() - (LocaleController.isRTL ? offset : 0), getMeasuredHeight() - 1, Theme.dividerPaint);
-            Theme.dividerPaint.setAlpha(alpha);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                Theme.dividerPaint.setColor(origColor);
+            } else {
+                Theme.dividerPaint.setAlpha(alpha);
+            }
         }
     }
 

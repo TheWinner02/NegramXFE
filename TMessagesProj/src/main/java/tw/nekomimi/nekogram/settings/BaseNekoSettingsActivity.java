@@ -169,6 +169,17 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
                 }
             });
             actionBar.setM3CollapseProgress(0.0f);
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            listView.setPadding(0, 0, 0, dp(80));
+            listView.setSections(
+                this::isM3SettingsSectionView,
+                this::isM3SettingsSectionViewType,
+                dp(16),
+                xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
+                listView::drawBackgroundRect,
+                true
+            );
+            actionBar.setAdaptiveBackground(listView);
         } else {
             listView.setSections(true);
             actionBar.setAdaptiveBackground(listView);
@@ -422,7 +433,11 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
                     break;
                 case TYPE_HEADER:
                     view = new HeaderCell(mContext, resourcesProvider);
-                    view.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        view.setBackgroundColor(0x00000000);
+                    } else {
+                        view.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    }
                     break;
                 case TYPE_NOTIFICATION_CHECK:
                     view = new NotificationsCheckCell(mContext, resourcesProvider);
@@ -434,7 +449,11 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
                     break;
                 case TYPE_INFO_PRIVACY:
                     view = new TextInfoPrivacyCell(mContext, resourcesProvider);
-                    view.setBackground(Theme.getThemedDrawable(mContext, R.drawable.greydivider, getThemedColor(Theme.key_windowBackgroundGrayShadow)));
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        view.setBackground(null);
+                    } else {
+                        view.setBackground(Theme.getThemedDrawable(mContext, R.drawable.greydivider, getThemedColor(Theme.key_windowBackgroundGrayShadow)));
+                    }
                     break;
                 case TYPE_TEXT:
                     view = new TextCell(mContext, resourcesProvider);
@@ -486,7 +505,7 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
         }
 
         private void setM3SectionCellBackground(@NonNull View view) {
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 view.setBackgroundColor(0x00000000);
             } else {
                 view.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));

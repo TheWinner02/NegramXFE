@@ -77,6 +77,8 @@ import org.telegram.ui.Components.SnowflakesEffect;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProvider;
+import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
+import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
 import org.telegram.ui.MainTabsLayout;
 
 import java.util.ArrayList;
@@ -269,8 +271,18 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             actionMode.setGlassMode(true);
         }
         if (backButtonImageView != null) {
-            backButtonImageView.setTranslationX(dp(2));
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                backButtonImageView.setTranslationX(0);
+                backButtonImageView.setPadding(0, 0, 0, 0);
+                updateBackButtonBackground();
+            } else {
+                backButtonImageView.setTranslationX(dp(2));
+            }
         }
+    }
+
+    public boolean isGlassMode() {
+        return glassMode;
     }
 
     public INavigationLayout.BackButtonState getBackButtonState() {
@@ -319,7 +331,11 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         boolean actionMode = actionModeVisible || isActionModeShowed();
         int iconColor = actionMode ? itemsActionModeColor : itemsColor;
         int backgroundColor = actionMode ? itemsActionModeBackgroundColor : itemsBackgroundColor;
-        backButtonImageView.setBackgroundDrawable(createExpressiveActionButtonDrawable(iconColor, backgroundColor));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) {
+            backButtonImageView.setBackgroundDrawable(Theme.createSimpleSelectorRoundRectDrawable(dp(23), 0, Theme.getColor(Theme.key_listSelector, resourcesProvider)));
+        } else {
+            backButtonImageView.setBackgroundDrawable(createExpressiveActionButtonDrawable(iconColor, backgroundColor));
+        }
         ScaleStateListAnimator.apply(backButtonImageView);
     }
 
@@ -336,8 +352,14 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         };
         backButtonImageView.setScaleType(ImageView.ScaleType.CENTER);
         updateBackButtonBackground();
-        backButtonImageView.setPadding(dp(1), 0, 0, 0);
-        addView(backButtonImageView, LayoutHelper.createFrame(54, 54, Gravity.LEFT | Gravity.TOP));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) {
+            backButtonImageView.setPadding(0, 0, 0, 0);
+            backButtonImageView.setTranslationX(0);
+        } else {
+            backButtonImageView.setPadding(dp(1), 0, 0, 0);
+        }
+        int btnWidth = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) ? 58 : 54;
+        addView(backButtonImageView, LayoutHelper.createFrame(btnWidth, 54, Gravity.LEFT | Gravity.TOP));
 
         backButtonImageView.setOnClickListener(v -> {
             if (!actionModeVisible && isSearchFieldVisible) {
@@ -370,10 +392,10 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             MenuDrawable menuDrawable = (MenuDrawable) drawable;
             menuDrawable.setBackColor(actionBarColor);
             menuDrawable.setIconColor(itemsColor);
-        } else if (drawable instanceof BitmapDrawable || drawable instanceof VectorDrawable) {
+        } else if (drawable != null) {
             backButtonImageView.setColorFilter(new PorterDuffColorFilter(itemsColor, PorterDuff.Mode.SRC_IN));
         }
-        if (mAlwaysApplyColorFilterToBackButton) {
+        if (mAlwaysApplyColorFilterToBackButton || (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode)) {
             backButtonImageView.setColorFilter(new PorterDuffColorFilter(itemsColor, PorterDuff.Mode.SRC_IN));
         }
 
@@ -540,6 +562,11 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         backButtonImageView.setVisibility(resource == 0 ? GONE : VISIBLE);
         backButtonImageView.setImageResource(resource);
         backButtonImageView.setColorFilter(new PorterDuffColorFilter(itemsColor, PorterDuff.Mode.SRC_IN));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) {
+            backButtonImageView.setPadding(0, 0, 0, 0);
+            backButtonImageView.setTranslationX(0);
+            updateBackButtonBackground();
+        }
         checkBackButtonLayerType();
     }
 
@@ -556,7 +583,11 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         subtitleTextView = new SimpleTextView(getContext());
         subtitleTextView.setGravity(isCentered() ? Gravity.CENTER : Gravity.LEFT);
         subtitleTextView.setVisibility(GONE);
-        subtitleTextView.setTextColor(getThemedColor(Theme.key_actionBarDefaultSubtitle));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) {
+            subtitleTextView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteGrayText2));
+        } else {
+            subtitleTextView.setTextColor(getThemedColor(Theme.key_actionBarDefaultSubtitle));
+        }
         addView(subtitleTextView, 0, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP));
     }
 
@@ -567,7 +598,11 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         additionalSubtitleTextView = new SimpleTextView(getContext());
         additionalSubtitleTextView.setGravity(isCentered() ? Gravity.CENTER : Gravity.LEFT);
         additionalSubtitleTextView.setVisibility(GONE);
-        additionalSubtitleTextView.setTextColor(getThemedColor(Theme.key_actionBarDefaultSubtitle));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) {
+            additionalSubtitleTextView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteGrayText2));
+        } else {
+            additionalSubtitleTextView.setTextColor(getThemedColor(Theme.key_actionBarDefaultSubtitle));
+        }
         addView(additionalSubtitleTextView, 0, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP));
     }
 
@@ -610,6 +645,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         titleTextView[i].setGravity(isCenterTitle ? Gravity.CENTER : Gravity.LEFT | Gravity.CENTER_VERTICAL);
         if (titleColorToSet != 0) {
             titleTextView[i].setTextColor(titleColorToSet);
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) {
+            titleTextView[i].setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText));
         } else {
             titleTextView[i].setTextColor(getThemedColor(Theme.key_actionBarDefaultTitle));
         }
@@ -781,6 +818,12 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             return menu;
         }
         menu = new ActionBarMenu(getContext(), this);
+        if (glassMode) {
+            menu.setTranslationX(-dp(10));
+            menu.setGlassMode(true);
+            menu.updateItemsColor();
+            menu.updateItemsBackgroundColor();
+        }
         addView(menu, 0, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.RIGHT));
         return menu;
     }
@@ -1250,8 +1293,10 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     @Override
     public void setBackgroundColor(int color) {
         actionBarColor = color;
-        if (!blurredBackground) {
+        if (!blurredBackground && !glassMode) {
             super.setBackgroundColor(actionBarColor);
+        } else if (glassMode) {
+            super.setBackground(null);
         }
         if (backButtonImageView != null) {
             Drawable drawable = backButtonImageView.getDrawable();
@@ -1259,6 +1304,24 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 ((MenuDrawable) drawable).setBackColor(color);
             }
         }
+    }
+
+    @Override
+    public void setBackground(Drawable background) {
+        if (glassMode) {
+            super.setBackground(null);
+            return;
+        }
+        super.setBackground(background);
+    }
+
+    @Override
+    public void setBackgroundDrawable(Drawable background) {
+        if (glassMode) {
+            super.setBackgroundDrawable(null);
+            return;
+        }
+        super.setBackgroundDrawable(background);
     }
 
     public int getBackgroundColor() {
@@ -1589,7 +1652,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
 
         int textLeft;
         if (backButtonImageView != null && backButtonImageView.getVisibility() != GONE) {
-            backButtonImageView.measure(MeasureSpec.makeMeasureSpec(dp(54), MeasureSpec.EXACTLY), actionBarHeightSpec);
+            int backBtnWidth = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) ? dp(58) : dp(54);
+            backButtonImageView.measure(MeasureSpec.makeMeasureSpec(backBtnWidth, MeasureSpec.EXACTLY), actionBarHeightSpec);
             textLeft = dp(AndroidUtilities.isTablet() ? 80 : 72);
         } else {
             textLeft = dp(AndroidUtilities.isTablet() ? 26 : 18);
@@ -1713,14 +1777,14 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             checkAvatarContainerWidth(animatorAvatarContainerWidth.isAnimating());
         }
 
-        final int capsulePad = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode ? dp(4) : 0;
+        final int capsulePad = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode ? dp(6) : 0;
 
         int textLeft;
         if (backButtonImageView != null && backButtonImageView.getVisibility() != GONE) {
             backButtonImageView.layout(capsulePad, additionalTop, capsulePad + backButtonImageView.getMeasuredWidth(), additionalTop + backButtonImageView.getMeasuredHeight());
-            textLeft = glassMode ? dp(76) + capsulePad : dp(AndroidUtilities.isTablet() ? 80 : 72);
+            textLeft = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode ? dp(88) : (glassMode ? dp(76) + capsulePad : dp(AndroidUtilities.isTablet() ? 80 : 72));
         } else {
-            textLeft = glassMode ? dp(24) + capsulePad : dp(AndroidUtilities.isTablet() ? 26 : 18);
+            textLeft = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode ? (capsulePad + dp(16)) : (glassMode ? dp(24) + capsulePad : dp(AndroidUtilities.isTablet() ? 26 : 18));
         }
         textLeft += additionalTextLeft;
 
@@ -1743,7 +1807,14 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 }
 
                 if (isCentered()) {
-                    titleTextView[i].layout(getMeasuredWidth() / 2 - titleTextView[i].getMeasuredWidth() / 2, additionalTop + textTop - titleTextView[i].getPaddingTop(), getMeasuredWidth() / 2 + titleTextView[i].getMeasuredWidth() / 2, additionalTop + textTop + titleTextView[i].getTextHeight() - titleTextView[i].getPaddingTop() + titleTextView[i].getPaddingBottom());
+                    int cLeft = getMeasuredWidth() / 2 - titleTextView[i].getMeasuredWidth() / 2;
+                    int cRight = getMeasuredWidth() / 2 + titleTextView[i].getMeasuredWidth() / 2;
+                    if (cLeft < textLeft) {
+                        int shift = textLeft - cLeft;
+                        cLeft += shift;
+                        cRight += shift;
+                    }
+                    titleTextView[i].layout(cLeft, additionalTop + textTop - titleTextView[i].getPaddingTop(), cRight, additionalTop + textTop + titleTextView[i].getTextHeight() - titleTextView[i].getPaddingTop() + titleTextView[i].getPaddingBottom());
                 } else {
                     titleTextView[i].layout(textLeft, additionalTop + textTop - titleTextView[i].getPaddingTop(), textLeft + titleTextView[i].getMeasuredWidth(), additionalTop + textTop + titleTextView[i].getTextHeight() - titleTextView[i].getPaddingTop() + titleTextView[i].getPaddingBottom());
                 }
@@ -1759,14 +1830,32 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         }
         if (subtitleTextView != null && subtitleTextView.getVisibility() != GONE) {
             int textTop = getCurrentActionBarHeight() / 2 + (getCurrentActionBarHeight() / 2 - subtitleTextView.getTextHeight()) / 2 - dp(2);
-            subtitleTextView.layout(textLeft, additionalTop + textTop, textLeft + subtitleTextView.getMeasuredWidth(), additionalTop + textTop + subtitleTextView.getTextHeight());
+            if (isCentered()) {
+                int sLeft = getMeasuredWidth() / 2 - subtitleTextView.getMeasuredWidth() / 2;
+                int sRight = getMeasuredWidth() / 2 + subtitleTextView.getMeasuredWidth() / 2;
+                if (sLeft < textLeft) {
+                    int shift = textLeft - sLeft;
+                    sLeft += shift;
+                    sRight += shift;
+                }
+                subtitleTextView.layout(sLeft, additionalTop + textTop, sRight, additionalTop + textTop + subtitleTextView.getTextHeight());
+            } else {
+                subtitleTextView.layout(textLeft, additionalTop + textTop, textLeft + subtitleTextView.getMeasuredWidth(), additionalTop + textTop + subtitleTextView.getTextHeight());
+            }
         }
 
         if (additionalSubtitleTextView != null && additionalSubtitleTextView.getVisibility() != GONE) {
             int textTop = getCurrentActionBarHeight() / 2 + (getCurrentActionBarHeight() / 2 - additionalSubtitleTextView.getTextHeight()) / 2 - dp(!AndroidUtilities.isTablet() && getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE ? 1 : 1);
 
             if (isCentered()) {
-                additionalSubtitleTextView.layout(getMeasuredWidth() / 2 - additionalSubtitleTextView.getMeasuredWidth() / 2, additionalTop + textTop, getMeasuredWidth() / 2 + additionalSubtitleTextView.getMeasuredWidth() / 2, additionalTop + textTop + additionalSubtitleTextView.getTextHeight());
+                int sLeft = getMeasuredWidth() / 2 - additionalSubtitleTextView.getMeasuredWidth() / 2;
+                int sRight = getMeasuredWidth() / 2 + additionalSubtitleTextView.getMeasuredWidth() / 2;
+                if (sLeft < textLeft) {
+                    int shift = textLeft - sLeft;
+                    sLeft += shift;
+                    sRight += shift;
+                }
+                additionalSubtitleTextView.layout(sLeft, additionalTop + textTop, sRight, additionalTop + textTop + additionalSubtitleTextView.getTextHeight());
             } else {
                 additionalSubtitleTextView.layout(textLeft, additionalTop + textTop, textLeft + additionalSubtitleTextView.getMeasuredWidth(), additionalTop + textTop + additionalSubtitleTextView.getTextHeight());
             }
@@ -2022,6 +2111,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                     ((BackDrawable) drawable).setRotatedColor(color);
                 } else if (drawable instanceof BitmapDrawable || drawable instanceof VectorDrawable) {
                     backButtonImageView.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+                } else if (drawable != null) {
+                    backButtonImageView.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
                 }
             }
         } else {
@@ -2033,7 +2124,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                         ((BackDrawable) drawable).setColor(color);
                     } else if (drawable instanceof MenuDrawable) {
                         ((MenuDrawable) drawable).setIconColor(color);
-                    } else if (drawable instanceof BitmapDrawable || drawable instanceof VectorDrawable) {
+                    } else if (drawable != null) {
                         backButtonImageView.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
                     }
                 }
@@ -2043,7 +2134,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             }
         }
 
-        if (backButtonImageView != null && mAlwaysApplyColorFilterToBackButton) {
+        if (backButtonImageView != null && (mAlwaysApplyColorFilterToBackButton || (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode))) {
             backButtonImageView.setColorFilter(new PorterDuffColorFilter(itemsColor, PorterDuff.Mode.SRC_IN));
         }
         updateBackButtonBackground();
@@ -2499,9 +2590,15 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         final int b = t + s + p * 2;
 
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (shouldAddToContainer()) {
+                int bgColor = adaptive_topColorKey != 0 && adaptive_topColorKey != -1
+                        ? getThemedColor(adaptive_topColorKey)
+                        : getThemedColor(Theme.key_windowBackgroundGray);
+                canvas.drawColor(bgColor);
+            }
             // iOS-style: three separate floating pill islands
-            final int edge = dp(4);     // margin from screen edge
-            final int gap  = dp(4);     // gap between islands
+            final int edge = dp(6);     // margin from screen edge
+            final int gap  = dp(8);     // gap between islands
             final float rad = dp(23);
             final int capsuleTop = occupyStatusBar ? AndroidUtilities.statusBarHeight : 0;
             final int capsuleBottom = getHeight() > 0 ? getHeight() : b;
@@ -2514,9 +2611,13 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             }
 
             // Right island: menu pill
-            if (glassDrawableMenu != null && menuWidth > 0 && !glassOnlyBack && !doNotDrawGlassMenu) {
+            int effectiveMenuWidth = menuWidth;
+            if (effectiveMenuWidth <= 0 && menu != null && menu.getVisibility() != GONE) {
+                effectiveMenuWidth = (int) menu.getItemsWidth();
+            }
+            if (glassDrawableMenu != null && effectiveMenuWidth > 0 && !glassOnlyBack && !doNotDrawGlassMenu) {
                 int menuRight = getWidth() - edge;
-                int menuLeft = menuRight - Math.max(s, menuWidth) - p * 2;
+                int menuLeft = menuRight - Math.max(s, effectiveMenuWidth) - p * 2;
                 glassDrawableMenu.setRadius(rad);
                 glassDrawableMenu.setBounds(menuLeft, capsuleTop, menuRight, capsuleBottom);
                 float alphaFactor = hasForcedMenuWidth ? 1f : Math.max(animatorHasMenuItems.getFloatValue(), actionModeFactor);
@@ -2524,16 +2625,73 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 glassDrawableMenu.draw(canvas);
             }
 
-            // Center island: title pill (between back and menu)
+            // Center island: title pill (between back and menu, hugging title content)
             if (glassDrawable != null && !glassOnlyBack) {
-                int centerLeft = hasBackButton ? (edge + s + p * 2 + gap) : edge;
-                int centerRight = (menuWidth > 0 && !doNotDrawGlassMenu)
-                        ? (getWidth() - edge - Math.max(s, menuWidth) - p * 2 - gap)
-                        : (getWidth() - edge);
-                if (centerRight > centerLeft + dp(20)) {
-                    glassDrawable.setRadius(rad);
-                    glassDrawable.setBounds(centerLeft, capsuleTop, centerRight, capsuleBottom);
-                    glassDrawable.draw(canvas);
+                float titleAlpha = 1.0f;
+                if (chatAvatarContainer != null) {
+                    titleAlpha = chatAvatarContainer.getAlpha();
+                } else {
+                    if (titlesContainer != null) {
+                        titleAlpha *= titlesContainer.getAlpha();
+                    }
+                    if (titleTextView[0] != null) {
+                        titleAlpha *= titleTextView[0].getAlpha();
+                        if (titleColorToSet != 0) {
+                            titleAlpha *= (Color.alpha(titleColorToSet) / 255.0f);
+                        }
+                    }
+                }
+
+                if (titleAlpha > 0.01f) {
+                    int minLeft = hasBackButton ? (edge + s + p * 2 + gap) : edge;
+                    int maxRight = (effectiveMenuWidth > 0 && !doNotDrawGlassMenu)
+                            ? (getWidth() - edge - Math.max(s, effectiveMenuWidth) - p * 2 - gap)
+                            : (getWidth() - edge);
+
+                    int contentLeft = Integer.MAX_VALUE;
+                    int contentRight = 0;
+                    if (chatAvatarContainer != null) {
+                        contentLeft = (int) chatAvatarContainer.getX();
+                        contentRight = contentLeft + chatAvatarContainer.getVisualWidth();
+                    } else {
+                        int offset = (useContainerForTitles && titlesContainer != null) ? (int) titlesContainer.getX() : 0;
+                        for (int i = 0; i < 2; i++) {
+                            if (titleTextView[i] != null && titleTextView[i].getVisibility() != GONE) {
+                                int l = offset + titleTextView[i].getLeft();
+                                int textW = titleTextView[i].getTextWidth();
+                                int r = l + (textW > 0 ? textW : titleTextView[i].getWidth());
+                                if (l < contentLeft) contentLeft = l;
+                                if (r > contentRight) contentRight = r;
+                            }
+                        }
+                        if (subtitleTextView != null && subtitleTextView.getVisibility() != GONE) {
+                            int l = offset + subtitleTextView.getLeft();
+                            int textW = subtitleTextView.getTextWidth();
+                            int r = l + (textW > 0 ? textW : subtitleTextView.getWidth());
+                            if (l < contentLeft) contentLeft = l;
+                            if (r > contentRight) contentRight = r;
+                        }
+                        if (additionalSubtitleTextView != null && additionalSubtitleTextView.getVisibility() != GONE) {
+                            int l = offset + additionalSubtitleTextView.getLeft();
+                            int textW = additionalSubtitleTextView.getTextWidth();
+                            int r = l + (textW > 0 ? textW : additionalSubtitleTextView.getWidth());
+                            if (l < contentLeft) contentLeft = l;
+                            if (r > contentRight) contentRight = r;
+                        }
+                    }
+
+                    if (contentRight > contentLeft && contentLeft != Integer.MAX_VALUE) {
+                        int hPad = dp(16);
+                        int centerLeft = Math.max(minLeft, contentLeft - hPad);
+                        int centerRight = Math.min(maxRight, contentRight + hPad);
+
+                        if (centerRight > centerLeft + dp(20)) {
+                            glassDrawable.setRadius(rad);
+                            glassDrawable.setBounds(centerLeft, capsuleTop, centerRight, capsuleBottom);
+                            glassDrawable.setAlpha((int) (255 * titleAlpha));
+                            glassDrawable.draw(canvas);
+                        }
+                    }
                 }
             }
         } else {
@@ -2605,7 +2763,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             }
         }
 
-        if (blurredBackground && actionBarColor != Color.TRANSPARENT) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && blurredBackground && actionBarColor != Color.TRANSPARENT) {
             rectTmp.set(0, 0, getMeasuredWidth(), getMeasuredHeight());
             blurScrimPaint.setColor(actionBarColor);
             if (adaptiveBackground) {
@@ -2784,6 +2942,44 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             setM3CollapseProgress(list.canScrollVertically(-1) ? 1.0f : 0.0f);
             return;
         }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            this.adaptive_topColorKey = topColorKey;
+            this.adaptive_lowerColorKey = lowerColorKey;
+            applyIosLiquidGlassTopBar();
+            this.adaptiveBackgroundHideTitle = hideTitle;
+            if (hideTitle) {
+                final Runnable checkScroll = () -> {
+                    final boolean onTop = !list.canScrollVertically(-1);
+                    if (ActionBar.this.onTop == onTop) return;
+                    if (adaptive_animator != null)
+                        adaptive_animator.cancel();
+                    adaptive_animator = ValueAnimator.ofFloat(onTopAnimated, (ActionBar.this.onTop = onTop) ? 1.0f : 0.0f);
+                    adaptive_animator.addUpdateListener(anm -> {
+                        onTopAnimated = (float) anm.getAnimatedValue();
+                        adaptive_updateTitleAlpha();
+                    });
+                    adaptive_animator.addListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            onTopAnimated = onTop ? 1.0f : 0.0f;
+                            adaptive_updateTitleAlpha();
+                        }
+                    });
+                    adaptive_animator.setDuration(320);
+                    adaptive_animator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                    adaptive_animator.start();
+                };
+                list.addOnScrollListener(new RecyclerView.OnScrollListener() {
+                    @Override
+                    public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                        checkScroll.run();
+                    }
+                });
+                this.onTopAnimated = (this.onTop = !list.canScrollVertically(-1)) ? 1 : 0;
+                adaptive_updateTitleAlpha();
+            }
+            return;
+        }
         this.adaptive_topColorKey = topColorKey;
         this.adaptive_lowerColorKey = lowerColorKey;
         final Runnable checkScroll = () -> {
@@ -2826,6 +3022,12 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         setAdaptiveBackground(list, Theme.key_windowBackgroundGray, Theme.key_actionBarDefault);
     }
     public void setAdaptiveBackground(SectionsScrollView list, final int topColorKey, final int lowerColorKey) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            this.adaptive_topColorKey = topColorKey;
+            this.adaptive_lowerColorKey = lowerColorKey;
+            applyIosLiquidGlassTopBar();
+            return;
+        }
         this.adaptive_topColorKey = topColorKey;
         this.adaptive_lowerColorKey = lowerColorKey;
         adaptive_updateColor();
@@ -2859,22 +3061,74 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             adaptive_updateColor();
         }
     }
+
+    public void applyIosLiquidGlassTopBar() {
+        if (!glassMode) {
+            BlurredBackgroundSourceColor sourceColor = new BlurredBackgroundSourceColor();
+            sourceColor.setColor(getThemedColor(adaptive_topColorKey != 0 && adaptive_topColorKey != -1 ? adaptive_topColorKey : Theme.key_windowBackgroundGray));
+            BlurredBackgroundDrawableViewFactory factory = new BlurredBackgroundDrawableViewFactory(sourceColor);
+            setupGlass(factory, BlurredBackgroundProviderImpl.topPanel(resourcesProvider));
+        }
+        setBackground(null);
+        setCastShadows(false);
+
+        int textColor = getThemedColor(Theme.key_windowBackgroundWhiteBlackText);
+        int subtitleColor = getThemedColor(Theme.key_windowBackgroundWhiteGrayText2);
+        int selectorColor = getThemedColor(Theme.key_listSelector);
+
+        setTitleColor(textColor);
+        setSubtitleColor(subtitleColor);
+        setItemsColor(textColor, false);
+        setItemsBackgroundColor(selectorColor, false);
+        setItemsColor(textColor, true);
+        setItemsBackgroundColor(selectorColor, true);
+
+        if (backButtonImageView != null) {
+            backButtonImageView.setTranslationX(0);
+            backButtonImageView.setPadding(0, 0, 0, 0);
+            backButtonImageView.setColorFilter(new PorterDuffColorFilter(textColor, PorterDuff.Mode.SRC_IN));
+            updateBackButtonBackground();
+        }
+
+        if (menu != null) {
+            menu.setTranslationX(-dp(10));
+            menu.setGlassMode(true);
+            menu.updateItemsColor();
+            menu.updateItemsBackgroundColor();
+        }
+        if (actionMode != null) {
+            actionMode.setTranslationX(-dp(10));
+            actionMode.setGlassMode(true);
+            actionMode.updateItemsColor();
+            actionMode.updateItemsBackgroundColor();
+        }
+
+        checkMenuItemsWidth();
+        requestLayout();
+        invalidate();
+    }
+
+    private void adaptive_updateTitleAlpha() {
+        float titleAlpha = 1.0f - onTopAnimated;
+        if (titlesContainer != null) {
+            titlesContainer.setAlpha(titleAlpha);
+        }
+        if (titleTextView[0] != null) {
+            titleTextView[0].setAlpha(titleAlpha);
+        }
+        if (titleTextView[1] != null) {
+            titleTextView[1].setAlpha(titleAlpha);
+        }
+        if (subtitleTextView != null) {
+            subtitleTextView.setAlpha(titleAlpha);
+        }
+        invalidate();
+    }
+
     private void adaptive_updateColor() {
         if (!adaptiveBackground || m3LargeFlexible) return;
         if (adaptiveBackgroundHideTitle) {
-            float titleAlpha = 1.0f - onTopAnimated;
-            if (titlesContainer != null) {
-                titlesContainer.setAlpha(titleAlpha);
-            }
-            if (titleTextView[0] != null) {
-                titleTextView[0].setAlpha(titleAlpha);
-            }
-            if (titleTextView[1] != null) {
-                titleTextView[1].setAlpha(titleAlpha);
-            }
-            if (subtitleTextView != null) {
-                subtitleTextView.setAlpha(titleAlpha);
-            }
+            adaptive_updateTitleAlpha();
         }
 
         final float factor = onTopAnimated;
@@ -2896,11 +3150,14 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     }
 
     private boolean isCentered() {
-        return NaConfig.INSTANCE.getCenterActionBarTitle().Bool() && NaConfig.INSTANCE.getCenterActionBarTitleType().Int() != 3;
+        return isCenterTitle || (NaConfig.INSTANCE.getCenterActionBarTitle().Bool() && NaConfig.INSTANCE.getCenterActionBarTitleType().Int() != 3);
     }
 
     // --- Spring Animation ---
     public void onDrawCrossfadeBackground(Canvas canvas) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            return;
+        }
         if (blurredBackground && actionBarColor != Color.TRANSPARENT) {
             rectTmp.set(0, 0, getMeasuredWidth(), getMeasuredHeight());
             blurScrimPaint.setColor(actionBarColor);

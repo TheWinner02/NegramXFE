@@ -314,6 +314,9 @@ public abstract class BaseFragment {
     }
 
     public boolean isActionBarCrossfadeEnabled() {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            return false;
+        }
         if (NaConfig.INSTANCE.getBackAnimationStyle().Int() == ActionBarLayout.BACK_ANIMATION_SPRING) {
             if (getLastStoryViewer() != null && getLastStoryViewer().attachedToParent()) {
                 return false;
@@ -1201,6 +1204,9 @@ public abstract class BaseFragment {
     public boolean isLightStatusBar() {
         if (getLastStoryViewer() != null && getLastStoryViewer().isShown()) {
             return false;
+        }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            return !Theme.getCurrentTheme().isDark();
         }
         if (hasForceLightStatusBar() && !Theme.getCurrentTheme().isDark()) {
             return true;

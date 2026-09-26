@@ -1635,10 +1635,13 @@ public class ActionBarMenuItem extends FrameLayout {
             };
             searchField.setScrollContainer(false);
             searchField.setCursorWidth(1.5f);
-            searchField.setCursorColor(getThemedColor(Theme.key_actionBarDefaultSearch));
+            boolean isGlass = (parentMenu != null && parentMenu.parentActionBar != null && parentMenu.parentActionBar.isGlassMode()) || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            int searchColor = isGlass ? getThemedColor(Theme.key_windowBackgroundWhiteBlackText) : getThemedColor(Theme.key_actionBarDefaultSearch);
+            int hintColor = isGlass ? getThemedColor(Theme.key_windowBackgroundWhiteGrayText) : getThemedColor(Theme.key_actionBarDefaultSearchPlaceholder);
+            searchField.setCursorColor(searchColor);
             searchField.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
-            searchField.setHintTextColor(getThemedColor(Theme.key_actionBarDefaultSearchPlaceholder));
-            searchField.setTextColor(getThemedColor(Theme.key_actionBarDefaultSearch));
+            searchField.setHintTextColor(hintColor);
+            searchField.setTextColor(searchColor);
             searchField.setSingleLine(true);
             searchField.setBackgroundResource(0);
             searchField.setPadding(0, 0, 0, 0);
@@ -2270,9 +2273,12 @@ public class ActionBarMenuItem extends FrameLayout {
             }
         }
         if (searchField != null) {
-            searchField.setCursorColor(getThemedColor(Theme.key_actionBarDefaultSearch));
-            searchField.setHintTextColor(getThemedColor(Theme.key_actionBarDefaultSearchPlaceholder));
-            searchField.setTextColor(getThemedColor(Theme.key_actionBarDefaultSearch));
+            boolean isGlass = (parentMenu != null && parentMenu.parentActionBar != null && parentMenu.parentActionBar.isGlassMode()) || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            int searchColor = isGlass ? getThemedColor(Theme.key_windowBackgroundWhiteBlackText) : getThemedColor(Theme.key_actionBarDefaultSearch);
+            int hintColor = isGlass ? getThemedColor(Theme.key_windowBackgroundWhiteGrayText) : getThemedColor(Theme.key_actionBarDefaultSearchPlaceholder);
+            searchField.setCursorColor(searchColor);
+            searchField.setHintTextColor(hintColor);
+            searchField.setTextColor(searchColor);
             searchField.setHighlightColor(getThemedColor(Theme.key_chat_inTextSelectionHighlight));
             searchField.setHandlesColor(getThemedColor(Theme.key_chat_TextSelectionCursor));
         }
