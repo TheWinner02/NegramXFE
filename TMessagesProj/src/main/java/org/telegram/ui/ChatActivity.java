@@ -5121,7 +5121,9 @@ public class ChatActivity extends BaseFragment implements
         chatInputViewsContainer = new ChatInputViewsContainer(context);
         chatInputViewsContainer.setClipChildren(false);
         chatInputViewsContainer.setWindowInsetsProvider(windowInsetsStateHolder);
-        chatInputViewsContainer.setInputIslandBubbleDrawable(
+        chatInputViewsContainer.setInputIslandDrawables(
+            glassBackgroundDrawableFactory.create(chatInputViewsContainer, blurredBackgroundColorProvider),
+            glassBackgroundDrawableFactory.create(chatInputViewsContainer, blurredBackgroundColorProvider),
             glassBackgroundDrawableFactory.create(chatInputViewsContainer, blurredBackgroundColorProvider));
         chatInputViewsContainer.setUnderKeyboardBackgroundDrawable(
             glassBackgroundDrawableFactoryFrosted.create(chatInputViewsContainer, blurredBackgroundColorProvider));

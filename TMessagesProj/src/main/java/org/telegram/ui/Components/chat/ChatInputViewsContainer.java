@@ -17,11 +17,14 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 
+import org.telegram.ui.Components.ChatActivityEnterView;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.blur3.BlurredBackgroundWithFadeDrawable;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.inset.InAppKeyboardInsetView;
 import org.telegram.ui.Components.inset.WindowInsetsProvider;
+
+import xyz.nextalone.nagram.ui.UIStyleEngine;
 
 public class ChatInputViewsContainer extends FrameLayout {
     public static final int INPUT_BUBBLE_RADIUS = 22;
@@ -75,11 +78,35 @@ public class ChatInputViewsContainer extends FrameLayout {
 
     public boolean drawInputBackground = true;
     public BlurredBackgroundDrawable blurredBackgroundDrawable;
+    public BlurredBackgroundDrawable blurredBackgroundDrawableLeft;
+    public BlurredBackgroundDrawable blurredBackgroundDrawableRight;
     private BlurredBackgroundDrawable underKeyboardBackgroundDrawable;
+
     public void setInputIslandBubbleDrawable(BlurredBackgroundDrawable drawable) {
         blurredBackgroundDrawable = drawable;
-        blurredBackgroundDrawable.setPadding(dp(7));
-        blurredBackgroundDrawable.setRadius(dp(INPUT_BUBBLE_RADIUS));
+        if (blurredBackgroundDrawable != null) {
+            blurredBackgroundDrawable.setPadding(dp(7));
+            blurredBackgroundDrawable.setRadius(dp(INPUT_BUBBLE_RADIUS));
+        }
+    }
+
+    public void setInputIslandDrawables(BlurredBackgroundDrawable center, BlurredBackgroundDrawable left, BlurredBackgroundDrawable right) {
+        blurredBackgroundDrawable = center;
+        blurredBackgroundDrawableLeft = left;
+        blurredBackgroundDrawableRight = right;
+
+        if (blurredBackgroundDrawable != null) {
+            blurredBackgroundDrawable.setPadding(dp(7));
+            blurredBackgroundDrawable.setRadius(dp(INPUT_BUBBLE_RADIUS));
+        }
+        if (blurredBackgroundDrawableLeft != null) {
+            blurredBackgroundDrawableLeft.setPadding(dp(7));
+            blurredBackgroundDrawableLeft.setRadius(dp(INPUT_BUBBLE_RADIUS));
+        }
+        if (blurredBackgroundDrawableRight != null) {
+            blurredBackgroundDrawableRight.setPadding(dp(7));
+            blurredBackgroundDrawableRight.setRadius(dp(INPUT_BUBBLE_RADIUS));
+        }
     }
 
     public void setUnderKeyboardBackgroundDrawable(BlurredBackgroundDrawable drawable) {
@@ -91,9 +118,29 @@ public class ChatInputViewsContainer extends FrameLayout {
     }
 
     public void updateColors() {
-        blurredBackgroundDrawable.updateColors();
-        underKeyboardBackgroundDrawable.updateColors();
+        if (blurredBackgroundDrawable != null) {
+            blurredBackgroundDrawable.updateColors();
+        }
+        if (blurredBackgroundDrawableLeft != null) {
+            blurredBackgroundDrawableLeft.updateColors();
+        }
+        if (blurredBackgroundDrawableRight != null) {
+            blurredBackgroundDrawableRight.updateColors();
+        }
+        if (underKeyboardBackgroundDrawable != null) {
+            underKeyboardBackgroundDrawable.updateColors();
+        }
         invalidate();
+    }
+
+    public boolean isEnterViewVisible() {
+        for (int i = 0; i < inputIslandBubbleContainer.getChildCount(); i++) {
+            View child = inputIslandBubbleContainer.getChildAt(i);
+            if (child instanceof ChatActivityEnterView) {
+                return child.getVisibility() == VISIBLE;
+            }
+        }
+        return false;
     }
 
 
@@ -246,6 +293,9 @@ public class ChatInputViewsContainer extends FrameLayout {
     /* Render */
 
     private final Rect tmpRect = new Rect();
+    private final Rect tmpRectLeft = new Rect();
+    private final Rect tmpRectCenter = new Rect();
+    private final Rect tmpRectRight = new Rect();
     private final RectF tmpRectF = new RectF();
 
     @Override
@@ -258,19 +308,66 @@ public class ChatInputViewsContainer extends FrameLayout {
         );
 
         final int blurTop = getMeasuredHeight() - currentBlurredHeight;
+        final int islandBottom = blurTop + inputBubbleHeightRound + (int) bubbleInputTranlationY;
 
-        tmpRect.set(
-            Math.round(inputBubbleOffsetLeft),
-            0,
-            getMeasuredWidth() - Math.round(inputBubbleOffsetRight),
-            inputBubbleHeightRound
-        );
-        tmpRect.inset(0, -dp(7));
-        tmpRect.offset(0, blurTop + (int) bubbleInputTranlationY);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && isEnterViewVisible() && blurredBackgroundDrawableLeft != null && blurredBackgroundDrawableRight != null) {
+            final int buttonSize = dp(ChatActivityEnterView.DEFAULT_HEIGHT);
+            final int islandRadius = buttonSize / 2;
+            final int islandGap = dp(8);
+            final int sideMargin = dp(7);
+            final int pad = dp(7);
 
-        blurredBackgroundDrawable.setBounds(tmpRect);
-        if (drawInputBackground)
-            blurredBackgroundDrawable.draw(canvas);
+            // Left Island (Attach)
+            tmpRectLeft.set(
+                sideMargin - pad,
+                islandBottom - buttonSize - pad,
+                sideMargin + buttonSize + pad,
+                islandBottom + pad
+            );
+            blurredBackgroundDrawableLeft.setRadius(islandRadius);
+            blurredBackgroundDrawableLeft.setBounds(tmpRectLeft);
+
+            // Right Island (Send / Mic)
+            tmpRectRight.set(
+                getMeasuredWidth() - sideMargin - buttonSize - pad,
+                islandBottom - buttonSize - pad,
+                getMeasuredWidth() - sideMargin + pad,
+                islandBottom + pad
+            );
+            blurredBackgroundDrawableRight.setRadius(islandRadius);
+            blurredBackgroundDrawableRight.setBounds(tmpRectRight);
+
+            // Center Island (Message text input + emoji + reply header)
+            final int centerVisualLeft = sideMargin + buttonSize + islandGap;
+            final int centerVisualRight = getMeasuredWidth() - sideMargin - buttonSize - islandGap;
+            tmpRectCenter.set(
+                centerVisualLeft - pad,
+                islandBottom - inputBubbleHeightRound - pad,
+                centerVisualRight + pad,
+                islandBottom + pad
+            );
+            blurredBackgroundDrawable.setRadius(islandRadius);
+            blurredBackgroundDrawable.setBounds(tmpRectCenter);
+
+            if (drawInputBackground) {
+                blurredBackgroundDrawableLeft.draw(canvas);
+                blurredBackgroundDrawable.draw(canvas);
+                blurredBackgroundDrawableRight.draw(canvas);
+            }
+        } else {
+            tmpRect.set(
+                Math.round(inputBubbleOffsetLeft),
+                0,
+                getMeasuredWidth() - Math.round(inputBubbleOffsetRight),
+                inputBubbleHeightRound
+            );
+            tmpRect.inset(0, -dp(7));
+            tmpRect.offset(0, blurTop + (int) bubbleInputTranlationY);
+
+            blurredBackgroundDrawable.setBounds(tmpRect);
+            if (drawInputBackground)
+                blurredBackgroundDrawable.draw(canvas);
+        }
 
         if (needDrawInAppKeyboard) {
             underKeyboardBackgroundDrawable.draw(canvas);
@@ -323,7 +420,12 @@ public class ChatInputViewsContainer extends FrameLayout {
         if (blurredBackgroundDrawable != null) {
             blurredBackgroundDrawable.setAlpha(alpha);
         }
-
+        if (blurredBackgroundDrawableLeft != null) {
+            blurredBackgroundDrawableLeft.setAlpha(alpha);
+        }
+        if (blurredBackgroundDrawableRight != null) {
+            blurredBackgroundDrawableRight.setAlpha(alpha);
+        }
     }
 
     private void checkDrawableBounds() {
@@ -344,6 +446,10 @@ public class ChatInputViewsContainer extends FrameLayout {
 
     private boolean captured;
 
+    private boolean containsVisual(Rect bounds, int pad, int x, int y) {
+        return x >= bounds.left + pad && x <= bounds.right - pad && y >= bounds.top + pad && y <= bounds.bottom - pad;
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         final int action = event.getAction();
@@ -352,8 +458,16 @@ public class ChatInputViewsContainer extends FrameLayout {
             final int x = (int) event.getX();
             final int y = (int) event.getY();
 
-            captured = blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255 && blurredBackgroundDrawable.getBounds().contains(x, y)
-                || underKeyboardBackgroundDrawable != null && underKeyboardBackgroundDrawable.getBounds().contains(x, y);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && isEnterViewVisible() && blurredBackgroundDrawableLeft != null && blurredBackgroundDrawableRight != null) {
+                final int pad = dp(7);
+                captured = (blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255 && containsVisual(tmpRectCenter, pad, x, y))
+                    || (blurredBackgroundDrawableLeft != null && blurredBackgroundDrawableLeft.getAlpha() == 255 && containsVisual(tmpRectLeft, pad, x, y))
+                    || (blurredBackgroundDrawableRight != null && blurredBackgroundDrawableRight.getAlpha() == 255 && containsVisual(tmpRectRight, pad, x, y))
+                    || (underKeyboardBackgroundDrawable != null && underKeyboardBackgroundDrawable.getBounds().contains(x, y));
+            } else {
+                captured = (blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255 && blurredBackgroundDrawable.getBounds().contains(x, y))
+                    || (underKeyboardBackgroundDrawable != null && underKeyboardBackgroundDrawable.getBounds().contains(x, y));
+            }
 
         }
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
