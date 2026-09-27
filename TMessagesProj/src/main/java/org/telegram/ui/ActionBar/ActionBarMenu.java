@@ -12,6 +12,7 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.find;
 
 import android.content.Context;
+import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.util.Log;
@@ -186,7 +187,7 @@ public class ActionBarMenu extends LinearLayout {
         ActionBarMenuItem menuItem = new ActionBarMenuItem(getContext(), this, backgroundColor, isActionMode ? parentActionBar.itemsActionModeColor : parentActionBar.itemsColor, text != null, resourcesProvider);
         menuItem.setTag(id);
 
-        if (isCenteredTitle) {
+        if (isCenteredTitle && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             menuItem.setAlpha(0f);
             menuItem.setVisibility(GONE);
             menuItem.setClickable(false);
@@ -1165,6 +1166,25 @@ public class ActionBarMenu extends LinearLayout {
         if (parentActionBar != null) {
             parentActionBar.checkMenuItemsWidth();
         }
+    }
+
+    @Override
+    protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && isActionMode && !(child instanceof ActionBarMenuItem) && child.getClass() != View.class && parentActionBar != null) {
+            Rect pillBounds = parentActionBar.getCenterPillBounds();
+            if (pillBounds != null && pillBounds.width() > 0) {
+                canvas.save();
+                int l = pillBounds.left - (int) getTranslationX() - getLeft();
+                int t = pillBounds.top - (int) getTranslationY() - getTop();
+                int r = pillBounds.right - (int) getTranslationX() - getLeft();
+                int b = pillBounds.bottom - (int) getTranslationY() - getTop();
+                canvas.clipRect(l, t, r, b);
+                boolean result = super.drawChild(canvas, child, drawingTime);
+                canvas.restore();
+                return result;
+            }
+        }
+        return super.drawChild(canvas, child, drawingTime);
     }
 
     @Override

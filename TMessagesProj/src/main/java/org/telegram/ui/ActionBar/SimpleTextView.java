@@ -984,7 +984,7 @@ public class SimpleTextView extends View implements Drawable.Callback {
         }
 
         if (layout != null) {
-            if (leftDrawableOutside || rightDrawableOutside || ellipsizeByGradient || paddingRight > 0) {
+            if (leftDrawableOutside || rightDrawableOutside || ellipsizeByGradient || fade || paddingRight > 0) {
                 canvas.save();
                 canvas.clipRect(textOffsetX, 0, getMaxTextWidth() - paddingRight - dp(rightDrawable != null && !(rightDrawable instanceof AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable) && rightDrawableOutside ? 2 : 0), getMeasuredHeight());
             }
@@ -1102,7 +1102,7 @@ public class SimpleTextView extends View implements Drawable.Callback {
             }
             updateScrollAnimation();
             Emoji.emojiDrawingUseAlpha = true;
-            if (leftDrawableOutside || rightDrawableOutside || ellipsizeByGradient || paddingRight > 0) {
+            if (leftDrawableOutside || rightDrawableOutside || ellipsizeByGradient || fade || paddingRight > 0) {
                 canvas.restore();
             }
         }

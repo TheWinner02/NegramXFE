@@ -394,6 +394,7 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
         } else {
             subtitleTextView = new SimpleTextConnectedView(context, subtitleTextLargerCopyView);
             subtitleTextView.setEllipsizeByGradient(true);
+            subtitleTextView.setScrollNonFitText(true);
             subtitleTextView.setTextColor(getThemedColor(Theme.key_actionBarDefaultSubtitle));
             subtitleTextView.setTag(Theme.key_actionBarDefaultSubtitle);
             subtitleTextView.setTextSize(14);
@@ -798,7 +799,8 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         final int width = MeasureSpec.getSize(widthMeasureSpec);
-        final int availableWidth = width - dp((avatarImageView.getVisibility() == VISIBLE ? 54 : 0) + 16);
+        final int extraPad = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 24 : 16;
+        final int availableWidth = Math.max(0, width - dp((avatarImageView.getVisibility() == VISIBLE ? 54 : 0) + extraPad));
         avatarImageView.measure(MeasureSpec.makeMeasureSpec(dp(avatarSizeInDp) - 2, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(dp(avatarSizeInDp) - 2, MeasureSpec.EXACTLY));
         titleTextView.measure(MeasureSpec.makeMeasureSpec(availableWidth, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(dp(24 + 8), MeasureSpec.AT_MOST));
         if (subtitleTextView != null) {
@@ -1867,6 +1869,8 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
         }
         if (subtitleTextView != null) {
             width = Math.max(width, subtitleTextView.getExactWidthIncludeDrawables());
+        } else if (animatedSubtitleTextView != null && animatedSubtitleTextView.getText() != null) {
+            width = Math.max(width, animatedSubtitleTextView.getPaint().measureText(animatedSubtitleTextView.getText().toString()));
         }
         if (hasVisibleAvatar()) {
             width += dp(52 + 18);

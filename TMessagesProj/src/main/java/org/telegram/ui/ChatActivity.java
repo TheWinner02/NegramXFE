@@ -3665,6 +3665,9 @@ public class ChatActivity extends BaseFragment implements
         if (avatarContainer != null) {
             avatarContainer.onDestroy();
         }
+        if (actionBar != null) {
+            actionBar.setChatAvatarContainer(null);
+        }
         if (mentionContainer != null && mentionContainer.getAdapter() != null) {
             mentionContainer.getAdapter().onDestroy();
         }
@@ -4577,7 +4580,7 @@ public class ChatActivity extends BaseFragment implements
 
             @Override
             protected boolean onAvatarClick() {
-                if (isTitleCentered()) {
+                if (isTitleCentered() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     if (editTextItem != null && editTextItem.getTag() != null) {
                         checkEditTextItemMenu();
                         editTextItem.createView().performClick();
@@ -4711,7 +4714,7 @@ public class ChatActivity extends BaseFragment implements
             searchItemVisible = false;
         }
 
-        if (chatMode == 0 && (threadMessageId == 0 || isTopic) && !UserObject.isReplyUser(currentUser) && !isReport() && !isTitleCentered()) {
+        if (chatMode == 0 && (threadMessageId == 0 || isTopic) && !UserObject.isReplyUser(currentUser) && !isReport() && (!isTitleCentered() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
             TLRPC.UserFull userFull = null;
             if (currentUser != null) {
                 audioCallIconItem = menu.lazilyAddItem(call, R.drawable.call, themeDelegate);
@@ -4768,7 +4771,7 @@ public class ChatActivity extends BaseFragment implements
             if (avatarContainer != null) {
                 avatarContainer.setAvatarOptionsMenuItem(headerItem);
             }
-            headerItem.setForceHidden(isTitleCentered());
+            headerItem.setForceHidden(!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && isTitleCentered());
 
             if (currentUser != null && currentUser.self && chatMode != MODE_SAVED) {
                 savedChatsItem = headerItem.lazilyAddSubItem(view_as_topics, R.drawable.msg_topics, LocaleController.getString(R.string.SavedViewAsChats));
@@ -5109,6 +5112,9 @@ public class ChatActivity extends BaseFragment implements
         } else if (isComments) {
             actionBar.setChatAvatarContainer(avatarContainer);
             actionBar.setForcedMenuMinWidth(dp(46));
+            avatarContainer.setActionBar(actionBar);
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            actionBar.setChatAvatarContainer(avatarContainer);
             avatarContainer.setActionBar(actionBar);
         }
 
@@ -11023,42 +11029,43 @@ public class ChatActivity extends BaseFragment implements
         actionMode.setLayoutTransition(transition);
 
         selectedMessagesCountTextView = new AnimatedTextView(actionMode.getContext(), true, true, true);
-        selectedMessagesCountTextView.setTextSize(dp(18));
+        selectedMessagesCountTextView.setTextSize(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(15) : dp(18));
         selectedMessagesCountTextView.setTypeface(AndroidUtilities.bold());
         selectedMessagesCountTextView.setTextColor(getThemedColor(Theme.key_actionBarActionModeDefaultIcon));
         selectedMessagesCountTextView.setOnTouchListener((v, event) -> true);
         selectedMessagesCountTextView.setEllipsizeByGradient(true);
         selectedMessagesCountTextView.setRightPadding(dp(8));
         selectedMessagesCountTextView.getDrawable().setOverrideFullWidth(dp(300));
-        actionMode.addView(selectedMessagesCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, 85, 0, 5, 0));
+        actionMode.addView(selectedMessagesCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : 85, 0, 5, 0));
         actionMode.setOnLayoutListener(actionBar::invalidate);
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getParentActivity().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         int maxActionBarItems = (int) (Math.ceil(displayMetrics.widthPixels / (double) dp(54))) - 2;
-        isActionBarTooNarrow = maxActionBarItems < 6;
-        actionModeViews.add(actionMode.addItemWithWidth(nkactionbarbtn_reply, R.drawable.menu_reply, dp(54), LocaleController.getString(R.string.Reply)));
-        actionModeViews.add(actionMode.addItemWithWidth(edit, R.drawable.msg_edit, dp(54), LocaleController.getString(R.string.Edit)));
-        actionModeViews.add(actionMode.addItemWithWidth(nkactionbarbtn_selectBetween, R.drawable.ic_select_between, dp(54), LocaleController.getString(R.string.SelectBetween)));
-        actionModeViews.add(actionMode.addItemWithWidth(star, R.drawable.msg_fave, dp(54), LocaleController.getString(R.string.AddToFavorites)));
-        actionModeViews.add(actionMode.addItemWithWidth(copy, R.drawable.msg_copy, dp(54), LocaleController.getString(R.string.Copy)));
-        actionModeViews.add(actionMode.addItemWithWidth(combine_message, R.drawable.msg_replace, dp(54), LocaleController.getString(R.string.CombineMessage)));
+        isActionBarTooNarrow = maxActionBarItems < 6 || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        final int itemWidth = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(42) : dp(54);
+        actionModeViews.add(actionMode.addItemWithWidth(nkactionbarbtn_reply, R.drawable.menu_reply, itemWidth, LocaleController.getString(R.string.Reply)));
+        actionModeViews.add(actionMode.addItemWithWidth(edit, R.drawable.msg_edit, itemWidth, LocaleController.getString(R.string.Edit)));
+        actionModeViews.add(actionMode.addItemWithWidth(nkactionbarbtn_selectBetween, R.drawable.ic_select_between, itemWidth, LocaleController.getString(R.string.SelectBetween)));
+        actionModeViews.add(actionMode.addItemWithWidth(star, R.drawable.msg_fave, itemWidth, LocaleController.getString(R.string.AddToFavorites)));
+        actionModeViews.add(actionMode.addItemWithWidth(copy, R.drawable.msg_copy, itemWidth, LocaleController.getString(R.string.Copy)));
+        actionModeViews.add(actionMode.addItemWithWidth(combine_message, R.drawable.msg_replace, itemWidth, LocaleController.getString(R.string.CombineMessage)));
         if (currentEncryptedChat == null && getDialogId() != UserObject.VERIFY && NaConfig.INSTANCE.getActionBarButtonForward().Bool()) {
-            actionModeViews.add(actionMode.addItemWithWidth(forward, R.drawable.msg_forward_noquote, dp(54), LocaleController.getString(R.string.Forward)));
+            actionModeViews.add(actionMode.addItemWithWidth(forward, R.drawable.msg_forward_noquote, itemWidth, LocaleController.getString(R.string.Forward)));
         }
-        actionModeViews.add(actionMode.addItemWithWidth(delete, R.drawable.msg_delete, dp(54), LocaleController.getString(R.string.Delete)));
+        actionModeViews.add(actionMode.addItemWithWidth(delete, R.drawable.msg_delete, itemWidth, LocaleController.getString(R.string.Delete)));
 
         if (currentEncryptedChat == null) {
             final boolean isSavedMessages = getDialogId() == getUserConfig().getClientUserId() && (chatMode == 0 || chatMode == MODE_SAVED);
-            actionModeViews.add(actionMode.addItemWithWidth(save_to, R.drawable.msg_download, dp(54), LocaleController.getString(R.string.SaveToMusic)));
+            actionModeViews.add(actionMode.addItemWithWidth(save_to, R.drawable.msg_download, itemWidth, LocaleController.getString(R.string.SaveToMusic)));
             if (isSavedMessages) {
-                actionModeViews.add(actionMode.addItemWithWidth(tag_message, R.drawable.menu_tag_edit, dp(48), LocaleController.getString(R.string.AccDescrTagMessage)));
+                actionModeViews.add(actionMode.addItemWithWidth(tag_message, R.drawable.menu_tag_edit, itemWidth, LocaleController.getString(R.string.AccDescrTagMessage)));
             }
         }
 
         boolean noforward = getMessagesController().isChatNoForwards(currentChat);
         boolean canSendMessages = ChatObject.canSendMessages(currentChat);
-        actionModeViews.add(actionModeOtherItem = actionMode.addItemWithWidth(nkactionbarbtn_action_mode_other, R.drawable.ic_ab_other, dp(54), LocaleController.getString(R.string.MessageMenu)));
+        actionModeViews.add(actionModeOtherItem = actionMode.addItemWithWidth(nkactionbarbtn_action_mode_other, R.drawable.ic_ab_other, itemWidth, LocaleController.getString(R.string.MessageMenu)));
 
         if (currentEncryptedChat == null && !noforward) {
             actionModeOtherItem.addSubItem(nkbtn_forward_noquote, R.drawable.msg_forward_noquote, LocaleController.getString(R.string.NoQuoteForward));
@@ -11077,7 +11084,7 @@ public class ChatActivity extends BaseFragment implements
         actionModeOtherItem.addSubItem(nkbtn_report, R.drawable.msg_report, LocaleController.getString(R.string.ReportChat));
         actionModeOtherItem.addSubItem(nkbtn_detail,R.drawable.msg_info,LocaleController.getString(R.string.MessageDetails));
 
-        actionMode.setItemVisibility(nkactionbarbtn_reply, canSendMessages && (selectedMessagesIds[0].size() + selectedMessagesIds[1].size() == 1) && NaConfig.INSTANCE.getActionBarButtonReply().Bool() ? View.VISIBLE : View.GONE);
+        actionMode.setItemVisibility(nkactionbarbtn_reply, !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && canSendMessages && (selectedMessagesIds[0].size() + selectedMessagesIds[1].size() == 1) && NaConfig.INSTANCE.getActionBarButtonReply().Bool() ? View.VISIBLE : View.GONE);
         actionMode.setItemVisibility(edit, canEditMessagesCount == 1 && (selectedMessagesIds[0].size() + selectedMessagesIds[1].size() == 1) && NaConfig.INSTANCE.getActionBarButtonEdit().Bool() ? View.VISIBLE : View.GONE);
         actionMode.setItemVisibility(nkactionbarbtn_selectBetween, NaConfig.INSTANCE.getActionBarButtonSelectBetween().Bool() ? View.VISIBLE : View.GONE);
         actionMode.setItemVisibility(copy, /*!isPeerNoForwards() &&*/ (selectedMessagesCanCopyIds[0].size() + selectedMessagesCanCopyIds[1].size() != 0) && NaConfig.INSTANCE.getActionBarButtonCopy().Bool() ? View.VISIBLE : View.GONE);
@@ -11090,8 +11097,11 @@ public class ChatActivity extends BaseFragment implements
 
         actionModeOtherItem.setSubItemVisibility(star, selectedMessagesCanStarIds[0].size() + selectedMessagesCanStarIds[1].size() != 0);
         boolean doShrinkActionBarItems = isActionBarTooNarrow && actionMode.getItem(edit).getVisibility() == View.VISIBLE && actionMode.getItem(copy).getVisibility() == View.VISIBLE && actionMode.getItem(delete).getVisibility() == View.VISIBLE;
-        if (doShrinkActionBarItems) {
+        if (doShrinkActionBarItems || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             actionMode.getItem(nkactionbarbtn_reply).setVisibility(View.GONE);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && actionMode.getItem(forward) != null && actionMode.getItem(edit).getVisibility() == View.VISIBLE) {
+                actionMode.getItem(forward).setVisibility(View.GONE);
+            }
         }
         updateActionModeButtonGroup();
     }
@@ -20396,9 +20406,18 @@ public class ChatActivity extends BaseFragment implements
                 }
 
                 if (replyItem != null) {
-                    boolean showReplyItem = !hasSelectedAyuDeletedMessage && chatMode != MODE_SCHEDULED && ChatObject.canSendMessages(currentChat) && selectedCount == 1 && NaConfig.INSTANCE.getActionBarButtonReply().Bool();
+                    boolean showReplyItem = !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && !hasSelectedAyuDeletedMessage && chatMode != MODE_SCHEDULED && ChatObject.canSendMessages(currentChat) && selectedCount == 1 && NaConfig.INSTANCE.getActionBarButtonReply().Bool();
                     boolean doShrinkActionBarItems = isActionBarTooNarrow && newCopyVisible == View.VISIBLE && canForward && canEditMessagesCount == 1 && selectedCount == 1;
                     replyItem.setVisibility(!doShrinkActionBarItems && showReplyItem);
+                }
+
+                if (forwardItem != null) {
+                    boolean doShrinkForward = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && isActionBarTooNarrow && newCopyVisible == View.VISIBLE && canForward && canEditMessagesCount == 1 && selectedCount == 1;
+                    if (doShrinkForward) {
+                        forwardItem.setVisibility(View.GONE);
+                    } else if (NaConfig.INSTANCE.getActionBarButtonForward().Bool()) {
+                        forwardItem.setVisibility(View.VISIBLE);
+                    }
                 }
 
                 boolean canSelectBetween = false;
@@ -20552,6 +20571,23 @@ public class ChatActivity extends BaseFragment implements
 
                 if (actionModeOtherItem != null) {
                     actionModeOtherItem.setSubItemVisibility(nkbtn_translate, !isTranslatingDialog(messageObject));
+                }
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    if (replyItem != null) {
+                        replyItem.setVisibility(View.GONE);
+                    }
+                    int visibleActionItems = 0;
+                    ActionBarMenuItem[] priorityItems = new ActionBarMenuItem[] {
+                        editItem, deleteItem, copyItem, forwardItem, starItem, saveItem, selectItem, shareItem, tagItem
+                    };
+                    for (ActionBarMenuItem item : priorityItems) {
+                        if (item != null && item.getVisibility() == View.VISIBLE) {
+                            visibleActionItems++;
+                            if (visibleActionItems > 3) {
+                                item.setVisibility(View.GONE);
+                            }
+                        }
+                    }
                 }
                 updateActionModeButtonGroup();
             }

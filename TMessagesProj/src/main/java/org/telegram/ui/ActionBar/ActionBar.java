@@ -487,6 +487,17 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             return true;
         }
 
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && child == chatAvatarContainer && glassDrawable != null) {
+            android.graphics.Rect bounds = glassDrawable.getBounds();
+            if (bounds != null && bounds.width() > 0) {
+                canvas.save();
+                canvas.clipRect(bounds.left, 0, bounds.right, getHeight());
+                boolean res = super.drawChild(canvas, child, drawingTime);
+                canvas.restore();
+                return res;
+            }
+        }
+
         boolean clip = shouldClipChild(child);
         if (clip) {
             canvas.save();
@@ -838,6 +849,10 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
 
     public ImageView getBackButton() {
         return backButtonImageView;
+    }
+
+    public Rect getCenterPillBounds() {
+        return glassDrawable != null ? glassDrawable.getBounds() : null;
     }
 
     public ActionBarMenu createActionMode() {
@@ -1759,7 +1774,30 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             if (child.getVisibility() == GONE || child == titleTextView[0] || child == titleTextView[1] || child == additionalSubTitleOverlayContainer || child == subtitleTextView || child == menu || child == backButtonImageView || child == additionalSubtitleTextView || child == avatarSearchImageView) {
                 continue;
             }
-            measureChildWithMargins(child, widthMeasureSpec, 0, MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY), 0);
+            if (child == chatAvatarContainer && xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                final int edge = dp(6);
+                final int gap  = dp(8);
+                final int p    = dp(6);
+                final int s    = dp(46);
+                boolean hasBack = backButtonImageView != null && backButtonImageView.getVisibility() != GONE;
+                int minL = hasBack ? (edge + s + p * 2 + gap) : edge;
+                int effectiveMenuW = 0;
+                if (menu != null && menu.getVisibility() != GONE) {
+                    effectiveMenuW = (int) menu.getItemsWidth();
+                    if (effectiveMenuW <= 0) {
+                        effectiveMenuW = menu.getMeasuredWidth();
+                    }
+                }
+                int menuPillWidth = (effectiveMenuW > 0 && !doNotDrawGlassMenu) ? Math.max(s, effectiveMenuW) + p * 2 : 0;
+                int maxR = (menuPillWidth > 0) ? (width - edge - menuPillWidth - gap) : (width - edge);
+                int maxCenterWidth = Math.max(dp(110), maxR - minL);
+                child.measure(
+                        MeasureSpec.makeMeasureSpec(maxCenterWidth, MeasureSpec.AT_MOST),
+                        MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY)
+                );
+            } else {
+                measureChildWithMargins(child, widthMeasureSpec, 0, MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY), 0);
+            }
         }
     }
 
@@ -2621,11 +2659,14 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 glassDrawableMenu.setRadius(rad);
                 glassDrawableMenu.setBounds(menuLeft, capsuleTop, menuRight, capsuleBottom);
                 float alphaFactor = hasForcedMenuWidth ? 1f : Math.max(animatorHasMenuItems.getFloatValue(), actionModeFactor);
+                if (alphaFactor <= 0.01f && effectiveMenuWidth > 0) {
+                    alphaFactor = 1.0f;
+                }
                 glassDrawableMenu.setAlpha((int) (255 * alphaFactor));
                 glassDrawableMenu.draw(canvas);
             }
 
-            // Center island: title pill (between back and menu, hugging title content)
+            // Center island: title pill (between back and menu, hugging title content or selection count)
             if (glassDrawable != null && !glassOnlyBack) {
                 float titleAlpha = 1.0f;
                 if (chatAvatarContainer != null) {
@@ -2642,18 +2683,59 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                     }
                 }
 
-                if (titleAlpha > 0.01f) {
+                View amTitleView = null;
+                if (actionModeFactor > 0 && actionMode != null) {
+                    for (int i = 0; i < actionMode.getChildCount(); i++) {
+                        View child = actionMode.getChildAt(i);
+                        if (!(child instanceof ActionBarMenuItem) && child.getClass() != View.class && child.getVisibility() != GONE) {
+                            amTitleView = child;
+                            break;
+                        }
+                    }
+                }
+                final float pillAlpha = Math.min(1.0f, Math.max(titleAlpha, actionModeFactor));
+
+                if (pillAlpha > 0.01f) {
                     int minLeft = hasBackButton ? (edge + s + p * 2 + gap) : edge;
                     int maxRight = (effectiveMenuWidth > 0 && !doNotDrawGlassMenu)
                             ? (getWidth() - edge - Math.max(s, effectiveMenuWidth) - p * 2 - gap)
                             : (getWidth() - edge);
 
-                    int contentLeft = Integer.MAX_VALUE;
-                    int contentRight = 0;
+                    int leftNormal = 0;
+                    int rightNormal = 0;
+                    boolean hasNormalBounds = false;
+
                     if (chatAvatarContainer != null) {
-                        contentLeft = (int) chatAvatarContainer.getX();
-                        contentRight = contentLeft + chatAvatarContainer.getVisualWidth();
+                        final int maxCenterWidth = Math.max(dp(110), maxRight - minLeft);
+                        final int visualW = chatAvatarContainer.getVisualWidth();
+                        final int desiredWidth = Math.max(dp(110), visualW + p * 2 + dp(10));
+                        final int width = Math.min(maxCenterWidth, desiredWidth);
+                        int left = (minLeft + maxRight - width) / 2;
+                        int right = left + width;
+
+                        if (left < minLeft) {
+                            left = minLeft;
+                            right = Math.min(maxRight, left + width);
+                        } else if (right > maxRight) {
+                            right = maxRight;
+                            left = Math.max(minLeft, right - width);
+                        }
+
+                        int leftMargin = chatAvatarContainer.getLayoutParams() instanceof MarginLayoutParams
+                                ? ((MarginLayoutParams) chatAvatarContainer.getLayoutParams()).leftMargin : 0;
+                        final float translationX = left
+                            - leftMargin
+                            - chatAvatarContainer.getLeftPadding()
+                            + p + dp(3);
+                        chatAvatarContainer.setTranslationX(translationX);
+                        chatAvatarContainer.setPivotX(chatAvatarContainer.getMeasuredWidth() / 2f - translationX);
+
+                        leftNormal = left;
+                        rightNormal = right;
+                        hasNormalBounds = true;
                     } else {
+                        int contentLeft = Integer.MAX_VALUE;
+                        int contentRight = 0;
                         int offset = (useContainerForTitles && titlesContainer != null) ? (int) titlesContainer.getX() : 0;
                         for (int i = 0; i < 2; i++) {
                             if (titleTextView[i] != null && titleTextView[i].getVisibility() != GONE) {
@@ -2678,19 +2760,82 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                             if (l < contentLeft) contentLeft = l;
                             if (r > contentRight) contentRight = r;
                         }
+                        if (contentRight > contentLeft && contentLeft != Integer.MAX_VALUE) {
+                            int hPad = dp(16);
+                            leftNormal = Math.max(minLeft, contentLeft - hPad);
+                            rightNormal = Math.min(maxRight, contentRight + hPad);
+                            hasNormalBounds = true;
+                        }
                     }
 
-                    if (contentRight > contentLeft && contentLeft != Integer.MAX_VALUE) {
-                        int hPad = dp(16);
-                        int centerLeft = Math.max(minLeft, contentLeft - hPad);
-                        int centerRight = Math.min(maxRight, contentRight + hPad);
+                    int leftAM = 0;
+                    int rightAM = 0;
+                    boolean hasAMBounds = false;
 
-                        if (centerRight > centerLeft + dp(20)) {
-                            glassDrawable.setRadius(rad);
-                            glassDrawable.setBounds(centerLeft, capsuleTop, centerRight, capsuleBottom);
-                            glassDrawable.setAlpha((int) (255 * titleAlpha));
-                            glassDrawable.draw(canvas);
+                    if (amTitleView != null) {
+                        int amTextW = 0;
+                        if (amTitleView instanceof org.telegram.ui.Components.AnimatedTextView) {
+                            amTextW = ((org.telegram.ui.Components.AnimatedTextView) amTitleView).width();
+                        } else if (amTitleView instanceof SimpleTextView) {
+                            amTextW = ((SimpleTextView) amTitleView).getTextWidth();
+                        } else if (amTitleView instanceof android.widget.TextView) {
+                            amTextW = (int) Math.ceil(((android.widget.TextView) amTitleView).getPaint().measureText(((android.widget.TextView) amTitleView).getText().toString()));
+                        } else {
+                            amTextW = amTitleView.getMeasuredWidth();
                         }
+
+                        final int maxCenterWidthAM = Math.max(0, maxRight - minLeft);
+                        final int desiredWidthAM = Math.max(dp(70), amTextW + p * 2 + dp(18));
+                        final int widthAM = Math.min(maxCenterWidthAM, desiredWidthAM);
+                        leftAM = (minLeft + maxRight - widthAM) / 2;
+                        rightAM = leftAM + widthAM;
+
+                        if (leftAM < minLeft) {
+                            leftAM = minLeft;
+                            rightAM = Math.min(maxRight, leftAM + widthAM);
+                        } else if (rightAM > maxRight) {
+                            rightAM = maxRight;
+                            leftAM = Math.max(minLeft, rightAM - widthAM);
+                        }
+
+                        float pillCenterAM = (leftAM + rightAM) / 2f;
+                        float textStartX = pillCenterAM - amTextW / 2f;
+                        float minTextStartX = leftAM + p + dp(6);
+                        if (textStartX < minTextStartX) {
+                            textStartX = minTextStartX;
+                        }
+                        float amPaddingLeft = amTitleView.getPaddingLeft();
+                        float amLeft = amTitleView.getLeft();
+                        float amParentTransX = actionMode != null ? actionMode.getTranslationX() : 0;
+                        float transX = textStartX - (amParentTransX + amLeft + amPaddingLeft);
+                        amTitleView.setTranslationX(transX);
+
+                        hasAMBounds = true;
+                    }
+
+                    int centerLeft = 0;
+                    int centerRight = 0;
+                    boolean shouldDraw = false;
+
+                    if (hasNormalBounds && hasAMBounds) {
+                        centerLeft = (int) AndroidUtilities.lerp(leftNormal, leftAM, actionModeFactor);
+                        centerRight = (int) AndroidUtilities.lerp(rightNormal, rightAM, actionModeFactor);
+                        shouldDraw = true;
+                    } else if (hasAMBounds && (actionModeFactor > 0.01f || !hasNormalBounds)) {
+                        centerLeft = leftAM;
+                        centerRight = rightAM;
+                        shouldDraw = true;
+                    } else if (hasNormalBounds) {
+                        centerLeft = leftNormal;
+                        centerRight = rightNormal;
+                        shouldDraw = true;
+                    }
+
+                    if (shouldDraw && centerRight > centerLeft + dp(20)) {
+                        glassDrawable.setRadius(rad);
+                        glassDrawable.setBounds(centerLeft, capsuleTop, centerRight, capsuleBottom);
+                        glassDrawable.setAlpha((int) (255 * pillAlpha));
+                        glassDrawable.draw(canvas);
                     }
                 }
             }
