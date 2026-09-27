@@ -1013,7 +1013,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
         recyclerListView.setAnimateEmptyView(true, RecyclerListView.EMPTY_VIEW_ANIMATION_TYPE_ALPHA);
         itemsEnterAnimator = new RecyclerItemsEnterAnimator(recyclerListView, true);
         recyclerListView.setItemsEnterAnimator(itemsEnterAnimator);
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             recyclerListView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
             recyclerListView.setSelectionChecker((v, pos) -> {
                 if (v instanceof TopicDialogCell) {
@@ -3539,7 +3539,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
 
             itemsEnterAnimator = new RecyclerItemsEnterAnimator(recyclerView, true);
             recyclerView.setItemsEnterAnimator(itemsEnterAnimator);
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 recyclerView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
                 recyclerView.setSections(
                     view -> {

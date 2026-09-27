@@ -4269,7 +4269,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             viewPage.listView.setAnimateEmptyView(true, RecyclerListView.EMPTY_VIEW_ANIMATION_TYPE_ALPHA);
             viewPage.listView.setClipToPadding(false);
             viewPage.listView.setPivotY(0);
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 viewPage.listView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
                 viewPage.listView.setSelectionChecker((v, pos) -> {
                     if (v instanceof org.telegram.ui.Cells.DialogCell) {
@@ -4305,8 +4305,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         return holder != null && isM3ChatSectionViewType(holder.getItemViewType());
                     },
                     this::isM3ChatSectionViewType,
-                    dp(12),
-                    dp(16),
+                    xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(16) : dp(12),
+                    xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
                     viewPage.listView::drawBackgroundRect,
                     false
                 );
@@ -5583,7 +5583,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             contentView.addView(animatedStatusView, LayoutHelper.createFrame(20, 20, Gravity.LEFT | Gravity.TOP));
         }
         if (fragmentSearchField != null) {
-            float sideMargin = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 16f : 7f;
+            float sideMargin = (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? 16f : 7f;
             contentView.addView(fragmentSearchField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.TOP, sideMargin, -2, sideMargin, 0));
         }
 
@@ -9542,7 +9542,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         return pinnedCount;
     }
 
-    private boolean isDialogPinned(TLRPC.Dialog dialog) {
+    public boolean isDialogPinned(TLRPC.Dialog dialog) {
         if (dialog == null) {
             return false;
         }

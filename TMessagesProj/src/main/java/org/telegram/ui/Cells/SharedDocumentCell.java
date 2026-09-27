@@ -754,8 +754,10 @@ public class SharedDocumentCell extends FrameLayout implements DownloadControlle
 
     private void drawDivider(Canvas canvas) {
         if (needDivider) {
-            int rightPadding = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? AndroidUtilities.dp(16) : getPaddingRight();
-            canvas.drawLine(AndroidUtilities.dp(72), getHeight() - 1, getWidth() - rightPadding, getHeight() - 1, Theme.getThemePaint(Theme.key_paint_divider, resourcesProvider));
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            int rightPadding = isIosGlass ? 0 : (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? AndroidUtilities.dp(16) : getPaddingRight());
+            float y = getHeight() - (isIosGlass ? AndroidUtilities.dpf2(0.5f) : 1);
+            canvas.drawLine(AndroidUtilities.dp(72), y, getWidth() - rightPadding, y, Theme.getThemePaint(Theme.key_paint_divider, resourcesProvider));
         }
     }
 

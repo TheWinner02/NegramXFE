@@ -444,19 +444,24 @@ public class TextCheckCell extends FrameLayout {
             if (dividerPaint != null) {
                 int origColor = dividerPaint.getColor();
                 int alpha = dividerPaint.getAlpha();
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                float origStroke = dividerPaint.getStrokeWidth();
+                boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+                if (isIosGlass) {
                     boolean isDark = Theme.isCurrentThemeDark();
-                    dividerPaint.setColor(isDark ? 0x24FFFFFF : 0x1F000000);
+                    dividerPaint.setColor(isDark ? 0x24FFFFFF : 0x24000000);
+                    dividerPaint.setStrokeWidth(AndroidUtilities.dpf2(0.5f));
                 } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                     dividerPaint.setAlpha((int) (alpha * 0.38f));
                 }
+                float y = getMeasuredHeight() - (isIosGlass ? AndroidUtilities.dpf2(0.5f) : 1);
                 if (imageView != null) {
-                    canvas.drawLine(LocaleController.isRTL ? 0 : padding, getMeasuredHeight() - 1, getMeasuredWidth() - (LocaleController.isRTL ? padding : 0), getMeasuredHeight() - 1, dividerPaint);
+                    canvas.drawLine(LocaleController.isRTL ? 0 : padding, y, getMeasuredWidth() - (LocaleController.isRTL ? padding : 0), y, dividerPaint);
                 } else {
-                    canvas.drawLine(LocaleController.isRTL ? 0 : AndroidUtilities.dp(20), getMeasuredHeight() - 1, getMeasuredWidth() - (LocaleController.isRTL ? AndroidUtilities.dp(20) : 0), getMeasuredHeight() - 1, dividerPaint);
+                    canvas.drawLine(LocaleController.isRTL ? 0 : AndroidUtilities.dp(20), y, getMeasuredWidth() - (LocaleController.isRTL ? AndroidUtilities.dp(20) : 0), y, dividerPaint);
                 }
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                if (isIosGlass) {
                     dividerPaint.setColor(origColor);
+                    dividerPaint.setStrokeWidth(origStroke);
                 } else {
                     dividerPaint.setAlpha(alpha);
                 }

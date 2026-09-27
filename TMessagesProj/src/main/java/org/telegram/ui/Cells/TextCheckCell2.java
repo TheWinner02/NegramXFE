@@ -12,6 +12,7 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
@@ -274,12 +275,29 @@ public class TextCheckCell2 extends FrameLayout {
     @Override
     protected void onDraw(Canvas canvas) {
         if (needDivider) {
-            int alpha = Theme.dividerPaint.getAlpha();
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                Theme.dividerPaint.setAlpha((int) (alpha * 0.38f));
+            Paint paint = Theme.dividerPaint;
+            int origColor = paint.getColor();
+            int alpha = paint.getAlpha();
+            float origStroke = paint.getStrokeWidth();
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            if (isIosGlass) {
+                boolean isDark = Theme.isCurrentThemeDark();
+                paint.setColor(isDark ? 0x24FFFFFF : 0x24000000);
+                paint.setStrokeWidth(AndroidUtilities.dpf2(0.5f));
+            } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                paint.setAlpha((int) (alpha * 0.38f));
             }
-            canvas.drawLine(LocaleController.isRTL ? 0 : dp(20), getMeasuredHeight() - 1, getMeasuredWidth() - (LocaleController.isRTL ? dp(20) : 0), getMeasuredHeight() - 1, Theme.dividerPaint);
-            Theme.dividerPaint.setAlpha(alpha);
+            int offset = dp(20);
+            int left = LocaleController.isRTL ? 0 : offset;
+            int right = getMeasuredWidth() - (LocaleController.isRTL ? offset : 0);
+            float y = getMeasuredHeight() - (isIosGlass ? AndroidUtilities.dpf2(0.5f) : 1);
+            canvas.drawLine(left, y, right, y, paint);
+            if (isIosGlass) {
+                paint.setColor(origColor);
+                paint.setStrokeWidth(origStroke);
+            } else {
+                paint.setAlpha(alpha);
+            }
         }
     }
 

@@ -954,11 +954,13 @@ public class ProfileSearchCell extends BaseCell implements NotificationCenter.No
             if (dividerPaint == null) {
                 dividerPaint = Theme.dividerPaint;
             }
-            int rightPadding = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : 0;
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            int rightPadding = (isIosGlass ? 0 : (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : 0));
+            float y = getMeasuredHeight() - (isIosGlass ? AndroidUtilities.dpf2(0.5f) : 1);
             if (LocaleController.isRTL) {
-                canvas.drawLine(rightPadding, getMeasuredHeight() - 1, getMeasuredWidth() - dp(AndroidUtilities.leftBaseline), getMeasuredHeight() - 1, dividerPaint);
+                canvas.drawLine(rightPadding, y, getMeasuredWidth() - dp(AndroidUtilities.leftBaseline), y, dividerPaint);
             } else {
-                canvas.drawLine(dp(AndroidUtilities.leftBaseline), getMeasuredHeight() - 1, getMeasuredWidth() - rightPadding, getMeasuredHeight() - 1, dividerPaint);
+                canvas.drawLine(dp(AndroidUtilities.leftBaseline), y, getMeasuredWidth() - rightPadding, y, dividerPaint);
             }
         }
 

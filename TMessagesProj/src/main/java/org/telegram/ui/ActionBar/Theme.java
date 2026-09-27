@@ -7808,7 +7808,7 @@ public class Theme {
     public static void createCommonResources(Context context) {
         if (dividerPaint == null) {
             dividerPaint = new Paint();
-            dividerPaint.setStrokeWidth(1);
+            dividerPaint.setStrokeWidth(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dpf2(0.5f) : 1);
 
             dividerExtraPaint = new Paint();
             dividerExtraPaint.setStrokeWidth(1);
@@ -7900,6 +7900,11 @@ public class Theme {
             return;
         }
         dividerPaint.setColor(getColor(key_divider));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            dividerPaint.setStrokeWidth(AndroidUtilities.dpf2(0.5f));
+        } else {
+            dividerPaint.setStrokeWidth(1);
+        }
         linkSelectionPaint.setColor(getColor(key_windowBackgroundWhiteLinkSelection));
 
         for (int a = 0; a < avatarDrawables.length; a++) {
@@ -9179,6 +9184,9 @@ public class Theme {
         }
         if (NaConfig.INSTANCE.getHideDividers().Bool() && key_divider == key) {
             return 0x00ffffff;
+        }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && key_divider == key) {
+            return isCurrentThemeDark() ? 0x24FFFFFF : 0x24000000;
         }
         if (serviceBitmapShader != null && (key_chat_serviceText == key || key_chat_serviceLink == key || key_chat_serviceIcon == key
                 || key_chat_stickerReplyLine == key || key_chat_stickerReplyNameText == key || key_chat_stickerReplyMessageText == key)) {

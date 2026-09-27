@@ -862,15 +862,20 @@ public class TextCell extends FrameLayout {
             }
             int origColor = paint.getColor();
             int alpha = paint.getAlpha();
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            float origStroke = paint.getStrokeWidth();
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            if (isIosGlass) {
                 boolean isDark = Theme.isCurrentThemeDark();
-                paint.setColor(isDark ? 0x24FFFFFF : 0x1F000000);
+                paint.setColor(isDark ? 0x24FFFFFF : 0x24000000);
+                paint.setStrokeWidth(AndroidUtilities.dpf2(0.5f));
             } else if (isM3Expressive()) {
                 paint.setAlpha((int) (alpha * 0.38f));
             }
-            canvas.drawLine(LocaleController.isRTL ? 0 : dp(imageView.getVisibility() == VISIBLE ? (inDialogs ? 72 : 58) : 20), getMeasuredHeight() - 1, getMeasuredWidth() - (LocaleController.isRTL ? dp(imageView.getVisibility() == VISIBLE ? (inDialogs ? 72 : 58) : 20) : 0), getMeasuredHeight() - 1, paint);
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            float y = getMeasuredHeight() - (isIosGlass ? AndroidUtilities.dpf2(0.5f) : 1);
+            canvas.drawLine(LocaleController.isRTL ? 0 : dp(imageView.getVisibility() == VISIBLE ? (inDialogs ? 72 : 58) : 20), y, getMeasuredWidth() - (LocaleController.isRTL ? dp(imageView.getVisibility() == VISIBLE ? (inDialogs ? 72 : 58) : 20) : 0), y, paint);
+            if (isIosGlass) {
                 paint.setColor(origColor);
+                paint.setStrokeWidth(origStroke);
             } else {
                 paint.setAlpha(alpha);
             }

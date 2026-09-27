@@ -1,6 +1,7 @@
 package org.telegram.ui;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
+import static org.telegram.messenger.AndroidUtilities.dpf2;
 import static org.telegram.messenger.AndroidUtilities.lerp;
 import static org.telegram.messenger.AndroidUtilities.replaceSingleTag;
 import static org.telegram.messenger.LocaleController.formatString;
@@ -1158,6 +1159,49 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             counterView.setText(LocaleController.formatNumber(counter, ','));
         }
 
+        private boolean needDivider;
+
+        public void setNeedDivider(boolean needDivider) {
+            if (this.needDivider != needDivider) {
+                this.needDivider = needDivider;
+                setWillNotDraw(!needDivider);
+                invalidate();
+            }
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (needDivider) {
+                boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+                Paint paint = resourcesProvider != null ? resourcesProvider.getPaint(Theme.key_paint_divider) : Theme.dividerPaint;
+                if (paint == null) {
+                    paint = Theme.dividerPaint;
+                }
+                int origColor = paint.getColor();
+                int alpha = paint.getAlpha();
+                float origStroke = paint.getStrokeWidth();
+                if (isIosGlass) {
+                    boolean isDark = resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark();
+                    paint.setColor(isDark ? 0x24FFFFFF : 0x24000000);
+                    paint.setStrokeWidth(dpf2(0.5f));
+                } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                    paint.setAlpha((int) (alpha * 0.38f));
+                }
+                int offset = dp(64);
+                int left = LocaleController.isRTL ? 0 : offset;
+                int right = getMeasuredWidth() - (LocaleController.isRTL ? offset : 0);
+                float y = getMeasuredHeight() - (isIosGlass ? dpf2(0.5f) : 1);
+                canvas.drawLine(left, y, right, y, paint);
+                if (isIosGlass) {
+                    paint.setColor(origColor);
+                    paint.setStrokeWidth(origStroke);
+                } else {
+                    paint.setAlpha(alpha);
+                }
+            }
+        }
+
         @Override
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
             super.onMeasure(
@@ -1177,6 +1221,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             @Override
             public void bindView(View view, UItem item, boolean divider, UniversalAdapter adapter, UniversalRecyclerView listView) {
                 ((AccountCell) view).set(item.intValue);
+                ((AccountCell) view).setNeedDivider(divider);
             }
 
             public static UItem of(int id, int account) {
@@ -1316,6 +1361,49 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             valueView.setText(value);
         }
 
+        private boolean needDivider;
+
+        public void setNeedDivider(boolean needDivider) {
+            if (this.needDivider != needDivider) {
+                this.needDivider = needDivider;
+                setWillNotDraw(!needDivider);
+                invalidate();
+            }
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (needDivider) {
+                boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+                Paint paint = resourcesProvider != null ? resourcesProvider.getPaint(Theme.key_paint_divider) : Theme.dividerPaint;
+                if (paint == null) {
+                    paint = Theme.dividerPaint;
+                }
+                int origColor = paint.getColor();
+                int alpha = paint.getAlpha();
+                float origStroke = paint.getStrokeWidth();
+                if (isIosGlass) {
+                    boolean isDark = resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark();
+                    paint.setColor(isDark ? 0x24FFFFFF : 0x24000000);
+                    paint.setStrokeWidth(dpf2(0.5f));
+                } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                    paint.setAlpha((int) (alpha * 0.38f));
+                }
+                int offset = dp(mini ? 49 : 64);
+                int left = LocaleController.isRTL ? 0 : offset;
+                int right = getMeasuredWidth() - (LocaleController.isRTL ? offset : 0);
+                float y = getMeasuredHeight() - (isIosGlass ? dpf2(0.5f) : 1);
+                canvas.drawLine(left, y, right, y, paint);
+                if (isIosGlass) {
+                    paint.setColor(origColor);
+                    paint.setStrokeWidth(origStroke);
+                } else {
+                    paint.setAlpha(alpha);
+                }
+            }
+        }
+
         @Override
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
             boolean m3Expressive = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
@@ -1393,6 +1481,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                     item.subtext,
                     item.textValue
                 );
+                ((SettingCell) view).setNeedDivider(divider);
             }
 
             public static UItem of(int id, int iconColorTop, int iconColorBottom, int icon, CharSequence title) {

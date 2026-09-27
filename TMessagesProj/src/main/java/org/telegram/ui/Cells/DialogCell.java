@@ -4910,18 +4910,29 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             }
 
             if (rightFragmentOpenedProgress != 1) {
+                int origColor = Theme.dividerPaint.getColor();
                 int alpha = Theme.dividerPaint.getAlpha();
+                float origStroke = Theme.dividerPaint.getStrokeWidth();
+                boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+                if (isIosGlass) {
+                    boolean isDark = Theme.isCurrentThemeDark();
+                    Theme.dividerPaint.setColor(isDark ? 0x24FFFFFF : 0x24000000);
+                    Theme.dividerPaint.setStrokeWidth(AndroidUtilities.dpf2(0.5f));
+                }
                 if (rightFragmentOpenedProgress != 0) {
                     Theme.dividerPaint.setAlpha((int) (alpha * (1f - rightFragmentOpenedProgress)));
                 }
-                float y = getMeasuredHeight() - 1 - rightFragmentOffset * rightFragmentOpenedProgress;
+                float y = getMeasuredHeight() - (isIosGlass ? AndroidUtilities.dpf2(0.5f) : 1) - rightFragmentOffset * rightFragmentOpenedProgress;
                 int rightPadding = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : 0;
                 if (LocaleController.isRTL) {
                     canvas.drawLine(rightPadding, y, getMeasuredWidth() - left, y, Theme.dividerPaint);
                 } else {
                     canvas.drawLine(left, y, getMeasuredWidth() - rightPadding, y, Theme.dividerPaint);
                 }
-                if (rightFragmentOpenedProgress != 0) {
+                if (isIosGlass) {
+                    Theme.dividerPaint.setColor(origColor);
+                    Theme.dividerPaint.setStrokeWidth(origStroke);
+                } else if (rightFragmentOpenedProgress != 0) {
                     Theme.dividerPaint.setAlpha(alpha);
                 }
             }

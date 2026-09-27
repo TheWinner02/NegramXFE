@@ -186,15 +186,20 @@ public class TextDetailSettingsCell extends FrameLayout {
         if (needDivider && Theme.dividerPaint != null) {
             int origColor = Theme.dividerPaint.getColor();
             int alpha = Theme.dividerPaint.getAlpha();
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            float origStroke = Theme.dividerPaint.getStrokeWidth();
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            if (isIosGlass) {
                 boolean isDark = Theme.isCurrentThemeDark();
-                Theme.dividerPaint.setColor(isDark ? 0x24FFFFFF : 0x1F000000);
+                Theme.dividerPaint.setColor(isDark ? 0x24FFFFFF : 0x24000000);
+                Theme.dividerPaint.setStrokeWidth(AndroidUtilities.dpf2(0.5f));
             } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                 Theme.dividerPaint.setAlpha((int) (alpha * 0.38f));
             }
-            canvas.drawLine(LocaleController.isRTL ? 0 : AndroidUtilities.dp(imageView.getVisibility() == VISIBLE ? 71 : 20), getMeasuredHeight() - 1, getMeasuredWidth() - (LocaleController.isRTL ? AndroidUtilities.dp(imageView.getVisibility() == VISIBLE ? 71 : 20) : 0), getMeasuredHeight() - 1, Theme.dividerPaint);
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            float y = getMeasuredHeight() - (isIosGlass ? AndroidUtilities.dpf2(0.5f) : 1);
+            canvas.drawLine(LocaleController.isRTL ? 0 : AndroidUtilities.dp(imageView.getVisibility() == VISIBLE ? 71 : 20), y, getMeasuredWidth() - (LocaleController.isRTL ? AndroidUtilities.dp(imageView.getVisibility() == VISIBLE ? 71 : 20) : 0), y, Theme.dividerPaint);
+            if (isIosGlass) {
                 Theme.dividerPaint.setColor(origColor);
+                Theme.dividerPaint.setStrokeWidth(origStroke);
             } else {
                 Theme.dividerPaint.setAlpha(alpha);
             }

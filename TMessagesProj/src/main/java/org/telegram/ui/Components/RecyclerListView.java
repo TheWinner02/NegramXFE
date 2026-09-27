@@ -3374,7 +3374,7 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
     ) {
         boolean m3Expressive = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
         boolean iosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
-        m3ExpressivePressedSelector = m3Expressive;
+        m3ExpressivePressedSelector = m3Expressive || iosGlass;
         m3ExpressiveSections = m3Expressive;
         if (m3Expressive) {
             padding = Math.max(padding, dp(12));
@@ -3446,7 +3446,8 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         ) {
             if (isSectionItem.run(view)) {
                 boolean m3Expressive = this.parent.m3ExpressiveSections;
-                int sectionPadding = m3Expressive ? Math.max(padding, dp(12)) : padding;
+                boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+                int sectionPadding = (m3Expressive || isIosGlass) ? Math.max(padding, dp(isIosGlass ? 16 : 12)) : padding;
                 outRect.left = outRect.right = sectionPadding;
 
                 final ViewHolder viewHolder = parent.getChildViewHolder(view);
@@ -3457,7 +3458,7 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                         final boolean first = position == 0;
                         final boolean last = position == adapter.getItemCount() - 1;
 
-                        if (m3Expressive) {
+                        if (m3Expressive || isIosGlass) {
                             View aboveView = this.parent.findChildByAdapterPosition(position - 1);
                             boolean hasAbove = this.parent.hasM3ExpressiveSectionItem(position - 1);
                             if (hasAbove && this.parent.sectionGroupingChecker != null) {
@@ -3470,11 +3471,16 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                                 hasBelow = this.parent.sectionGroupingChecker.canConnect(view, position, belowView, position + 1);
                             }
 
-                            outRect.top = hasAbove ? this.parent.getM3ExpressiveSegmentGap() : dp(6);
-                            outRect.bottom = hasBelow ? this.parent.getM3ExpressiveSegmentGap() : dp(10);
+                            if (isIosGlass) {
+                                outRect.top = hasAbove ? 0 : dp(8);
+                                outRect.bottom = hasBelow ? 0 : dp(14);
+                            } else {
+                                outRect.top = hasAbove ? this.parent.getM3ExpressiveSegmentGap() : dp(6);
+                                outRect.bottom = hasBelow ? this.parent.getM3ExpressiveSegmentGap() : dp(10);
+                            }
                         }
-                        if (first) outRect.top = enableTopPadding ? sectionPadding : (m3Expressive ? dp(8) : dp(4));
-                        if (last) outRect.bottom = m3Expressive ? Math.max(sectionPadding, dp(16)) : sectionPadding;
+                        if (first) outRect.top = enableTopPadding ? sectionPadding : ((m3Expressive || isIosGlass) ? dp(8) : dp(4));
+                        if (last) outRect.bottom = (m3Expressive || isIosGlass) ? Math.max(sectionPadding, dp(16)) : sectionPadding;
                     }
                 }
             }
@@ -3523,14 +3529,24 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         final int position = getChildAdapterPosition(view);
         if (position == NO_POSITION || position == 0) return false;
         final int viewType = getAdapter().getItemViewType(position - 1);
-        return isViewTypeSection.run(viewType);
+        boolean isSection = isViewTypeSection.run(viewType);
+        if (isSection && sectionGroupingChecker != null) {
+            View aboveView = findChildByAdapterPosition(position - 1);
+            return sectionGroupingChecker.canConnect(view, position, aboveView, position - 1);
+        }
+        return isSection;
     }
     private boolean hasBelow(View view, int index) {
         if (view == null || index < getChildCount() - 1 || getAdapter() == null || isViewTypeSection == null) return false;
         final int position = getChildAdapterPosition(view);
         if (position == NO_POSITION || position == getAdapter().getItemCount() - 1) return false;
         final int viewType = getAdapter().getItemViewType(position + 1);
-        return isViewTypeSection.run(viewType);
+        boolean isSection = isViewTypeSection.run(viewType);
+        if (isSection && sectionGroupingChecker != null) {
+            View belowView = findChildByAdapterPosition(position + 1);
+            return sectionGroupingChecker.canConnect(view, position, belowView, position + 1);
+        }
+        return isSection;
     }
 
     private boolean isM3ExpressiveSectionItem(View view) {
@@ -3724,18 +3740,30 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
             View start = null, prev = null;
             for (int i = 0; i < getChildCount(); ++i) {
                 final View child = getChildAt(i);
+                int pos = getChildAdapterPosition(child);
+                boolean canConnect = true;
+                if (start != null && prev != null && sectionGroupingChecker != null) {
+                    int prevPos = getChildAdapterPosition(prev);
+                    canConnect = sectionGroupingChecker.canConnect(prev, prevPos, child, pos);
+                }
                 if (
                     child == emptyView ||
                     child.getVisibility() != View.VISIBLE || child.getAlpha() <= 0 ||
                     !sectionsItemDecoration.isSectionItem.run(child) ||
-                    isInsideForcedSection(getChildAdapterPosition(child))
+                    isInsideForcedSection(pos)
                 ) {
                     drawSectionBackground(canvas, start, prev, hasAbove(start, startIndex), hasBelow(prev, prevIndex));
                     startIndex = prevIndex = -1;
                     start = prev = null;
                     continue;
                 }
-                if (start != null && Math.abs(prev.getAlpha() - child.getAlpha()) > 0.1f) {
+                if (!canConnect) {
+                    drawSectionBackground(canvas, start, prev, hasAbove(start, startIndex), hasBelow(prev, prevIndex));
+                    startIndex = prevIndex = i;
+                    start = prev = child;
+                    continue;
+                }
+                if (start != null && prev != null && Math.abs(prev.getAlpha() - child.getAlpha()) > 0.1f) {
                     drawSectionBackground(canvas, start, prev, hasAbove(start, startIndex), hasBelow(prev, prevIndex));
                     startIndex = -1;
                     start = null;
@@ -3957,8 +3985,10 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         } else {
             final View prevChild = findViewByPosition(position - 1);
             final View nextChild = findViewByPosition(position + 1);
-            prev = prevChild != null && sectionsItemDecoration.isSectionItem.run(prevChild);
-            next = nextChild != null && sectionsItemDecoration.isSectionItem.run(nextChild);
+            boolean canConnectPrev = prevChild != null && (sectionGroupingChecker == null || sectionGroupingChecker.canConnect(child, position, prevChild, position - 1));
+            boolean canConnectNext = nextChild != null && (sectionGroupingChecker == null || sectionGroupingChecker.canConnect(child, position, nextChild, position + 1));
+            prev = prevChild != null && sectionsItemDecoration.isSectionItem.run(prevChild) && canConnectPrev;
+            next = nextChild != null && sectionsItemDecoration.isSectionItem.run(nextChild) && canConnectNext;
         }
         float topInset = 0;
         float bottomInset = 0;

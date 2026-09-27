@@ -295,7 +295,7 @@ public class FilteredSearchView extends FrameLayout implements NotificationCente
         super(fragment.getParentActivity());
         parentFragment = fragment;
         Context context = parentActivity = fragment.getParentActivity();
-        setBackgroundColor(Theme.getColor(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? Theme.key_windowBackgroundGray : Theme.key_windowBackgroundWhite));
+        setBackgroundColor(Theme.getColor((xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? Theme.key_windowBackgroundGray : Theme.key_windowBackgroundWhite));
         recyclerListView = new RecyclerListView(context) {
 
             @Override
@@ -383,7 +383,7 @@ public class FilteredSearchView extends FrameLayout implements NotificationCente
 
         recyclerListView.setSectionsType(RecyclerListView.SECTIONS_TYPE_DATE);
         recyclerListView.setSkipDrawSection(true);
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             recyclerListView.setSections(
                 view -> {
                     if (view == null || view.getParent() != recyclerListView) {

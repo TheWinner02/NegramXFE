@@ -870,9 +870,11 @@ public class UserCell extends FrameLayout implements NotificationCenter.Notifica
     @Override
     protected void onDraw(Canvas canvas) {
         if (needDivider) {
-            int rightPadding = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : (LocaleController.isRTL ? dp(68) : 0);
-            int leftPadding = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && LocaleController.isRTL ? dp(16) : (LocaleController.isRTL ? 0 : dp(68));
-            canvas.drawLine(leftPadding, getMeasuredHeight() - 1, getMeasuredWidth() - rightPadding, getMeasuredHeight() - 1, Theme.dividerPaint);
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            int rightPadding = isIosGlass ? (LocaleController.isRTL ? dp(68) : 0) : (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : (LocaleController.isRTL ? dp(68) : 0));
+            int leftPadding = isIosGlass ? (LocaleController.isRTL ? 0 : dp(68)) : (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && LocaleController.isRTL ? dp(16) : (LocaleController.isRTL ? 0 : dp(68)));
+            float y = getMeasuredHeight() - (isIosGlass ? AndroidUtilities.dpf2(0.5f) : 1);
+            canvas.drawLine(leftPadding, y, getMeasuredWidth() - rightPadding, y, Theme.dividerPaint);
         }
     }
 

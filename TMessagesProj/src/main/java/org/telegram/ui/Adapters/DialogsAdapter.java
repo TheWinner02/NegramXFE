@@ -995,8 +995,15 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
                 } else {
                     DialogCell cell = (DialogCell) holder.itemView;
                     cell.isHiddenInCommunity = communityId != 0 && ChatObject.isHiddenInCommunity(currentAccount, dialog.id);
-                    cell.useSeparator = false; // nextDialog != null;
-                    cell.fullSeparator = false; // dialog.pinned && nextDialog != null && !nextDialog.pinned;
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        boolean isPinned = parentFragment != null && parentFragment.isDialogPinned(dialog);
+                        boolean nextPinned = nextDialog != null && parentFragment != null && parentFragment.isDialogPinned(nextDialog);
+                        cell.useSeparator = nextDialog != null && (isPinned == nextPinned);
+                        cell.fullSeparator = false;
+                    } else {
+                        cell.useSeparator = false; // nextDialog != null;
+                        cell.fullSeparator = false; // dialog.pinned && nextDialog != null && !nextDialog.pinned;
+                    }
                     if (dialogsType == DialogsActivity.DIALOGS_TYPE_DEFAULT) {
                         if (AndroidUtilities.isTablet()) {
                             cell.setDialogSelected(dialog.id == openedDialogId);

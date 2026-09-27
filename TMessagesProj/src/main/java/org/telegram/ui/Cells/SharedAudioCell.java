@@ -771,11 +771,13 @@ public class SharedAudioCell extends FrameLayout implements DownloadController.F
         radialProgress.draw(canvas);
 
         if (needDivider) {
-            int rightPadding = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : getPaddingRight();
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            int rightPadding = isIosGlass ? 0 : (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : getPaddingRight());
+            float y = getHeight() - (isIosGlass ? AndroidUtilities.dpf2(0.5f) : 1);
             if (LocaleController.isRTL) {
-                canvas.drawLine(0, getHeight() - 1, getWidth() - dp(72) - rightPadding, getHeight() - 1, Theme.getThemePaint(Theme.key_paint_divider, resourcesProvider));
+                canvas.drawLine(0, y, getWidth() - dp(72) - rightPadding, y, Theme.getThemePaint(Theme.key_paint_divider, resourcesProvider));
             } else {
-                canvas.drawLine(dp(72), getHeight() - 1, getWidth() - rightPadding, getHeight() - 1, Theme.getThemePaint(Theme.key_paint_divider, resourcesProvider));
+                canvas.drawLine(dp(72), y, getWidth() - rightPadding, y, Theme.getThemePaint(Theme.key_paint_divider, resourcesProvider));
             }
         }
     }
