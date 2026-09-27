@@ -12,12 +12,17 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.RoundedCorner;
 import android.view.View;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.WindowInsets;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 
+import org.telegram.messenger.AndroidUtilities;
+import org.telegram.ui.Components.AnimatedFloat;
 import org.telegram.ui.Components.ChatActivityEnterView;
+import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.blur3.BlurredBackgroundWithFadeDrawable;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
@@ -41,7 +46,26 @@ public class ChatInputViewsContainer extends FrameLayout {
     public ChatInputViewsContainer(@NonNull Context context) {
         super(context);
 
-        inputIslandBubbleContainer = new FrameLayout(context);
+        inputIslandBubbleContainer = new FrameLayout(context) {
+            @Override
+            public void onViewAdded(View child) {
+                super.onViewAdded(child);
+                if (child instanceof ChatActivityEnterView) {
+                    ((ChatActivityEnterView) child).addTextChangedListener(new TextWatcher() {
+                        @Override
+                        public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                        @Override
+                        public void onTextChanged(CharSequence s, int start, int before, int count) {
+                            invalidate();
+                        }
+
+                        @Override
+                        public void afterTextChanged(Editable s) {}
+                    });
+                }
+            }
+        };
         addView(inputIslandBubbleContainer,
             LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM));
 
@@ -141,6 +165,38 @@ public class ChatInputViewsContainer extends FrameLayout {
             }
         }
         return false;
+    }
+
+    public boolean enterViewHasText() {
+        for (int i = 0; i < inputIslandBubbleContainer.getChildCount(); i++) {
+            View child = inputIslandBubbleContainer.getChildAt(i);
+            if (child instanceof ChatActivityEnterView) {
+                ChatActivityEnterView enterView = (ChatActivityEnterView) child;
+                return enterView.getVisibility() == VISIBLE && enterView.hasText() && !enterView.isRecordingAudioVideo();
+            }
+        }
+        return false;
+    }
+
+    public boolean isAiButtonVisible() {
+        for (int i = 0; i < inputIslandBubbleContainer.getChildCount(); i++) {
+            View child = inputIslandBubbleContainer.getChildAt(i);
+            if (child instanceof ChatActivityEnterView) {
+                ChatActivityEnterView enterView = (ChatActivityEnterView) child;
+                return enterView.getVisibility() == VISIBLE && enterView.isAiButtonVisible();
+            }
+        }
+        return false;
+    }
+
+    public int getEnterViewTextFieldHeight() {
+        for (int i = 0; i < inputIslandBubbleContainer.getChildCount(); i++) {
+            View child = inputIslandBubbleContainer.getChildAt(i);
+            if (child instanceof ChatActivityEnterView) {
+                return ((ChatActivityEnterView) child).getTextFieldHeight();
+            }
+        }
+        return dp(ChatActivityEnterView.DEFAULT_HEIGHT);
     }
 
 
@@ -297,6 +353,8 @@ public class ChatInputViewsContainer extends FrameLayout {
     private final Rect tmpRectCenter = new Rect();
     private final Rect tmpRectRight = new Rect();
     private final RectF tmpRectF = new RectF();
+    private final AnimatedFloat mergeProgress = new AnimatedFloat(this, 0, 320, CubicBezierInterpolator.EASE_OUT_QUINT);
+    private final AnimatedFloat leftIslandExpandProgress = new AnimatedFloat(this, 0, 320, CubicBezierInterpolator.EASE_OUT_QUINT);
 
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
@@ -317,10 +375,18 @@ public class ChatInputViewsContainer extends FrameLayout {
             final int sideMargin = dp(7);
             final int pad = dp(7);
 
-            // Left Island (Attach)
+            final boolean hasText = enterViewHasText();
+            final float p = mergeProgress.set(hasText ? 1f : 0f);
+
+            final boolean aiVisible = isAiButtonVisible();
+            final float p_left = leftIslandExpandProgress.set(aiVisible ? 1f : 0f);
+            final int expandedLeftHeight = getEnterViewTextFieldHeight();
+            final int currentLeftHeight = Math.round(AndroidUtilities.lerp((float) buttonSize, (float) expandedLeftHeight, p_left));
+
+            // Left Island (Emoji button + optional AI button when expanded into vertical capsule)
             tmpRectLeft.set(
                 sideMargin - pad,
-                islandBottom - buttonSize - pad,
+                islandBottom - currentLeftHeight - pad,
                 sideMargin + buttonSize + pad,
                 islandBottom + pad
             );
@@ -336,14 +402,19 @@ public class ChatInputViewsContainer extends FrameLayout {
             );
             blurredBackgroundDrawableRight.setRadius(islandRadius);
             blurredBackgroundDrawableRight.setBounds(tmpRectRight);
+            blurredBackgroundDrawableRight.setAlpha(Math.round(currentInputBubbleAlpha * (1f - p)));
 
             // Center Island (Message text input + emoji + reply header)
+            // Morphs smoothly between unmerged (ends before gap) and merged (covers right button)
             final int centerVisualLeft = sideMargin + buttonSize + islandGap;
             final int centerVisualRight = getMeasuredWidth() - sideMargin - buttonSize - islandGap;
+            final int mergedVisualRight = getMeasuredWidth() - sideMargin;
+            final int centerCurrentRight = Math.round(AndroidUtilities.lerp((float) centerVisualRight, (float) mergedVisualRight, p));
+
             tmpRectCenter.set(
                 centerVisualLeft - pad,
                 islandBottom - inputBubbleHeightRound - pad,
-                centerVisualRight + pad,
+                centerCurrentRight + pad,
                 islandBottom + pad
             );
             blurredBackgroundDrawable.setRadius(islandRadius);
@@ -351,8 +422,13 @@ public class ChatInputViewsContainer extends FrameLayout {
 
             if (drawInputBackground) {
                 blurredBackgroundDrawableLeft.draw(canvas);
+                if (p < 1f && blurredBackgroundDrawableRight.getAlpha() > 0) {
+                    canvas.save();
+                    canvas.clipRect(centerCurrentRight, 0, getMeasuredWidth(), getMeasuredHeight());
+                    blurredBackgroundDrawableRight.draw(canvas);
+                    canvas.restore();
+                }
                 blurredBackgroundDrawable.draw(canvas);
-                blurredBackgroundDrawableRight.draw(canvas);
             }
         } else {
             tmpRect.set(
@@ -416,7 +492,9 @@ public class ChatInputViewsContainer extends FrameLayout {
         invalidate();
     }
 
+    private int currentInputBubbleAlpha = 255;
     public void setInputBubbleAlpha(int alpha) {
+        currentInputBubbleAlpha = alpha;
         if (blurredBackgroundDrawable != null) {
             blurredBackgroundDrawable.setAlpha(alpha);
         }
@@ -462,7 +540,7 @@ public class ChatInputViewsContainer extends FrameLayout {
                 final int pad = dp(7);
                 captured = (blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255 && containsVisual(tmpRectCenter, pad, x, y))
                     || (blurredBackgroundDrawableLeft != null && blurredBackgroundDrawableLeft.getAlpha() == 255 && containsVisual(tmpRectLeft, pad, x, y))
-                    || (blurredBackgroundDrawableRight != null && blurredBackgroundDrawableRight.getAlpha() == 255 && containsVisual(tmpRectRight, pad, x, y))
+                    || (blurredBackgroundDrawableRight != null && blurredBackgroundDrawableRight.getAlpha() > 0 && containsVisual(tmpRectRight, pad, x, y))
                     || (underKeyboardBackgroundDrawable != null && underKeyboardBackgroundDrawable.getBounds().contains(x, y));
             } else {
                 captured = (blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255 && blurredBackgroundDrawable.getBounds().contains(x, y))

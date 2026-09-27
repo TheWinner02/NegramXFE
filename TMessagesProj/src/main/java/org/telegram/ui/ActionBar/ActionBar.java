@@ -1387,15 +1387,23 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         alphaUpdate.addUpdateListener(anm -> {
             searchFieldVisibleAlpha = (float) anm.getAnimatedValue();
 
-            if (glassDrawable != null && glassModeIsForum) {
-                final float r1 = dp(23);
-                final float r2 = lerp(dp(18.33f), dp(23), searchFieldVisibleAlpha);
-                glassDrawable.setRadius(r2, r1, r1, r2);
-                invalidate();
+            if (glassDrawable != null) {
+                if (glassModeIsForum) {
+                    final float r1 = dp(23);
+                    final float r2 = lerp(dp(18.33f), dp(23), searchFieldVisibleAlpha);
+                    glassDrawable.setRadius(r2, r1, r1, r2);
+                    invalidate();
+                } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    invalidate();
+                }
             }
 
             if (glassMode && menu != null) {
-                menu.setTranslationX(-lerp((float) dp(10), dp(5), searchFieldVisibleAlpha));
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    menu.setTranslationX(lerp(-dp(10), 0, searchFieldVisibleAlpha));
+                } else {
+                    menu.setTranslationX(-lerp((float) dp(10), dp(5), searchFieldVisibleAlpha));
+                }
             }
             if (backgroundUpdateListener != null) {
                 backgroundUpdateListener.run();
@@ -1678,16 +1686,27 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         if (menu != null && menu.getVisibility() != GONE) {
             int menuWidth;
             boolean searchFieldIsVisible = menu.searchFieldVisible();
+            final boolean hasBackButton = backButtonImageView != null && backButtonImageView.getVisibility() != GONE;
+            int searchLeft = dp(menuOccupyBack ? 0 : AndroidUtilities.isTablet() ? 74 : 66);
+            int searchRight = 0;
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) {
+                final int edge = dp(6);
+                final int s = dp(46);
+                final int p = dp(6);
+                final int gap = dp(8);
+                searchLeft = hasBackButton ? (edge + s + p * 2 + gap) : edge;
+                searchRight = hasBackButton ? gap : edge;
+            }
             if (searchFieldIsVisible && !this.isSearchFieldVisible) {
                 menuWidth = MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST);
                 menu.measure(menuWidth, actionBarHeightSpec);
                 int itemsWidth = menu.getItemsMeasuredWidth(true);
-                menuWidth = MeasureSpec.makeMeasureSpec(width - dp(menuOccupyBack ? 0 : AndroidUtilities.isTablet() ? 74 : 66) + menu.getItemsMeasuredWidth(true), MeasureSpec.EXACTLY);
+                menuWidth = MeasureSpec.makeMeasureSpec(width - searchLeft - searchRight + menu.getItemsMeasuredWidth(true), MeasureSpec.EXACTLY);
                 if (!isMenuOffsetSuppressed) {
                     menu.translateXItems(-itemsWidth);
                 }
             } else if (isSearchFieldVisible) {
-                menuWidth = MeasureSpec.makeMeasureSpec(width - dp(menuOccupyBack ? 0 : AndroidUtilities.isTablet() ? 74 : 66), MeasureSpec.EXACTLY);
+                menuWidth = MeasureSpec.makeMeasureSpec(width - searchLeft - searchRight, MeasureSpec.EXACTLY);
                 if (!isMenuOffsetSuppressed) {
                     menu.translateXItems(0);
                 }
@@ -1827,7 +1846,16 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         textLeft += additionalTextLeft;
 
         if (menu != null && menu.getVisibility() != GONE) {
-            int menuLeft = menu.searchFieldVisible() ? dp(menuOccupyBack ? 0 : AndroidUtilities.isTablet() ? 74 : 66) : (getMeasuredWidth() - capsulePad) - menu.getMeasuredWidth();
+            int searchLeft = dp(menuOccupyBack ? 0 : AndroidUtilities.isTablet() ? 74 : 66);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) {
+                final int edge = dp(6);
+                final int s = dp(46);
+                final int p = dp(6);
+                final int gap = dp(8);
+                final boolean hasBackButton = backButtonImageView != null && backButtonImageView.getVisibility() != GONE;
+                searchLeft = hasBackButton ? (edge + s + p * 2 + gap) : edge;
+            }
+            int menuLeft = menu.searchFieldVisible() ? searchLeft : (getMeasuredWidth() - capsulePad) - menu.getMeasuredWidth();
             menu.layout(menuLeft, additionalTop, menuLeft + menu.getMeasuredWidth(), additionalTop + menu.getMeasuredHeight());
         }
 
@@ -1901,10 +1929,11 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         }
 
         if (avatarSearchImageView != null) {
+            int avatarLeft = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) ? dp(78) : dp(56 + 8);
             avatarSearchImageView.layout(
-                dp(56 + 8),
+                avatarLeft,
                 additionalTop + (getCurrentActionBarHeight() - avatarSearchImageView.getMeasuredHeight()) / 2,
-                dp(56 + 8) + avatarSearchImageView.getMeasuredWidth(),
+                avatarLeft + avatarSearchImageView.getMeasuredWidth(),
                 additionalTop + (getCurrentActionBarHeight() + avatarSearchImageView.getMeasuredHeight()) / 2
             );
         }
@@ -2662,8 +2691,11 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 if (alphaFactor <= 0.01f && effectiveMenuWidth > 0) {
                     alphaFactor = 1.0f;
                 }
-                glassDrawableMenu.setAlpha((int) (255 * alphaFactor));
-                glassDrawableMenu.draw(canvas);
+                alphaFactor *= (1.0f - searchFieldVisibleAlpha);
+                if (alphaFactor > 0.01f) {
+                    glassDrawableMenu.setAlpha((int) (255 * alphaFactor));
+                    glassDrawableMenu.draw(canvas);
+                }
             }
 
             // Center island: title pill (between back and menu, hugging title content or selection count)
@@ -2693,7 +2725,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                         }
                     }
                 }
-                final float pillAlpha = Math.min(1.0f, Math.max(titleAlpha, actionModeFactor));
+                final float pillAlpha = Math.min(1.0f, Math.max(Math.max(titleAlpha, actionModeFactor), searchFieldVisibleAlpha));
 
                 if (pillAlpha > 0.01f) {
                     int minLeft = hasBackButton ? (edge + s + p * 2 + gap) : edge;
@@ -2829,6 +2861,19 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                         centerLeft = leftNormal;
                         centerRight = rightNormal;
                         shouldDraw = true;
+                    }
+
+                    if (searchFieldVisibleAlpha > 0.01f) {
+                        int leftSearch = minLeft;
+                        int rightSearch = getWidth() - (hasBackButton ? gap : edge);
+                        if (shouldDraw) {
+                            centerLeft = (int) AndroidUtilities.lerp(centerLeft, leftSearch, searchFieldVisibleAlpha);
+                            centerRight = (int) AndroidUtilities.lerp(centerRight, rightSearch, searchFieldVisibleAlpha);
+                        } else {
+                            centerLeft = leftSearch;
+                            centerRight = rightSearch;
+                            shouldDraw = true;
+                        }
                     }
 
                     if (shouldDraw && centerRight > centerLeft + dp(20)) {

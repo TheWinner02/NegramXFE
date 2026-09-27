@@ -1578,7 +1578,11 @@ public class ActionBarMenuItem extends FrameLayout {
                 wrappedSearchFrameLayout.addView(horizontalScrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, 0, 0, 0, 48, 0));
                 parentMenu.addView(wrappedSearchFrameLayout, 0, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, searchItemPaddingStart, 0, 0, 0));
             } else {
-                parentMenu.addView(searchContainer, 0, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, searchItemPaddingStart + 6, 0, searchRightMargin, 0));
+                int leftPad = searchItemPaddingStart + 6;
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    leftPad = Math.max(12, leftPad);
+                }
+                parentMenu.addView(searchContainer, 0, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, leftPad, 0, searchRightMargin, 0));
             }
             searchContainer.setVisibility(GONE);
 
@@ -1763,7 +1767,7 @@ public class ActionBarMenuItem extends FrameLayout {
                     return parentMenu.parentActionBar.itemsColor;
                 }
             });
-            int clearRad = AndroidUtilities.dp(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 20 : 16);
+            int clearRad = AndroidUtilities.dp(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 20 : 16);
             clearButton.setBackground(Theme.createSelectorDrawable(parentMenu.parentActionBar.itemsActionModeBackgroundColor, 1, clearRad));
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                 org.telegram.ui.Components.ScaleStateListAnimator.apply(clearButton, 0.05f, 1.2f);

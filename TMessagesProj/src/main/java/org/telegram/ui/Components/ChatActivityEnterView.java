@@ -6719,6 +6719,11 @@ public class ChatActivityEnterView extends FrameLayout implements
             MessagesController.getInstance(currentAccount).getTonesController().load();
         }
         shownAiButton = show;
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (getParent() != null && getParent().getParent() instanceof org.telegram.ui.Components.chat.ChatInputViewsContainer) {
+                ((org.telegram.ui.Components.chat.ChatInputViewsContainer) getParent().getParent()).invalidate();
+            }
+        }
         aiButton.setVisibility(View.VISIBLE);
         aiButton.animate()
             .alpha(show ? 1.0f : 0.0f)
@@ -11719,6 +11724,14 @@ public class ChatActivityEnterView extends FrameLayout implements
 
     public boolean hasText() {
         return messageEditText != null && messageEditText.length() > 0;
+    }
+
+    public boolean isAiButtonVisible() {
+        return shownAiButton;
+    }
+
+    public int getTextFieldHeight() {
+        return textFieldContainer != null ? textFieldContainer.getMeasuredHeight() : AndroidUtilities.dp(DEFAULT_HEIGHT);
     }
 
     @Nullable
