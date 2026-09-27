@@ -430,6 +430,22 @@ public class ChatInputViewsContainer extends FrameLayout {
                 }
                 blurredBackgroundDrawable.draw(canvas);
             }
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            final int islandRadius = dp(22);
+            final int sideMargin = dp(7);
+            final int pad = dp(7);
+
+            tmpRect.set(
+                sideMargin - pad,
+                islandBottom - inputBubbleHeightRound - pad,
+                getMeasuredWidth() - sideMargin + pad,
+                islandBottom + pad
+            );
+            blurredBackgroundDrawable.setRadius(islandRadius);
+            blurredBackgroundDrawable.setBounds(tmpRect);
+            if (drawInputBackground) {
+                blurredBackgroundDrawable.draw(canvas);
+            }
         } else {
             tmpRect.set(
                 Math.round(inputBubbleOffsetLeft),
@@ -536,12 +552,17 @@ public class ChatInputViewsContainer extends FrameLayout {
             final int x = (int) event.getX();
             final int y = (int) event.getY();
 
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && isEnterViewVisible() && blurredBackgroundDrawableLeft != null && blurredBackgroundDrawableRight != null) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 final int pad = dp(7);
-                captured = (blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255 && containsVisual(tmpRectCenter, pad, x, y))
-                    || (blurredBackgroundDrawableLeft != null && blurredBackgroundDrawableLeft.getAlpha() == 255 && containsVisual(tmpRectLeft, pad, x, y))
-                    || (blurredBackgroundDrawableRight != null && blurredBackgroundDrawableRight.getAlpha() > 0 && containsVisual(tmpRectRight, pad, x, y))
-                    || (underKeyboardBackgroundDrawable != null && underKeyboardBackgroundDrawable.getBounds().contains(x, y));
+                if (isEnterViewVisible() && blurredBackgroundDrawableLeft != null && blurredBackgroundDrawableRight != null) {
+                    captured = (blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255 && containsVisual(tmpRectCenter, pad, x, y))
+                        || (blurredBackgroundDrawableLeft != null && blurredBackgroundDrawableLeft.getAlpha() == 255 && containsVisual(tmpRectLeft, pad, x, y))
+                        || (blurredBackgroundDrawableRight != null && blurredBackgroundDrawableRight.getAlpha() > 0 && containsVisual(tmpRectRight, pad, x, y))
+                        || (underKeyboardBackgroundDrawable != null && underKeyboardBackgroundDrawable.getBounds().contains(x, y));
+                } else {
+                    captured = (blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255 && containsVisual(tmpRect, pad, x, y))
+                        || (underKeyboardBackgroundDrawable != null && underKeyboardBackgroundDrawable.getBounds().contains(x, y));
+                }
             } else {
                 captured = (blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255 && blurredBackgroundDrawable.getBounds().contains(x, y))
                     || (underKeyboardBackgroundDrawable != null && underKeyboardBackgroundDrawable.getBounds().contains(x, y));

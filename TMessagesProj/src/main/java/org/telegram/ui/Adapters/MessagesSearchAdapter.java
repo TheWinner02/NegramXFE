@@ -231,7 +231,13 @@ public class MessagesSearchAdapter extends RecyclerListView.SelectionAdapter imp
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         if (holder.getItemViewType() == 0) {
             DialogCell cell = (DialogCell) holder.itemView;
-            cell.useSeparator = true;
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                int searchIndex = containsStories ? position - 1 : position;
+                cell.useSeparator = searchIndex < searchResultMessages.size() - 1;
+                cell.fullSeparator = false;
+            } else {
+                cell.useSeparator = true;
+            }
             cell.useFromUserAsAvatar = !isSavedMessages;
             MessageObject messageObject = (MessageObject) getItem(position);
             int date;

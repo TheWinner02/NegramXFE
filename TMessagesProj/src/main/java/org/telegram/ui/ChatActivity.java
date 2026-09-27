@@ -730,6 +730,10 @@ public class ChatActivity extends BaseFragment implements
     private AnimatedTextView searchCountText;
     private AnimatedTextView searchExpandList;
     private AnimatedTextView searchOtherButton;
+    private final Paint searchSectionGlassPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint searchSectionGlassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path searchSectionPath = new Path();
+    private final float[] searchSectionRadii = new float[8];
     private ChatActionCell floatingDateView;
     private TopicSeparator.Cell floatingTopicSeparator;
     private float intoTopViewTop;
@@ -8136,6 +8140,22 @@ public class ChatActivity extends BaseFragment implements
         messagesSearchListView.setLayoutManager(messagesSearchLayoutManager);
         messagesSearchListView.setAdapter(messagesSearchAdapter = new MessagesSearchAdapter(context, this, themeDelegate, searchType, dialog_id == getUserConfig().getClientUserId()));
         messagesSearchListView.setClipToPadding(false);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            messagesSearchListView.setSections(
+                view -> {
+                    if (view == null || view.getParent() != messagesSearchListView) {
+                        return false;
+                    }
+                    RecyclerView.ViewHolder holder = messagesSearchListView.getChildViewHolder(view);
+                    return holder != null && holder.getItemViewType() == 0;
+                },
+                vt -> vt == 0,
+                xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(16) : dp(12),
+                xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
+                this::drawSearchListSectionBackground,
+                false
+            );
+        }
         checkHashtagStories(true);
         DefaultItemAnimator itemAnimator = new DefaultItemAnimator();
         itemAnimator.setSupportsChangeAnimations(false);
@@ -11366,7 +11386,7 @@ public class ChatActivity extends BaseFragment implements
 //        searchCountText.setScaleProperty(.5f);
         searchCountText.setTextSize(dp(15));
         searchCountText.setTypeface(AndroidUtilities.bold());
-        searchCountText.setTextColor(getThemedColor(Theme.key_chat_searchPanelText));
+        searchCountText.setTextColor(getThemedColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.key_windowBackgroundWhiteBlackText : Theme.key_chat_searchPanelText));
         searchCountText.setGravity(Gravity.LEFT);
         searchContainer.addView(searchCountText, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 30, Gravity.CENTER_VERTICAL, 0, -1, 97.33f, 0));
         chatInputBubbleContainer.addView(searchContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, searchContainerHeight, Gravity.BOTTOM, 7, 0, 7, 0));
@@ -11380,7 +11400,7 @@ public class ChatActivity extends BaseFragment implements
         searchExpandList.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlueText2));
         searchExpandList.setText(LocaleController.getString(isMessagesSearchListVisible() ? R.string.SearchAsChat : R.string.SearchAsList));
         searchExpandList.adaptWidth = false;
-        searchExpandList.setPadding(dp(15.33f), 0, dp(15.33f), 0);
+        searchExpandList.setPadding(dp(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 18 : 15.33f), 0, dp(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 18 : 15.33f), 0);
         searchExpandList.setOnClickListener(v -> {
             toggleMesagesSearchListView();
         });
@@ -11393,7 +11413,11 @@ public class ChatActivity extends BaseFragment implements
         searchOtherButton.setTypeface(AndroidUtilities.bold());
         searchOtherButton.setTextColor(getThemedColor(Theme.key_chat_fieldOverlayText));
         searchOtherButton.setTextSize(AndroidUtilities.dp(15));
-        searchOtherButton.setBackground(Theme.createSelectorWithBackgroundDrawable(getThemedColor(Theme.key_windowBackgroundWhite), Theme.blendOver(getThemedColor(Theme.key_windowBackgroundWhite), getThemedColor(Theme.key_listSelector))));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            searchOtherButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, AndroidUtilities.dp(22)));
+        } else {
+            searchOtherButton.setBackground(Theme.createSelectorWithBackgroundDrawable(getThemedColor(Theme.key_windowBackgroundWhite), Theme.blendOver(getThemedColor(Theme.key_windowBackgroundWhite), getThemedColor(Theme.key_listSelector))));
+        }
         searchOtherButton.setText(LocaleController.getString(chatAdapter.isFiltered ? R.string.SavedTagHideOtherMessages : R.string.SavedTagShowOtherMessages));
         searchOtherButton.setOnClickListener(v -> {
             setFilterMessages(!chatAdapter.isFiltered);
@@ -11406,9 +11430,10 @@ public class ChatActivity extends BaseFragment implements
             searchUserButton = new ImageView(getContext());
             searchUserButton.setScaleType(ImageView.ScaleType.CENTER);
             searchUserButton.setImageResource(R.drawable.msg_usersearch);
-            searchUserButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_chat_searchPanelIcons), PorterDuff.Mode.MULTIPLY));
+            int iconColor = getThemedColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.key_windowBackgroundWhiteBlackText : Theme.key_chat_searchPanelIcons);
+            searchUserButton.setColorFilter(new PorterDuffColorFilter(iconColor, PorterDuff.Mode.MULTIPLY));
             searchUserButton.setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 1));
-            searchContainer.addView(searchUserButton, LayoutHelper.createFrame(44, 44, Gravity.LEFT | Gravity.TOP, 48, 0, 0, 0));
+            searchContainer.addView(searchUserButton, LayoutHelper.createFrame(44, 44, Gravity.LEFT | Gravity.CENTER_VERTICAL, 48, 0, 0, 0));
             searchUserButton.setOnClickListener(view -> {
                 if (mentionContainer != null) {
                     mentionContainer.setReversed(true);
@@ -11433,9 +11458,10 @@ public class ChatActivity extends BaseFragment implements
             searchCalendarButton = new ImageView(getContext());
             searchCalendarButton.setScaleType(ImageView.ScaleType.CENTER);
             searchCalendarButton.setImageResource(R.drawable.msg_calendar);
-            searchCalendarButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_chat_searchPanelIcons), PorterDuff.Mode.MULTIPLY));
+            int calIconColor = getThemedColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.key_windowBackgroundWhiteBlackText : Theme.key_chat_searchPanelIcons);
+            searchCalendarButton.setColorFilter(new PorterDuffColorFilter(calIconColor, PorterDuff.Mode.MULTIPLY));
             searchCalendarButton.setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 1));
-            searchContainer.addView(searchCalendarButton, LayoutHelper.createFrame(44, 44, Gravity.LEFT | Gravity.TOP, 2.66f, 0, 0, 0));
+            searchContainer.addView(searchCalendarButton, LayoutHelper.createFrame(44, 44, Gravity.LEFT | Gravity.CENTER_VERTICAL, xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 4 : 2.66f, 0, 0, 0));
             searchCalendarButton.setOnClickListener(view -> {
                 if (getParentActivity() == null) {
                     return;
@@ -11455,9 +11481,9 @@ public class ChatActivity extends BaseFragment implements
             searchFilterButton = new ImageView(getContext());
             searchFilterButton.setScaleType(ImageView.ScaleType.CENTER);
             searchFilterButton.setImageResource(R.drawable.ic_filter_list);
-            searchFilterButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_chat_searchPanelIcons), PorterDuff.Mode.MULTIPLY));
+            searchFilterButton.setColorFilter(new PorterDuffColorFilter(calIconColor, PorterDuff.Mode.MULTIPLY));
             searchFilterButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 1));
-            searchContainer.addView(searchFilterButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.TOP, searchUserButton != null ? (96 - 2.66f) : 48, 0, 0, 0));
+            searchContainer.addView(searchFilterButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.CENTER_VERTICAL, searchUserButton != null ? (96 - 2.66f) : 48, 0, 0, 0));
             searchFilterButton.setOnClickListener(view -> {
                 if (getParentActivity() == null) {
                     return;
@@ -13862,6 +13888,34 @@ public class ChatActivity extends BaseFragment implements
         hideFieldPanel(false);
         if (chatMode == 0) {
             getMediaDataController().cleanDraft(dialog_id, threadMessageId, true);
+        }
+    }
+
+    private void drawSearchListSectionBackground(Canvas canvas, RectF rect, float topRadius, float bottomRadius, float alpha) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            boolean isDark = themeDelegate != null ? themeDelegate.isDark() : Theme.isCurrentThemeDark();
+            searchSectionGlassStrokePaint.setStyle(Paint.Style.STROKE);
+            searchSectionGlassStrokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.5f));
+            searchSectionGlassStrokePaint.setColor(Theme.multAlpha(isDark ? 0x24FFFFFF : 0x1A000000, alpha));
+
+            int baseColor = Theme.getColor(Theme.key_windowBackgroundWhite, themeDelegate);
+            int glassFill = Theme.multAlpha(baseColor, isDark ? 0.55f : 0.70f);
+            searchSectionGlassPaint.setColor(Theme.multAlpha(glassFill, alpha));
+            searchSectionGlassPaint.setShadowLayer(AndroidUtilities.dpf2(3f), 0, AndroidUtilities.dpf2(0.66f), Theme.multAlpha(isDark ? 0x26000000 : 0x0A000000, alpha));
+
+            if (topRadius == bottomRadius) {
+                canvas.drawRoundRect(rect, topRadius, topRadius, searchSectionGlassPaint);
+                canvas.drawRoundRect(rect, topRadius, topRadius, searchSectionGlassStrokePaint);
+            } else {
+                searchSectionPath.rewind();
+                searchSectionRadii[0] = searchSectionRadii[1] = searchSectionRadii[2] = searchSectionRadii[3] = topRadius;
+                searchSectionRadii[4] = searchSectionRadii[5] = searchSectionRadii[6] = searchSectionRadii[7] = bottomRadius;
+                searchSectionPath.addRoundRect(rect, searchSectionRadii, Path.Direction.CW);
+                canvas.drawPath(searchSectionPath, searchSectionGlassPaint);
+                canvas.drawPath(searchSectionPath, searchSectionGlassStrokePaint);
+            }
+        } else if (messagesSearchListView != null) {
+            messagesSearchListView.drawBackgroundRect(canvas, rect, topRadius, bottomRadius, alpha);
         }
     }
 
