@@ -278,7 +278,7 @@
     <string name="BlurRadiusGlobal">Глобальна інтенсивність розмиття</string>
     <string name="MainTabsGlassAlpha">Прозорість скла нижньої панелі</string>
     <string name="MainTabsBlurRadius">Інтенсивність розмиття нижньої панелі</string>
-    <string name="ActionBarGlassAlpha">Прозорість скла верхньої панелі</string>
+    <string name="ActionBarGlassAlpha">Прозорість скла Liquid Glass (Глобально)</string>
     <string name="ActionBarBlurRadius">Інтенсивність розмиття верхньої панелі</string>
     <string name="OpenProfileByAvatar">Відкривати профіль дотиком до аватара</string>
 </resources>

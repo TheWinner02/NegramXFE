@@ -277,7 +277,7 @@
     <string name="BlurRadiusGlobal">Độ mờ toàn cục</string>
     <string name="MainTabsGlassAlpha">Độ mờ kính thanh điều hướng dưới</string>
     <string name="MainTabsBlurRadius">Cường độ làm mờ thanh dưới</string>
-    <string name="ActionBarGlassAlpha">Độ mờ kính thanh tiêu đề trên</string>
+    <string name="ActionBarGlassAlpha">Độ mờ kính Liquid Glass (Toàn cục)</string>
     <string name="ActionBarBlurRadius">Cường độ làm mờ thanh trên</string>
     <string name="OpenProfileByAvatar">Mở hồ sơ bằng cách nhấn vào ảnh đại diện</string>
 </resources>

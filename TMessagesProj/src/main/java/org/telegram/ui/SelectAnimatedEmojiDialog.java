@@ -143,6 +143,7 @@ import java.util.List;
 import java.util.Objects;
 
 import tw.nekomimi.nekogram.NekoConfig;
+import xyz.nextalone.nagram.ui.UIStyleEngine;
 
 public class SelectAnimatedEmojiDialog extends FrameLayout implements NotificationCenter.NotificationCenterDelegate {
 
@@ -577,7 +578,8 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                         );
                     }
                     pathApi20.rewind();
-                    pathApi20.addRoundRect(AndroidUtilities.rectTmp, AndroidUtilities.dp(12), AndroidUtilities.dp(12), Path.Direction.CW);
+                    float r = UIStyleEngine.isIosLiquidGlass() ? UIStyleEngine.getCardCornerRadius() : AndroidUtilities.dp(12);
+                    pathApi20.addRoundRect(AndroidUtilities.rectTmp, r, r, Path.Direction.CW);
                     canvas.drawPath(pathApi20, paintApi20);
                     canvas.clipPath(pathApi20);
                     super.dispatchDraw(canvas);
@@ -612,7 +614,7 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                             (int) (view.getPaddingTop() + h * scaleY)
                         );
                     }
-                    outline.setRoundRect(rect, dp(12));
+                    outline.setRoundRect(rect, UIStyleEngine.isIosLiquidGlass() ? UIStyleEngine.getCardCornerRadius() : dp(12));
                 }
             });
             contentView.setClipToOutline(true);

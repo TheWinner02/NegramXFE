@@ -70,4 +70,9 @@ object UIStyleEngine {
     fun shouldUseLiquidGlassHeader(): Boolean {
         return isIosLiquidGlass()
     }
+
+    @JvmStatic
+    fun getGlassAlpha(): Float {
+        return tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f
+    }
 }

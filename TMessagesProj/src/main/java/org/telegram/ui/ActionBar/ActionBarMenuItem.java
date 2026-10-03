@@ -477,10 +477,13 @@ public class ActionBarMenuItem extends FrameLayout {
         popupLayout = new ActionBarPopupWindow.ActionBarPopupWindowLayout(getContext(), R.drawable.popup_fixed_alert4, resourcesProvider, ActionBarPopupWindow.ActionBarPopupWindowLayout.FLAG_USE_SWIPEBACK);
 
         if (subMenuFactory != null) {
+            float rad = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(12);
             popupLayout.setBackground(subMenuFactory.create(popupLayout, true)
                     .setColorProvider(subMenuProvider)
-                    .setRadius(dp(12))
-                    .setPadding(dp(8)));
+                    .setRadius(rad)
+                    .setPadding(dp(8))
+                    .setHasPadding(true)
+                    .setClipToOutline(true));
         }
 
         popupLayout.setOnTouchListener((v, event) -> {
@@ -841,10 +844,13 @@ public class ActionBarMenuItem extends FrameLayout {
         this.subMenuFactory = subMenuFactory;
         this.subMenuProvider = subMenuProvider;
         if (popupLayout != null && subMenuFactory != null) {
+            float rad = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(12);
             popupLayout.setBackground(subMenuFactory.create(popupLayout, true)
                     .setColorProvider(subMenuProvider)
-                    .setRadius(dp(12))
-                    .setPadding(dp(8)));
+                    .setRadius(rad)
+                    .setPadding(dp(8))
+                    .setHasPadding(true)
+                    .setClipToOutline(true));
         }
     }
 
@@ -901,11 +907,13 @@ public class ActionBarMenuItem extends FrameLayout {
             }
             if (topView instanceof ActionBarMenuSubItem || topView instanceof LinearLayout) {
                 if (subMenuFactory != null) {
+                    float rad = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(12);
                     frameLayout.setBackground(subMenuFactory.create(popupLayout, true)
                         .setColorProvider(subMenuProvider)
-                        .setRadius(dp(12))
+                        .setRadius(rad)
                         .setPadding(dp(8))
-                        .setHasPadding(true));
+                        .setHasPadding(true)
+                        .setClipToOutline(true));
                 } else {
                     Drawable drawable = ContextCompat.getDrawable(getContext(), R.drawable.popup_fixed_alert2).mutate();
                     drawable.setColorFilter(new PorterDuffColorFilter(popupLayout.getBackgroundColor(), PorterDuff.Mode.MULTIPLY));
@@ -974,8 +982,30 @@ public class ActionBarMenuItem extends FrameLayout {
             popupLayout.getSwipeBack().closeForeground(false);
         }
         popupWindow.startAnimation(fromStickersAlert);
-        if (dimMenu > 0) {
-            popupWindow.dimBehind(dimMenu);
+        if (popupLayout != null) {
+            popupLayout.post(() -> {
+                if (popupLayout != null && popupLayout.getBackgroundDrawable() instanceof org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable) {
+                    org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable bbg = (org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable) popupLayout.getBackgroundDrawable();
+                    int[] loc = new int[2];
+                    popupLayout.getLocationOnScreen(loc);
+                    int[] parentLoc = new int[2];
+                    if (parentMenu != null && parentMenu.parentActionBar != null) {
+                        View pv = (View) parentMenu.parentActionBar.getParent();
+                        if (pv != null) {
+                            pv.getLocationOnScreen(parentLoc);
+                        }
+                    }
+                    bbg.setSourceOffset(loc[0] - parentLoc[0], loc[1] - parentLoc[1]);
+                    popupLayout.invalidate();
+                }
+            });
+        }
+        float dim = dimMenu;
+        if (dim <= 0 && xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            dim = 0.2f;
+        }
+        if (dim > 0) {
+            popupWindow.dimBehind(dim);
         }
     }
 

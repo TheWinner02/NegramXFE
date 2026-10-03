@@ -7,19 +7,31 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Shader;
 
+import android.os.Build;
+
 import androidx.annotation.Nullable;
 
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
+import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawableRenderNode;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawableSource;
+
+import me.vkryl.core.reference.ReferenceList;
 
 public class BlurredBackgroundSourceBitmap implements BlurredBackgroundSource {
     private final Paint bitmapPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Matrix bitmapMatrix = new Matrix();
     private @Nullable BitmapShader bitmapShader;
     private @Nullable Bitmap bitmap;
+    private final ReferenceList<BlurredBackgroundDrawableRenderNode> drawables = new ReferenceList<>();
 
     public BlurredBackgroundSourceBitmap() {
         bitmapPaint.setFilterBitmap(true);
+    }
+
+    public void invalidateDisplayListForDrawables() {
+        for (BlurredBackgroundDrawableRenderNode d : drawables) {
+            d.invalidateDisplayList();
+        }
     }
 
     public void setBitmap(Bitmap bitmap) {
@@ -37,10 +49,12 @@ public class BlurredBackgroundSourceBitmap implements BlurredBackgroundSource {
             bitmapPaint.setShader(bitmapShader);
             updateMatrix();
         }
+        invalidateDisplayListForDrawables();
     }
 
     public void setMatrix(Matrix matrix) {
         bitmapMatrix.set(matrix);
+        invalidateDisplayListForDrawables();
     }
 
     public Matrix getMatrix() {
@@ -69,6 +83,11 @@ public class BlurredBackgroundSourceBitmap implements BlurredBackgroundSource {
 
     @Override
     public BlurredBackgroundDrawable createDrawable() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            BlurredBackgroundDrawableRenderNode d = new BlurredBackgroundDrawableRenderNode(this);
+            drawables.add(d);
+            return d;
+        }
         return new BlurredBackgroundDrawableSource(this);
     }
 

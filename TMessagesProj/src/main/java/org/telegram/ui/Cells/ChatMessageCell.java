@@ -24123,6 +24123,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (restore != Integer.MIN_VALUE) {
             canvas.restoreToCount(restore);
         }
+        transitionParams.recordDrawingState();
         canvas.restore();
     }
 

@@ -78,13 +78,17 @@ public class ActionBarMenuSubItem extends FrameLayout {
         this.bottom = bottom;
 
         boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+        boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        if (isIosGlass) {
+            selectorRad = (int) (xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() / AndroidUtilities.density);
+        }
         textColor = getThemedColor(Theme.key_actionBarDefaultSubmenuItem);
         iconColor = getThemedColor(Theme.key_actionBarDefaultSubmenuItemIcon);
         iconColorMode = PorterDuff.Mode.MULTIPLY;
         selectorColor = getThemedColor(Theme.key_dialogButtonSelector);
 
         updateBackground();
-        setPadding(dp(isM3 ? 14 : 18), 0, dp(isM3 ? 14 : 18), 0);
+        setPadding(dp(isM3 ? 14 : (isIosGlass ? 16 : 18)), 0, dp(isM3 ? 14 : (isIosGlass ? 16 : 18)), 0);
 
         imageView = new RLottieImageView(context);
         imageView.setScaleType(ImageView.ScaleType.CENTER);
@@ -428,6 +432,9 @@ public class ActionBarMenuSubItem extends FrameLayout {
     }
 
     public void updateSelectorBackground(boolean top, boolean bottom, int selectorRad) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            selectorRad = 22;
+        }
         if (this.top == top && this.bottom == bottom && this.selectorRad == selectorRad) {
             return;
         }
@@ -482,6 +489,21 @@ public class ActionBarMenuSubItem extends FrameLayout {
             canvas.restore();
         } else {
             super.dispatchDraw(canvas);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && !bottom) {
+                boolean isDark = Theme.isCurrentThemeDark();
+                int origColor = Theme.dividerPaint.getColor();
+                float origStroke = Theme.dividerPaint.getStrokeWidth();
+                Theme.dividerPaint.setColor(isDark ? 0x24FFFFFF : 0x24000000);
+                Theme.dividerPaint.setStrokeWidth(AndroidUtilities.dpf2(0.5f));
+
+                int left = LocaleController.isRTL ? 0 : (imageView != null && imageView.getVisibility() == VISIBLE ? dp(44) : dp(16));
+                int right = LocaleController.isRTL ? getMeasuredWidth() - (imageView != null && imageView.getVisibility() == VISIBLE ? dp(44) : dp(16)) : getMeasuredWidth();
+                float y = getMeasuredHeight() - AndroidUtilities.dpf2(0.5f);
+                canvas.drawLine(left, y, right, y, Theme.dividerPaint);
+
+                Theme.dividerPaint.setColor(origColor);
+                Theme.dividerPaint.setStrokeWidth(origStroke);
+            }
         }
     }
 
@@ -490,6 +512,9 @@ public class ActionBarMenuSubItem extends FrameLayout {
             int topR = top ? AndroidUtilities.dp(16) : AndroidUtilities.dp(4);
             int bottomR = bottom ? AndroidUtilities.dp(16) : AndroidUtilities.dp(4);
             setBackground(Theme.createRadSelectorDrawable(selectorColor, topR, bottomR));
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            int rad = (int) (xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() / AndroidUtilities.density);
+            setBackground(Theme.createRadSelectorDrawable(selectorColor, top ? rad : 0, bottom ? rad : 0));
         } else {
             setBackground(Theme.createRadSelectorDrawable(selectorColor, top ? selectorRad : 0, bottom ? selectorRad : 0));
         }

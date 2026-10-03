@@ -1162,6 +1162,7 @@ public class ChatActivity extends BaseFragment implements
     private View scrimView;
     private float scrimViewAlpha = 1f;
     private float scrimViewProgress = 0f;
+    private float scrimViewShiftY = 0f;
     private Integer scrimViewReaction;
     private Integer scrimViewTask;
     private int scrimViewReactionOffset;
@@ -2946,8 +2947,8 @@ public class ChatActivity extends BaseFragment implements
         navbarContentDrawableFactory = new BlurredBackgroundDrawableViewFactory(navbarContentSourceWallpaper);
         navbarContentDrawableFactory.setLinkedViewsRef(glassAttachedViews);
         glassBackgroundDrawableFactory.setLinkedViewsRef(glassAttachedViews);
-        glassBackgroundDrawableFactoryFrosted.setLinkedViewsRef(glassAttachedViews);
         scrimBlur3Factory.setLinkedViewsRef(new ReferenceList<>());
+        scrimBlur3Factory.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass());
 
         navbarContentDrawableFactory.setLinkedDrawablesRef(glassAttachedDrawables);
         glassBackgroundDrawableFactory.setLinkedDrawablesRef(glassAttachedDrawables);
@@ -3944,7 +3945,9 @@ public class ChatActivity extends BaseFragment implements
                     return ColorUtils.setAlphaComponent(getThemedColor(Theme.key_chat_messagePanelBackground), 255);
                 }
 
-                int alpha = (int) (255 * (tw.nekomimi.nekogram.NekoConfig.mainTabsGlassAlpha.Int() / 100f));
+                int alpha = (int) (255 * (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                        ? (tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f)
+                        : (tw.nekomimi.nekogram.NekoConfig.mainTabsGlassAlpha.Int() / 100f)));
                 return ColorUtils.setAlphaComponent(super.getBackgroundColor(), alpha);
             }
         };
@@ -3955,7 +3958,9 @@ public class ChatActivity extends BaseFragment implements
                     return ColorUtils.setAlphaComponent(getThemedColor(Theme.key_windowBackgroundWhite), 255);
                 }
 
-                int alpha = (int) (255 * (tw.nekomimi.nekogram.NekoConfig.mainTabsGlassAlpha.Int() / 100f));
+                int alpha = (int) (255 * (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                        ? (tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f)
+                        : (tw.nekomimi.nekogram.NekoConfig.mainTabsGlassAlpha.Int() / 100f)));
                 return ColorUtils.setAlphaComponent(super.getBackgroundColor(), alpha);
             }
         };
@@ -4762,12 +4767,18 @@ public class ChatActivity extends BaseFragment implements
             headerItem.setSubMenuDelegate(new ActionBarMenuItem.ActionBarSubMenuItemDelegate() {
                 @Override
                 public void onShowSubMenu() {
-                    updateScrimSourceBitmap();
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        dimBehindView(true);
+                    } else {
+                        updateScrimSourceBitmap();
+                    }
                 }
 
                 @Override
                 public void onHideSubMenu() {
-
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        dimBehindView(false);
+                    }
                 }
             });
             otherIcon.addView(headerItem.getIconView());
@@ -11573,12 +11584,12 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private void dimBehindView(View view, boolean enable) {
-        dimBehindView(view, false, enable);
+        dimBehindView(view, xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass(), enable);
     }
 
     private void dimBehindView(View view, boolean blur, boolean enable) {
         setScrimView(view);
-        dimBehindView(enable ? 0.2f : 0, blur, view != sideControlsButtonsLayout);
+        dimBehindView(enable ? 0.2f : 0, blur || (enable && xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()), view != sideControlsButtonsLayout);
     }
 
     private void dimBehindView(View view, float value) {
@@ -11601,7 +11612,10 @@ public class ChatActivity extends BaseFragment implements
         }
     }
     public void dimBehindView(boolean enable) {
-        dimBehindView(enable ? 0.2f : 0, false, true);
+        if (enable) {
+            setScrimView(null);
+        }
+        dimBehindView(enable ? 0.2f : 0, enable && xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass(), true);
     }
 
     private void checkInstantCameraView() {
@@ -11664,6 +11678,9 @@ public class ChatActivity extends BaseFragment implements
                     scrimBlur3SourceBitmap.setBitmap(bitmapOptions);
                     Blur3Utils.checkBitmapSourceMatrixScale(scrimBlur3SourceBitmap, fragmentView);
                     scrimBlur3Factory.invalidateAllLinkedViews();
+                    if (fragmentView != null) {
+                        fragmentView.invalidate();
+                    }
                 });
             }
         } else {
@@ -11700,6 +11717,7 @@ public class ChatActivity extends BaseFragment implements
                     if (cell != null) {
                         cell.invalidate();
                     }
+                    scrimViewShiftY = 0f;
                     setScrimView(null);
                     scrimViewTask = null;
                     scrimViewReaction = null;
@@ -12801,9 +12819,18 @@ public class ChatActivity extends BaseFragment implements
 
     private void updateScrimSourceBitmap() {
         ScrimOptions.makeGlobalBlurBitmaps((bitmapBg, bitmapOptions) -> {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && bitmapBg != null) {
+                scrimBlurBitmap = bitmapBg;
+                scrimBlurBitmapPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                scrimBlurBitmapPaint.setShader(scrimBlurBitmapShader = new BitmapShader(scrimBlurBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP));
+                scrimBlurMatrix = new Matrix();
+            }
             scrimBlur3SourceBitmap.setBitmap(bitmapOptions);
             Blur3Utils.checkBitmapSourceMatrixScale(scrimBlur3SourceBitmap, fragmentView);
             scrimBlur3Factory.invalidateAllLinkedViews();
+            if (fragmentView != null) {
+                fragmentView.invalidate();
+            }
         });
     }
 
@@ -18815,6 +18842,31 @@ public class ChatActivity extends BaseFragment implements
             float alpha = cell.shouldDrawAlphaLayer() ? cell.getAlpha() : 1f;
             canvas.clipRect(chatListView.getLeft(), listTop, chatListView.getRight(), chatListView.getY() + chatListView.getMeasuredHeight() - blurredViewBottomOffset - windowInsetsStateHolder.getCurrentMaxBottomInset() - inputIslandHeightCurrent - dp(9));
             canvas.translate(canvasOffsetX, canvasOffsetY);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && scrimViewProgress > 0) {
+                boolean isScrimCell = cell == scrimView;
+                if (!isScrimCell && scrimView instanceof ChatMessageCell) {
+                    MessageObject.GroupedMessages group = ((ChatMessageCell) scrimView).getCurrentMessagesGroup();
+                    if (group != null && group.messages != null && group.messages.contains(cell.getMessageObject())) {
+                        isScrimCell = true;
+                    }
+                }
+                if (isScrimCell) {
+                    boolean isGroup = cell.getCurrentMessagesGroup() != null;
+                    float liftProgress = CubicBezierInterpolator.EASE_OUT.getInterpolation(scrimViewProgress);
+                    float scale = isGroup ? 1.0f : (1.0f + 0.035f * liftProgress);
+                    float pivotX = cell.getMeasuredWidth() / 2f;
+                    float pivotY = cell.getMeasuredHeight() / 2f;
+                    if (cell != null) {
+                        pivotX = (cell.getBackgroundDrawableLeft() + cell.getBackgroundDrawableRight()) / 2f;
+                        pivotY = (cell.getBackgroundDrawableTop() + cell.getBackgroundDrawableBottom()) / 2f;
+                    }
+                    float liftY = -dp(3) * liftProgress + scrimViewShiftY * liftProgress;
+                    canvas.translate(0, liftY);
+                    if (scale != 1.0f) {
+                        canvas.scale(scale, scale, pivotX, pivotY);
+                    }
+                }
+            }
             cell.setInvalidatesParent(true);
             if (type == 0) {
                 cell.drawTime(canvas, alpha, true);
@@ -18931,6 +18983,10 @@ public class ChatActivity extends BaseFragment implements
                     scrimBlurBitmapPaint.setAlpha((int) (0xFF * scrimViewProgress));
                     if (scrimBlurBitmapPaint.getAlpha() > 0) {
                         canvas.drawRect(0, 0, getMeasuredWidth(), getMeasuredHeight(), scrimBlurBitmapPaint);
+                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                            scrimPaint.setAlpha((int) (0xFF * 0.16f * scrimViewProgress));
+                            canvas.drawRect(0, 0, getMeasuredWidth(), getMeasuredHeight(), scrimPaint);
+                        }
                     }
                 } else {
                     scrimPaint.setAlpha((int) (0xFF * scrimPaintAlpha * (scrimView != null ? scrimViewAlpha : 1f)));
@@ -18980,6 +19036,7 @@ public class ChatActivity extends BaseFragment implements
                         scrimGroup = null;
                     }
                     boolean groupedBackgroundWasDraw = false;
+                    final boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
                     int count = chatListView.getChildCount();
                     for (int num = 0; num < count; num++) {
                         View child = chatListView.getChildAt(num);
@@ -19041,6 +19098,11 @@ public class ChatActivity extends BaseFragment implements
 
                             canvas.clipRect(0, listTop + (mentionContainer != null ? mentionContainer.clipTop() : 0), getMeasuredWidth(), viewClipBottom2);
                             canvas.translate(0, chatListView.getY());
+                            if (isIosGlass && scrimViewProgress > 0) {
+                                float liftProgress = CubicBezierInterpolator.EASE_OUT.getInterpolation(scrimViewProgress);
+                                float liftY = -dp(3) * liftProgress + scrimViewShiftY * liftProgress;
+                                canvas.translate(0, liftY);
+                            }
                             scrimGroup.transitionParams.cell.drawBackground(canvas, (int) l, (int) t, (int) r, (int) b, scrimGroup.transitionParams.pinnedTop, scrimGroup.transitionParams.pinnedBotton, selected, 0);
                             canvas.restore();
                             groupedBackgroundWasDraw = true;
@@ -19050,39 +19112,66 @@ public class ChatActivity extends BaseFragment implements
                             invalidate();
                         }
 
-                        float viewClipLeft = chatListView.getLeft();
-                        float viewClipTop = listTop;
-                        float viewClipRight = chatListView.getRight();
-                        float viewClipBottom = getMeasuredHeight()
-                            - windowInsetsStateHolder.getCurrentMaxBottomInset()
-                            - inputIslandHeightCurrent
-                            - getTopicTabsSideSize(TopicsTabsView.Position.BOTTOM)
-                            - dp(9);
+                        float liftProgress = (isIosGlass && scrimViewProgress > 0) ? CubicBezierInterpolator.EASE_OUT.getInterpolation(scrimViewProgress) : 0f;
+                        float liftY = (isIosGlass && scrimViewProgress > 0) ? (-dp(3) * liftProgress + scrimViewShiftY * liftProgress) : 0f;
 
-                        float clipTop = 0, clipBottom = 0;
-                        if (mentionContainer != null) {
-                            clipTop = Math.max(clipTop, mentionContainer.clipTop());
-                            clipBottom = Math.max(clipBottom, mentionContainer.clipBottom());
-                        }
-                        if (chatActivityEnterView != null && chatActivityEnterView.botCommandsMenuContainer != null) {
-                            clipBottom = Math.max(clipBottom, chatActivityEnterView.botCommandsMenuContainer.clipBottom());
-                        }
-                        viewClipTop += clipTop;
-                        viewClipBottom -= clipBottom;
+                        float viewClipLeft;
+                        float viewClipTop;
+                        float viewClipRight;
+                        float viewClipBottom;
 
-                        if (cell == null || !cell.getTransitionParams().animateBackgroundBoundsInner) {
-                            viewClipLeft = Math.max(viewClipLeft, chatListView.getLeft() + child.getX());
-                            viewClipTop = Math.max(viewClipTop, chatListView.getY() + child.getY());
-                            viewClipRight = Math.min(viewClipRight, chatListView.getLeft() + child.getX() + child.getMeasuredWidth());
-                            viewClipBottom = Math.min(viewClipBottom, chatListView.getY() + child.getY() + child.getMeasuredHeight());
-                        }
+                        if (isIosGlass && scrimViewProgress > 0) {
+                            viewClipLeft = getSideMenuWidth();
+                            viewClipTop = inBubbleMode ? 0 : AndroidUtilities.statusBarHeight;
+                            viewClipRight = getMeasuredWidth();
+                            viewClipBottom = getMeasuredHeight() - windowInsetsStateHolder.getCurrentMaxBottomInset();
 
-                        viewClipLeft = Math.max(viewClipLeft, getSideMenuWidth());
+                            if (cell == null || !cell.getTransitionParams().animateBackgroundBoundsInner) {
+                                float cLeft = chatListView.getLeft() + child.getX() - dp(24);
+                                float cTop = chatListView.getY() + child.getY() + liftY - dp(24);
+                                float cRight = chatListView.getLeft() + child.getX() + child.getMeasuredWidth() + dp(24);
+                                float cBottom = chatListView.getY() + child.getY() + child.getMeasuredHeight() + liftY + dp(24);
 
-                        if (scrimViewTask != null) {
-                            final int index = cell.getTodoIndex(scrimViewTask);
-                            viewClipTop = Math.max(viewClipTop, chatListView.getY() + cell.getY() + cell.getPollButtonTop(index));
-                            viewClipBottom = Math.min(viewClipBottom, chatListView.getY() + cell.getY() + cell.getPollButtonBottom(index));
+                                viewClipLeft = Math.max(viewClipLeft, cLeft);
+                                viewClipTop = Math.max(viewClipTop, cTop);
+                                viewClipRight = Math.min(viewClipRight, cRight);
+                                viewClipBottom = Math.min(viewClipBottom, cBottom);
+                            }
+                        } else {
+                            viewClipLeft = chatListView.getLeft();
+                            viewClipTop = listTop;
+                            viewClipRight = chatListView.getRight();
+                            viewClipBottom = getMeasuredHeight()
+                                - windowInsetsStateHolder.getCurrentMaxBottomInset()
+                                - inputIslandHeightCurrent
+                                - getTopicTabsSideSize(TopicsTabsView.Position.BOTTOM)
+                                - dp(9);
+
+                            float clipTop = 0, clipBottom = 0;
+                            if (mentionContainer != null) {
+                                clipTop = Math.max(clipTop, mentionContainer.clipTop());
+                                clipBottom = Math.max(clipBottom, mentionContainer.clipBottom());
+                            }
+                            if (chatActivityEnterView != null && chatActivityEnterView.botCommandsMenuContainer != null) {
+                                clipBottom = Math.max(clipBottom, chatActivityEnterView.botCommandsMenuContainer.clipBottom());
+                            }
+                            viewClipTop += clipTop;
+                            viewClipBottom -= clipBottom;
+
+                            if (cell == null || !cell.getTransitionParams().animateBackgroundBoundsInner) {
+                                viewClipLeft = Math.max(viewClipLeft, chatListView.getLeft() + child.getX());
+                                viewClipTop = Math.max(viewClipTop, chatListView.getY() + child.getY());
+                                viewClipRight = Math.min(viewClipRight, chatListView.getLeft() + child.getX() + child.getMeasuredWidth());
+                                viewClipBottom = Math.min(viewClipBottom, chatListView.getY() + child.getY() + child.getMeasuredHeight());
+                            }
+
+                            viewClipLeft = Math.max(viewClipLeft, getSideMenuWidth());
+
+                            if (scrimViewTask != null) {
+                                final int index = cell.getTodoIndex(scrimViewTask);
+                                viewClipTop = Math.max(viewClipTop, chatListView.getY() + cell.getY() + cell.getPollButtonTop(index));
+                                viewClipBottom = Math.min(viewClipBottom, chatListView.getY() + cell.getY() + cell.getPollButtonBottom(index));
+                            }
                         }
 
                         if (viewClipTop < viewClipBottom) {
@@ -19100,6 +19189,19 @@ public class ChatActivity extends BaseFragment implements
                             }
                             canvas.clipRect(viewClipLeft, viewClipTop, viewClipRight, viewClipBottom);
                             canvas.translate(chatListView.getLeft() + child.getX(), chatListView.getY() + child.getY());
+                            if (isIosGlass && scrimViewProgress > 0) {
+                                float scale = scrimGroup != null ? 1.0f : (1.0f + 0.035f * liftProgress);
+                                float pivotX = child.getMeasuredWidth() / 2f;
+                                float pivotY = child.getMeasuredHeight() / 2f;
+                                if (cell != null) {
+                                    pivotX = (cell.getBackgroundDrawableLeft() + cell.getBackgroundDrawableRight()) / 2f;
+                                    pivotY = (cell.getBackgroundDrawableTop() + cell.getBackgroundDrawableBottom()) / 2f;
+                                }
+                                canvas.translate(0, liftY);
+                                if (scale != 1.0f) {
+                                    canvas.scale(scale, scale, pivotX, pivotY);
+                                }
+                            }
                             if (cell != null && scrimGroup == null && cell.drawBackgroundInParent()) {
                                 canvas.save();
                                 canvas.translate(0, cell.getPaddingTop());
@@ -32803,8 +32905,10 @@ public class ChatActivity extends BaseFragment implements
 
             popupLayout.setBackground(scrimBlur3Factory.create(popupLayout, true)
                 .setColorProvider(BlurredBackgroundProviderImpl.messageMenuBackground(resourceProvider))
-                .setRadius(dp(12))
-                .setPadding(dp(8)));
+                .setRadius(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(12))
+                .setPadding(dp(8))
+                .setHasPadding(true)
+                .setClipToOutline(true));
 
             boolean addGap = false;
 
@@ -33921,6 +34025,40 @@ public class ChatActivity extends BaseFragment implements
                 }
             });
 
+            final boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            ChatMessageCell msgCell = v instanceof ChatMessageCell ? (ChatMessageCell) v : null;
+            MessageObject.GroupedMessages group = msgCell != null ? msgCell.getCurrentMessagesGroup() : null;
+            int bubbleWindowLeft;
+            int bubbleWindowTop;
+            int bubbleWindowRight;
+            int bubbleWindowBottom;
+            if (group != null && group.transitionParams != null && group.transitionParams.top != 0 && group.transitionParams.bottom != 0) {
+                int[] listLoc = new int[2];
+                chatListView.getLocationInWindow(listLoc);
+                bubbleWindowLeft = listLoc[0] + group.transitionParams.left;
+                bubbleWindowTop = listLoc[1] + group.transitionParams.top;
+                bubbleWindowRight = listLoc[0] + group.transitionParams.right;
+                bubbleWindowBottom = listLoc[1] + group.transitionParams.bottom;
+            } else if (msgCell != null) {
+                int[] vLoc = new int[2];
+                v.getLocationInWindow(vLoc);
+                bubbleWindowLeft = vLoc[0] + msgCell.getBackgroundDrawableLeft();
+                bubbleWindowTop = vLoc[1] + msgCell.getBackgroundDrawableTop();
+                bubbleWindowRight = vLoc[0] + msgCell.getBackgroundDrawableRight();
+                bubbleWindowBottom = vLoc[1] + msgCell.getBackgroundDrawableBottom();
+            } else {
+                int[] vLoc = new int[2];
+                v.getLocationInWindow(vLoc);
+                bubbleWindowLeft = vLoc[0];
+                bubbleWindowTop = vLoc[1];
+                bubbleWindowRight = vLoc[0] + v.getMeasuredWidth();
+                bubbleWindowBottom = vLoc[1] + v.getMeasuredHeight();
+            }
+            int bubbleHeight = bubbleWindowBottom - bubbleWindowTop;
+            if (bubbleHeight <= 0) {
+                bubbleHeight = v.getMeasuredHeight();
+            }
+
             ReactionsContainerLayout reactionsLayout = null;
             if (optionsView != null) {
                 scrimPopupContainerLayout.addView(optionsView);
@@ -33940,9 +34078,9 @@ public class ChatActivity extends BaseFragment implements
                     }));
                 }
                 if (isReactionsAvailable && (!tags || (!getMessagesController().premiumFeaturesBlocked() && (getUserConfig().isPremium())))) {
-                    int pad = 22;
-                    int sPad = 24;
-                    reactionsLayout.setPadding(dp(4) + (LocaleController.isRTL ? 0 : sPad), dp(4), dp(4) + (LocaleController.isRTL ? sPad : 0), dp(pad));
+                    int pad = isIosGlass ? 4 : 22;
+                    int sPad = isIosGlass ? 4 : 24;
+                    reactionsLayout.setPadding(dp(4) + (isIosGlass ? dp(4) : (LocaleController.isRTL ? 0 : sPad)), dp(4), dp(4) + (isIosGlass ? dp(4) : (LocaleController.isRTL ? sPad : 0)), dp(pad));
 
                     ReactionsContainerLayout finalReactionsLayout = reactionsLayout;
                     reactionsLayout.setDelegate(new ReactionsContainerLayout.ReactionsContainerDelegate() {
@@ -33979,14 +34117,20 @@ public class ChatActivity extends BaseFragment implements
                         }
                     });
 
-                    LinearLayout.LayoutParams params = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, (int) (52 + reactionsLayout.getTopOffset() / AndroidUtilities.density + pad), Gravity.RIGHT, 0, 50, 0, -20);
-                    scrimPopupContainerLayout.addView(reactionsLayout, params);
+                    if (isIosGlass) {
+                        int gravity = message.isOutOwner() ? Gravity.RIGHT : Gravity.LEFT;
+                        LinearLayout.LayoutParams params = LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, (int) (56 + reactionsLayout.getTopOffset() / AndroidUtilities.density), gravity, 0, 0, 0, 0);
+                        scrimPopupContainerLayout.addView(reactionsLayout, params);
+                    } else {
+                        LinearLayout.LayoutParams params = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, (int) (52 + reactionsLayout.getTopOffset() / AndroidUtilities.density + pad), Gravity.RIGHT, 0, 50, 0, -20);
+                        scrimPopupContainerLayout.addView(reactionsLayout, params);
+                    }
                     scrimPopupContainerLayout.setReactionsLayout(reactionsLayout);
                     scrimPopupContainerLayout.setClipChildren(false);
                     MessageObject messageWithReactions = message;
-                    MessageObject.GroupedMessages group = getValidGroupedMessage(message);
-                    if (group != null) {
-                        messageWithReactions = group.findPrimaryMessageObject();
+                    MessageObject.GroupedMessages groupMsg = getValidGroupedMessage(message);
+                    if (groupMsg != null) {
+                        messageWithReactions = groupMsg.findPrimaryMessageObject();
                     }
                     reactionsLayout.setMessage(messageWithReactions, chatInfo, true);
 
@@ -34013,7 +34157,18 @@ public class ChatActivity extends BaseFragment implements
                 }
 
                 boolean showNoForwards = (isPeerNoForwards() || message.messageOwner.noforwards && currentUser != null && currentUser.bot) && message.messageOwner.action == null && message.isSent() && !message.isEditing() && chatMode != MODE_SCHEDULED && chatMode != MODE_SAVED && getDialogId() != UserObject.VERIFY;
-                scrimPopupContainerLayout.addView(popupLayout, LayoutHelper.createLinearRelatively(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT, isReactionsAvailable ? 16 : 0, 0, isReactionsAvailable ? 36 : 0, 0));
+                if (isIosGlass) {
+                    int gravity = message.isOutOwner() ? Gravity.RIGHT : Gravity.LEFT;
+                    LinearLayout.LayoutParams params = LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, gravity);
+                    if (isReactionsAvailable && reactionsLayout != null) {
+                        Rect popupPad = popupLayout.getPadding();
+                        int padTop = popupPad != null ? popupPad.top : AndroidUtilities.dp(8);
+                        params.topMargin = Math.max(0, bubbleHeight + AndroidUtilities.dp(20) - padTop);
+                    }
+                    scrimPopupContainerLayout.addView(popupLayout, params);
+                } else {
+                    scrimPopupContainerLayout.addView(popupLayout, LayoutHelper.createLinearRelatively(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT, isReactionsAvailable ? 16 : 0, 0, isReactionsAvailable ? 36 : 0, 0));
+                }
                 scrimPopupContainerLayout.setPopupWindowLayout(popupLayout);
                 if (showNoForwards) {
                     popupLayout.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
@@ -34047,7 +34202,12 @@ public class ChatActivity extends BaseFragment implements
                     FrameLayout fl = new FrameLayout(contentView.getContext());
                     fl.setBackground(shadowDrawable2);
                     fl.addView(tv, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 11, 11, 11, 11));
-                    scrimPopupContainerLayout.addView(fl, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT, isReactionsAvailable ? 16 : 0, -8, isReactionsAvailable ? 36 : 0, 0));
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        int gravity = message.isOutOwner() ? Gravity.RIGHT : Gravity.LEFT;
+                        scrimPopupContainerLayout.addView(fl, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, gravity, 0, 4, 0, 0));
+                    } else {
+                        scrimPopupContainerLayout.addView(fl, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT, isReactionsAvailable ? 16 : 0, -8, isReactionsAvailable ? 36 : 0, 0));
+                    }
                     scrimPopupContainerLayout.applyViewBottom(fl);
                 }
 
@@ -34070,7 +34230,12 @@ public class ChatActivity extends BaseFragment implements
                     FrameLayout fl = new FrameLayout(contentView.getContext());
                     fl.setBackground(shadowDrawable2);
                     fl.addView(tv, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 11, 11, 11, 11));
-                    scrimPopupContainerLayout.addView(fl, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT, isReactionsAvailable ? 16 : 0, -8, isReactionsAvailable ? 36 : 0, 0));
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        int gravity = message.isOutOwner() ? Gravity.RIGHT : Gravity.LEFT;
+                        scrimPopupContainerLayout.addView(fl, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, gravity, 0, 4, 0, 0));
+                    } else {
+                        scrimPopupContainerLayout.addView(fl, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT, isReactionsAvailable ? 16 : 0, -8, isReactionsAvailable ? 36 : 0, 0));
+                    }
                     scrimPopupContainerLayout.applyViewBottom(fl);
                 }
 
@@ -34169,7 +34334,9 @@ public class ChatActivity extends BaseFragment implements
             scrimPopupWindow.setDismissAnimationDuration(220);
             scrimPopupWindow.setOutsideTouchable(true);
             scrimPopupWindow.setClippingEnabled(true);
-            if (!isReactionsAvailable || reactionsLayout == null || !ReactionsContainerLayout.allowSmoothEnterTransition()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                scrimPopupWindow.setAnimationStyle(0);
+            } else if (!isReactionsAvailable || reactionsLayout == null || !ReactionsContainerLayout.allowSmoothEnterTransition()) {
                 scrimPopupWindow.setAnimationStyle(R.style.PopupContextAnimation);
             } else {
                 scrimPopupWindow.setAnimationStyle(0);
@@ -34183,42 +34350,97 @@ public class ChatActivity extends BaseFragment implements
 
             ItemOptions.setGapBackgroundColor(popupLayout, Theme.multAlpha(getThemedColor(Theme.key_actionBarDefaultSubmenuItem), 0.06f));
 
-            int popupX = v.getLeft() + (int) x - scrimPopupContainerLayout.getMeasuredWidth() + backgroundPaddings.left - AndroidUtilities.dp(28);
-            if (popupX < AndroidUtilities.dp(6)) {
-                popupX = AndroidUtilities.dp(6);
-            } else if (popupX > chatListView.getMeasuredWidth() - AndroidUtilities.dp(6) - scrimPopupContainerLayout.getMeasuredWidth()) {
-                popupX = chatListView.getMeasuredWidth() - AndroidUtilities.dp(6) - scrimPopupContainerLayout.getMeasuredWidth();
-            }
-            if (AndroidUtilities.isTablet()) {
-                int[] location = new int[2];
-                fragmentView.getLocationInWindow(location);
-                popupX += location[0];
-            }
+            int popupX;
+            int popupY;
             int totalHeight = contentView.getHeight();
             int height = scrimPopupContainerLayout.getMeasuredHeight() + AndroidUtilities.dp(48);
             int keyboardHeight = contentView.measureKeyboardHeight();
             if (keyboardHeight > AndroidUtilities.dp(20)) {
                 totalHeight += keyboardHeight;
             }
-            int popupY;
             int minY = (int) (chatListView.getY() + dp(24));
             int maxY = totalHeight - height - dp(8);
-            if (height < totalHeight) {
-                popupY = (int) (chatListView.getY() + v.getTop() + y);
-                if (isInsideContainer) {
-                    int[] location = new int[2];
-                    v.getLocationInWindow(location);
-                    popupY = (int) (location[1] + y);
 
-                    chatListView.getLocationInWindow(location);
-                    minY = dp(24);
-                    maxY = Math.min(location[1] + chatListView.getMeasuredHeight(), AndroidUtilities.displaySize.y) - dp(8) - height;
-                } else if (height - backgroundPaddings.top - backgroundPaddings.bottom > AndroidUtilities.dp(240)) {
-                    popupY += AndroidUtilities.dp(240) - height;
+            if (isIosGlass) {
+                int measuredW = scrimPopupContainerLayout.getMeasuredWidth();
+                int measuredH = scrimPopupContainerLayout.getMeasuredHeight();
+
+                if (message.isOutOwner()) {
+                    popupX = bubbleWindowRight - measuredW;
+                } else {
+                    popupX = bubbleWindowLeft;
                 }
-                popupY = Utilities.clamp(popupY, maxY, minY);
+
+                int minX = AndroidUtilities.dp(8);
+                int maxX = chatListView.getMeasuredWidth() - AndroidUtilities.dp(8) - measuredW;
+                if (AndroidUtilities.isTablet()) {
+                    int[] fragmentLoc = new int[2];
+                    fragmentView.getLocationInWindow(fragmentLoc);
+                    minX += fragmentLoc[0];
+                    maxX += fragmentLoc[0];
+                }
+                popupX = Utilities.clamp(popupX, maxX, minX);
+
+                int reactionsH = (reactionsLayout != null && isReactionsAvailable) ? reactionsLayout.getMeasuredHeight() : 0;
+                int idealPopupY;
+                if (reactionsLayout != null && isReactionsAvailable) {
+                    idealPopupY = bubbleWindowTop - reactionsH - AndroidUtilities.dp(8);
+                } else {
+                    Rect popupPad = popupLayout.getPadding();
+                    int padTop = popupPad != null ? popupPad.top : AndroidUtilities.dp(8);
+                    idealPopupY = bubbleWindowBottom + AndroidUtilities.dp(12) - padTop;
+                }
+
+                int[] listLoc = new int[2];
+                chatListView.getLocationInWindow(listLoc);
+                int listBottom = listLoc[1] + chatListView.getMeasuredHeight() - AndroidUtilities.dp(12);
+                if (keyboardHeight > AndroidUtilities.dp(20)) {
+                    listBottom = Math.min(listBottom, contentView.getHeight() - keyboardHeight - AndroidUtilities.dp(12));
+                }
+
+                int maxYAllowed = listBottom - measuredH;
+                int minYAllowed = listLoc[1] + AndroidUtilities.dp(12);
+
+                if (idealPopupY > maxYAllowed) {
+                    popupY = Math.max(minYAllowed, maxYAllowed);
+                    scrimViewShiftY = popupY - idealPopupY;
+                } else if (idealPopupY < minYAllowed) {
+                    popupY = Math.min(maxYAllowed, minYAllowed);
+                    scrimViewShiftY = popupY - idealPopupY;
+                } else {
+                    popupY = idealPopupY;
+                    scrimViewShiftY = 0;
+                }
             } else {
-                popupY = inBubbleMode ? 0 : AndroidUtilities.statusBarHeight;
+                scrimViewShiftY = 0;
+                popupX = v.getLeft() + (int) x - scrimPopupContainerLayout.getMeasuredWidth() + backgroundPaddings.left - AndroidUtilities.dp(28);
+                if (popupX < AndroidUtilities.dp(6)) {
+                    popupX = AndroidUtilities.dp(6);
+                } else if (popupX > chatListView.getMeasuredWidth() - AndroidUtilities.dp(6) - scrimPopupContainerLayout.getMeasuredWidth()) {
+                    popupX = chatListView.getMeasuredWidth() - AndroidUtilities.dp(6) - scrimPopupContainerLayout.getMeasuredWidth();
+                }
+                if (AndroidUtilities.isTablet()) {
+                    int[] location = new int[2];
+                    fragmentView.getLocationInWindow(location);
+                    popupX += location[0];
+                }
+                if (height < totalHeight) {
+                    popupY = (int) (chatListView.getY() + v.getTop() + y);
+                    if (isInsideContainer) {
+                        int[] location = new int[2];
+                        v.getLocationInWindow(location);
+                        popupY = (int) (location[1] + y);
+
+                        chatListView.getLocationInWindow(location);
+                        minY = dp(24);
+                        maxY = Math.min(location[1] + chatListView.getMeasuredHeight(), AndroidUtilities.displaySize.y) - dp(8) - height;
+                    } else if (height - backgroundPaddings.top - backgroundPaddings.bottom > AndroidUtilities.dp(240)) {
+                        popupY += AndroidUtilities.dp(240) - height;
+                    }
+                    popupY = Utilities.clamp(popupY, maxY, minY);
+                } else {
+                    popupY = inBubbleMode ? 0 : AndroidUtilities.statusBarHeight;
+                }
             }
             final int finalPopupX = scrimPopupX = popupX;
             final int finalPopupY = scrimPopupY = popupY;
@@ -34231,6 +34453,14 @@ public class ChatActivity extends BaseFragment implements
                 scrimPopupWindow.showAtLocation(chatListView, Gravity.LEFT | Gravity.TOP, finalPopupX, finalPopupY);
                 if (isReactionsAvailableFinal && finalReactionsLayout != null) {
                     finalReactionsLayout.startEnterAnimation(true);
+                } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    ValueAnimator anim = ValueAnimator.ofFloat(0f, 1f);
+                    anim.setDuration(220);
+                    anim.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                    anim.addUpdateListener(a -> {
+                        popupLayout.setReactionsTransitionProgress((float) a.getAnimatedValue());
+                    });
+                    anim.start();
                 }
                 AndroidUtilities.runOnUIThread(() -> {
                     if (scrimPopupWindowItems != null && scrimPopupWindowItems.length > 0 && scrimPopupWindowItems[0] != null) {

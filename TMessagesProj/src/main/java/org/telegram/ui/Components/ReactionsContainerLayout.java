@@ -640,15 +640,21 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
         this.blurredBackgroundDrawable = backgroundFactory.create(this, true)
             .setColorProvider(backgroundColorProvider)
             .setRadius(dp(24))
-            .setPadding(dp(8));
+            .setPadding(dp(8))
+            .setHasPadding(true)
+            .setClipToOutline(true);
         this.blurredBackgroundDrawable1 = backgroundFactory.create(this, true)
             .setColorProvider(backgroundColorProvider)
             .setRadius(dp(8))
-            .setPadding(dp(8));
+            .setPadding(dp(8))
+            .setHasPadding(true)
+            .setClipToOutline(true);
         this.blurredBackgroundDrawable2 = backgroundFactory.create(this, true)
             .setColorProvider(backgroundColorProvider)
             .setRadius(dp(4))
-            .setPadding(dp(8));
+            .setPadding(dp(8))
+            .setHasPadding(true)
+            .setClipToOutline(true);
     }
 
 
@@ -747,6 +753,7 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
                     rect.round(AndroidUtilities.rectTmp2);
                     AndroidUtilities.rectTmp2.inset(-dp(8), -dp(8));
 
+                    blurredBackgroundDrawable.setRadius(radius);
                     blurredBackgroundDrawable.setBounds(AndroidUtilities.rectTmp2);
                     blurredBackgroundDrawable.setAlpha(bgPaint.getAlpha());
                     blurredBackgroundDrawable.draw(canvas);
@@ -916,7 +923,7 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
     }
 
     private void drawBubbles(Canvas canvas, float br, float cPr, float sr, int alpha) {
-        if (type == TYPE_STORY) {
+        if (type == TYPE_STORY || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             return;
         }
         canvas.save();
@@ -942,6 +949,7 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
                 AndroidUtilities.rectTmp.round(AndroidUtilities.rectTmp2);
                 AndroidUtilities.rectTmp2.inset(-dp(8), -dp(8));
 
+                blurredBackgroundDrawable1.setRadius(br);
                 blurredBackgroundDrawable1.setBounds(AndroidUtilities.rectTmp2);
                 blurredBackgroundDrawable1.setAlpha(bgPaint.getAlpha());
                 blurredBackgroundDrawable1.draw(canvas);
@@ -966,6 +974,7 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
                 AndroidUtilities.rectTmp.round(AndroidUtilities.rectTmp2);
                 AndroidUtilities.rectTmp2.inset(-dp(8), -dp(8));
 
+                blurredBackgroundDrawable2.setRadius(sr);
                 blurredBackgroundDrawable2.setBounds(AndroidUtilities.rectTmp2);
                 blurredBackgroundDrawable2.setAlpha(bgPaint.getAlpha());
                 blurredBackgroundDrawable2.draw(canvas);

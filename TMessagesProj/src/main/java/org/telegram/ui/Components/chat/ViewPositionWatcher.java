@@ -85,6 +85,22 @@ public final class ViewPositionWatcher implements
 
         if (multiwindow) {
             view.getViewTreeObserver().addOnPreDrawListener(this);
+            if (!view.isAttachedToWindow()) {
+                view.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+                    @Override
+                    public void onViewAttachedToWindow(View v) {
+                        v.getViewTreeObserver().addOnPreDrawListener(ViewPositionWatcher.this);
+                        v.post(ViewPositionWatcher.this::onPreDraw);
+                    }
+
+                    @Override
+                    public void onViewDetachedFromWindow(View v) {
+                        try {
+                            v.getViewTreeObserver().removeOnPreDrawListener(ViewPositionWatcher.this);
+                        } catch (Exception ignored) {}
+                    }
+                });
+            }
         }
     }
 

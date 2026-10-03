@@ -21,7 +21,9 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider mainTabs(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) -> {
-                final float alpha = tw.nekomimi.nekogram.NekoConfig.mainTabsGlassAlpha.Int() / 100f;
+                final float alpha = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                        ? tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha
+                        : tw.nekomimi.nekogram.NekoConfig.mainTabsGlassAlpha).Int() / 100f;
                 final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                 final int colorTarget = Theme.getColor(Theme.key_glass_targetMainTabs, r);
                 return solveSrcColor(colorBg, colorTarget, alpha);
@@ -53,7 +55,9 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider emojiViewButton(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
-                    final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                    final float alpha = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                            ? tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f
+                            : (LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f));
                     final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                     return Theme.multAlpha(colorBg, alpha);
                 })
@@ -85,22 +89,31 @@ public class BlurredBackgroundProviderImpl {
     }
 
     public static BlurredBackgroundProvider messageMenuBackground(Theme.ResourcesProvider resourcesProvider) {
+        final boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
-                    if (!LiteMode.isEnabled(LiteMode.FLAG_CHAT_BLUR)) {
-                        return Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground);
+                    if (isIosGlass) {
+                        final float alpha = tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f;
+                        final int colorBg = Theme.getColor(Theme.key_chat_messagePanelBackground, r);
+                        return Theme.multAlpha(colorBg, alpha);
                     }
-                    return Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), isDark ? 0.85f : 0.825f);
+                    if (!LiteMode.isEnabled(LiteMode.FLAG_CHAT_BLUR) && !checkBlurEnabled(resourcesProvider)) {
+                        return Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, r);
+                    }
+                    return Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, r), isDark ? 0.85f : 0.825f);
                 })
-                .setStrokeColorTop(0x44FFFFFF, 0)
-                .setStrokeColorBottom(0x22FFFFFF, 0)
-                .setShadowColor(0x38000000, 0)
-                .setShadowLayer(dpf2(3.5f), 0, 0)
-                .setStrokeWidth(dpf2(2 / 3f), dpf2(2 / 3f))
+                .setStrokeColorTop(isIosGlass ? 0xFFFFFFFF : 0x44FFFFFF, isIosGlass ? 0x28FFFFFF : 0)
+                .setStrokeColorBottom(isIosGlass ? 0xFFFFFFFF : 0x22FFFFFF, isIosGlass ? 0x14FFFFFF : 0)
+                .setShadowColor(0x20000000, 0)
+                .setShadowLayer(dpf2(isIosGlass ? 4.5f : 3.5f), 0, dpf2(isIosGlass ? 1f : 0f))
+                .setStrokeWidth(dpf2(0.5f), dpf2(isIosGlass ? 0.5f : 2 / 3f))
                 .build();
     }
 
     public static BlurredBackgroundProvider scrimMenuBackground(Theme.ResourcesProvider resourcesProvider) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            return messageMenuBackground(resourcesProvider);
+        }
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) ->
                 Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), isDark ? 0.85f : 0.825f))
@@ -115,7 +128,9 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider attachMenuSearch(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
-                    final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                    final float alpha = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                            ? tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f
+                            : (LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f));
                     final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                     return Theme.multAlpha(colorBg, alpha);
                 })
@@ -144,7 +159,9 @@ public class BlurredBackgroundProviderImpl {
                         return ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_chat_messagePanelBackground, r), 255);
                     }
 
-                    final float alpha = tw.nekomimi.nekogram.NekoConfig.mainTabsGlassAlpha.Int() / 100f;
+                    final float alpha = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                            ? tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha
+                            : tw.nekomimi.nekogram.NekoConfig.mainTabsGlassAlpha).Int() / 100f;
                     final int colorBg = Theme.getColor(Theme.key_chat_messagePanelBackground, r);
                     return Theme.multAlpha(colorBg, alpha);
                 })
@@ -179,7 +196,9 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider attachMenuActionBar(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
-                    final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                    final float alpha = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                            ? tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f
+                            : (LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f));
                     final int colorBg = Theme.getColor(isDark ? Theme.key_windowBackgroundGray : Theme.key_dialogBackgroundGray, r);
                     final int colorTarget = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                     return solveSrcColor(colorBg, colorTarget, alpha);
@@ -200,7 +219,9 @@ public class BlurredBackgroundProviderImpl {
                             Theme.key_actionBarDefault : Theme.key_chat_topPanelBackground, r), 255);
                 }
 
-                final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                final float alpha = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                        ? tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f
+                        : (LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f));
                 final int colorBg = Theme.getColor(Theme.key_chat_topPanelBackground, r);
                 return Theme.multAlpha(colorBg, alpha);
             })
@@ -216,7 +237,9 @@ public class BlurredBackgroundProviderImpl {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
                     final boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
-                    final float alpha = isIosGlass ? (isDark ? 0.35f : 0.40f) : 0.7f;
+                    final float alpha = isIosGlass
+                            ? (tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f * 0.5f)
+                            : 0.7f;
                     final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                     return Theme.multAlpha(colorBg, alpha);
                 })
@@ -231,7 +254,9 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider bulletin(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) -> {
-                final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                final float alpha = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                        ? tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f
+                        : (LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f));
                 final int colorBg = Theme.getColor(Theme.key_undo_background, r);
                 return Theme.multAlpha(colorBg, alpha);
             })
@@ -250,7 +275,9 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider inputFieldShareAlert(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
-                    final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                    final float alpha = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+                            ? tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f
+                            : (LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f));
                     final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                     final int colorTarget = Theme.getColor(Theme.key_chat_messagePanelBackground, r);
                     return solveSrcColor(colorBg, colorTarget, alpha);
@@ -262,6 +289,7 @@ public class BlurredBackgroundProviderImpl {
                 .setStrokeWidth(dpf2(1), dpf2(2 / 3f))
                 .build();
     }
+
 
     public static BlurredBackgroundProvider photoViewer(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)

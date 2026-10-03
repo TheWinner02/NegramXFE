@@ -44,6 +44,17 @@ public class ChatScrimPopupContainerLayout extends LinearLayout {
             popupLayoutLeftOffset = 0;
             super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                reactionsLayout.measureHint();
+                if (bottomView != null) {
+                    bottomView.getLayoutParams().width = LayoutHelper.MATCH_PARENT;
+                    ((LayoutParams) bottomView.getLayoutParams()).rightMargin = 0;
+                }
+                super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+                maxHeight = getMeasuredHeight();
+                return;
+            }
+
             int maxWidth = reactionsLayout.getMeasuredWidth();
             if (popupWindowLayout.getSwipeBack() != null && popupWindowLayout.getSwipeBack().getMeasuredWidth() > maxWidth) {
                 maxWidth = popupWindowLayout.getSwipeBack().getMeasuredWidth();

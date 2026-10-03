@@ -278,7 +278,7 @@
     <string name="BlurRadiusGlobal">전체 블러 강도</string>
     <string name="MainTabsGlassAlpha">하단 바 글래스 불투명도</string>
     <string name="MainTabsBlurRadius">하단 바 블러 강도</string>
-    <string name="ActionBarGlassAlpha">상단 바 글래스 불투명도</string>
+    <string name="ActionBarGlassAlpha">Liquid Glass 불투명도 (전체)</string>
     <string name="ActionBarBlurRadius">상단 바 블러 강도</string>
     <string name="OpenProfileByAvatar">아바타를 탭하여 프로필 열기</string>
 </resources>

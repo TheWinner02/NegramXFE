@@ -70,6 +70,8 @@ import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.PremiumPreviewFragment;
 import org.telegram.ui.SelectAnimatedEmojiDialog;
 
+import xyz.nextalone.nagram.ui.UIStyleEngine;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -244,7 +246,8 @@ public class CustomEmojiReactionsWindow {
 
                 @Override
                 public void getOutline(View view, Outline outline) {
-                    float radius = AndroidUtilities.lerp(fromRadius, dp(8), enterTransitionProgress);
+                    float targetRadius = UIStyleEngine.isIosLiquidGlass() ? UIStyleEngine.getCardCornerRadius() : dp(8);
+                    float radius = AndroidUtilities.lerp(fromRadius, targetRadius, enterTransitionProgress);
                     rectTmp.set(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
                     AndroidUtilities.lerp(fromRect, rectTmp, enterTransitionProgress, rectF);
                     rectF.round(rect);
@@ -322,7 +325,7 @@ public class CustomEmojiReactionsWindow {
         this.selectAnimatedEmojiDialog.searchBox.setUseCustomBackground();
         this.blurredBackgroundDrawable = backgroundFactory.create(containerView, true)
             .setColorProvider(backgroundColorProvider)
-            .setRadius(dp(12))
+            .setRadius(UIStyleEngine.isIosLiquidGlass() ? UIStyleEngine.getCardCornerRadius() : dp(12))
             .setPadding(dp(8));
     }
 
@@ -865,7 +868,8 @@ public class CustomEmojiReactionsWindow {
                 fromRect.offset(fromRectTranslateX, fromRectTranslateY);
             }
             AndroidUtilities.lerp(fromRect, AndroidUtilities.rectTmp, enterTransitionProgress, drawingRect);
-            float radius = AndroidUtilities.lerp(fromRadius, dp(type == TYPE_MESSAGE_EFFECTS ? 20 : 8), enterTransitionProgress);
+            float targetRadius = UIStyleEngine.isIosLiquidGlass() ? UIStyleEngine.getCardCornerRadius() : dp(type == TYPE_MESSAGE_EFFECTS ? 20 : 8);
+            float radius = AndroidUtilities.lerp(fromRadius, targetRadius, enterTransitionProgress);
 
             transitionReactions.clear();
             if (type == TYPE_STORY || (reactionsContainerLayout.getDelegate() != null && reactionsContainerLayout.getDelegate().drawBackground())) {
