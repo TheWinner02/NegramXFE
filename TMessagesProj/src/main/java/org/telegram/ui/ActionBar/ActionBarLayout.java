@@ -1125,9 +1125,13 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         int clipRight = width + getPaddingLeft();
         int backOffset = 0;
 
-        if (child == containerViewBack) {
+        final boolean isCloseAnimation = onCloseAnimationEndRunnable != null;
+        final View topChild = isCloseAnimation ? containerViewBack : containerView;
+        final View bottomChild = isCloseAnimation ? containerView : containerViewBack;
+
+        if (child == bottomChild) {
             clipRight = translationX + dp(1);
-        } else if (child == containerView) {
+        } else if (child == topChild) {
             clipLeft = translationX;
         }
 
@@ -1136,8 +1140,8 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             bottomSheetTabsClip.clip(canvas, withShadow, isKeyboardVisible, getWidth(), (int) getY() + getHeight(), 1.0f);
             withShadow = false;
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !isSheet && (translationX != 0 || overrideWidthOffset != -1)) {
-            if (child == containerView) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !isSheet && (translationX != 0 || overrideWidthOffset != -1 || isCloseAnimation)) {
+            if (child == topChild) {
                 final WindowInsets insets = getRootWindowInsets();
                 if (insets != null) {
                     AndroidUtilities.rectTmp.set(translationX, 0, translationX + getWidth(), getHeight());
@@ -1182,7 +1186,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     clipPath.addRoundRect(AndroidUtilities.rectTmp, radii, Path.Direction.CW);
                     canvas.clipPath(clipPath);
                 }
-            } else if (child == containerViewBack) {
+            } else if (child == bottomChild) {
                 final WindowInsets insets = getRootWindowInsets();
                 if (insets != null) {
                     final RoundedCorner topLeft = insets.getRoundedCorner(android.view.RoundedCorner.POSITION_TOP_LEFT);
@@ -1205,12 +1209,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         final boolean result = super.drawChild(canvas, child, drawingTime);
         canvas.restoreToCount(restoreCount);
 
-        if (translationX != 0 || overrideWidthOffset != -1) {
+        if (translationX != 0 || overrideWidthOffset != -1 || isCloseAnimation) {
             int widthOffset = overrideWidthOffset != -1 ? overrideWidthOffset : width - translationX;
             int top = getTop(widthOffset, (float) width);
-            final boolean isCloseAnimation = onCloseAnimationEndRunnable != null;
-            final View topChild = isCloseAnimation ? containerViewBack : containerView;
-            final View bottomChild = isCloseAnimation ? containerView : containerViewBack;
 
             if (child == topChild) {
                 final int alpha = MathUtils.clamp(255 * widthOffset / dp(20), 0, 255);
@@ -1223,7 +1224,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     } else {
                         additionalHeight = 0;
                     }
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || isSheet || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || isSheet || useSlideAnimation()) {
                         if (layerShadowDrawable == null) {
                             layerShadowDrawable = getResources().getDrawable(R.drawable.layer_shadow);
                         }
@@ -1967,6 +1968,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     .setSpring(new SpringForce(SPRING_MULTIPLIER)
                             .setStiffness(stiffness)
                             .setDampingRatio(preview ? 0.6f : 1f));
+            if (!open && !preview) {
+                currentSpringAnimation.setStartVelocity(1600f);
+            }
             currentSpringAnimation.addUpdateListener((animation, value, velocity) -> {
                 animationProgress = value / SPRING_MULTIPLIER;
                 if (useActionBarCrossfade()) {
@@ -2465,7 +2469,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                             containerView.setScaleX(0.5f);
                             containerView.setScaleY(0.5f);
                         } else {
-                            containerView.setTranslationX(getWidth() - getPaddingLeft() - getPaddingRight());
+                            float widthNoPaddings = getWidth() - getPaddingLeft() - getPaddingRight();
+                            containerView.setTranslationX(widthNoPaddings);
+                            setInnerTranslationX(widthNoPaddings);
                         }
                     } else {
                         containerView.setAlpha(0.0f);
@@ -2967,7 +2973,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     animation = currentFragment.onCustomTransitionAnimation(false, () -> onAnimationEndCheck(false));
                 }
                 if (animation == null) {
-                    if (!inPreviewMode && (containerView.isKeyboardVisible || containerViewBack.isKeyboardVisible)) {
+                    if (!inPreviewMode && !useSlideAnimation() && (containerView.isKeyboardVisible || containerViewBack.isKeyboardVisible)) {
                         waitingForKeyboardCloseRunnable = new Runnable() {
                             @Override
                             public void run() {
