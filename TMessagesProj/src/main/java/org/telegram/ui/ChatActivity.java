@@ -34452,8 +34452,12 @@ public class ChatActivity extends BaseFragment implements
                 }
                 scrimPopupWindow.showAtLocation(chatListView, Gravity.LEFT | Gravity.TOP, finalPopupX, finalPopupY);
                 if (isReactionsAvailableFinal && finalReactionsLayout != null) {
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        popupLayout.setReactionsTransitionProgress(0f);
+                    }
                     finalReactionsLayout.startEnterAnimation(true);
                 } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    popupLayout.setReactionsTransitionProgress(0f);
                     ValueAnimator anim = ValueAnimator.ofFloat(0f, 1f);
                     anim.setDuration(220);
                     anim.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
