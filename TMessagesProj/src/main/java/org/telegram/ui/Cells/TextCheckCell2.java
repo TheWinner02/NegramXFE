@@ -127,11 +127,17 @@ public class TextCheckCell2 extends FrameLayout {
 
         checkBox = new Switch(context);
         checkBox.setDrawIconType(1);
-        addView(checkBox, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 52 : 37, xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 48 : 40, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 22, 0, 22, 0));
+        addView(checkBox, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchWidth(), xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchHeight(), (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 22, 0, 22, 0));
     }
 
     private int getSwitchTextInset() {
-        return xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 104 : 64;
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            return 104;
+        }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            return 86;
+        }
+        return 64;
     }
 
     @Override

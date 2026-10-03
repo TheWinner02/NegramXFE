@@ -12,9 +12,13 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RadialGradient;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.SystemClock;
@@ -58,11 +62,13 @@ public class SeekBarView extends FrameLayout {
     public static final int SLIDER_STYLE_DEFAULT = 0;
     public static final int SLIDER_STYLE_MODERN = 1;
     public static final int SLIDER_STYLE_MD3 = 2;
+    public static final int SLIDER_STYLE_IOS_GLASS = 3;
 
     private final SeekBarAccessibilityDelegate seekBarAccessibilityDelegate;
 
     private Paint innerPaint1;
     private Paint outerPaint1;
+    private Paint glassPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private int thumbSize;
     private int selectorWidth;
     private int thumbX;
@@ -88,6 +94,31 @@ public class SeekBarView extends FrameLayout {
     private int sliderStyleOverride = -1;
 
     private Path path = new Path();
+
+    private float iosLensProgress = 0f;
+    private android.animation.ValueAnimator iosLensAnimator;
+
+    private void animateIosLens(boolean active) {
+        if (iosLensAnimator != null) {
+            iosLensAnimator.cancel();
+        }
+        iosLensAnimator = android.animation.ValueAnimator.ofFloat(iosLensProgress, active ? 1f : 0f);
+        iosLensAnimator.setDuration(active ? 150 : 200);
+        iosLensAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT);
+        iosLensAnimator.addUpdateListener(animation -> {
+            iosLensProgress = (float) animation.getAnimatedValue();
+            invalidate();
+        });
+        iosLensAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                iosLensProgress = active ? 1f : 0f;
+                iosLensAnimator = null;
+                invalidate();
+            }
+        });
+        iosLensAnimator.start();
+    }
 
     private boolean twoSided;
     private final Theme.ResourcesProvider resourcesProvider;
@@ -250,8 +281,10 @@ public class SeekBarView extends FrameLayout {
         if (ev.getAction() == MotionEvent.ACTION_DOWN) {
             sx = ev.getX();
             sy = ev.getY();
+            animateIosLens(true);
             return true;
         } else if (ev.getAction() == MotionEvent.ACTION_UP || ev.getAction() == MotionEvent.ACTION_CANCEL) {
+            animateIosLens(false);
             captured = false;
             if (ev.getAction() == MotionEvent.ACTION_UP) {
                 final ViewConfiguration vc = ViewConfiguration.get(getContext());
@@ -468,8 +501,10 @@ public class SeekBarView extends FrameLayout {
         int configStyle = NaConfig.INSTANCE.getSliderStyle().Int();
         if (UIStyleEngine.isMaterial3Expressive()) {
             configStyle = SLIDER_STYLE_MD3;
+        } else if (UIStyleEngine.isIosLiquidGlass()) {
+            configStyle = SLIDER_STYLE_IOS_GLASS;
         }
-        if (sliderStyleOverride != -1 && configStyle == SLIDER_STYLE_MD3) {
+        if (sliderStyleOverride != -1 && (configStyle == SLIDER_STYLE_MD3 || configStyle == SLIDER_STYLE_IOS_GLASS)) {
             return sliderStyleOverride;
         }
         return configStyle;
@@ -477,21 +512,21 @@ public class SeekBarView extends FrameLayout {
 
     private void updateModernState() {
         int style = getEffectiveSliderStyle();
-        isModern = style == SLIDER_STYLE_MODERN || style == SLIDER_STYLE_MD3;
+        isModern = style == SLIDER_STYLE_MODERN || style == SLIDER_STYLE_MD3 || style == SLIDER_STYLE_IOS_GLASS;
         isModern &= (timestamps == null || timestamps.isEmpty());
 
         if (!hasCustomLineWidthValue || style != SLIDER_STYLE_DEFAULT) {
-            lineWidthDp = style == SLIDER_STYLE_MODERN ? 17 : (style == SLIDER_STYLE_MD3 ? 13 : 3);
+            lineWidthDp = style == SLIDER_STYLE_MODERN ? 17 : (style == SLIDER_STYLE_MD3 ? 13 : (style == SLIDER_STYLE_IOS_GLASS ? 9 : 3));
         }
 
-        thumbSize = isModern && style == SLIDER_STYLE_MD3 ? AndroidUtilities.dp(4) : AndroidUtilities.dp(24);
+        thumbSize = isModern && style == SLIDER_STYLE_MD3 ? AndroidUtilities.dp(4) : (style == SLIDER_STYLE_IOS_GLASS ? AndroidUtilities.dp(26) : AndroidUtilities.dp(24));
     }
 
     private int needCustomDraw() {
         updateModernState();
 
         int style = getEffectiveSliderStyle();
-        if (isModern && style == SLIDER_STYLE_MD3) {
+        if (isModern && (style == SLIDER_STYLE_MD3 || style == SLIDER_STYLE_IOS_GLASS)) {
             return style;
         }
 
@@ -623,6 +658,102 @@ public class SeekBarView extends FrameLayout {
             // left, top, right, bottom, rx, ry
             rect.set(thumbX + selectorWidth / 2f, top - AndroidUtilities.dp(5), thumbX + selectorWidth / 2f + thumbSize, bottom + AndroidUtilities.dp(5));
             canvas.drawRoundRect(rect, indicatorRadius, indicatorRadius, outerPaint1);
+        } else if (needCustomDraw() == SLIDER_STYLE_IOS_GLASS) {
+            float trackHeight = AndroidUtilities.dpf2(4.5f);
+            float trackTop = centerY - trackHeight / 2f;
+            float trackBottom = centerY + trackHeight / 2f;
+            float trackRadius = trackHeight / 2f;
+            boolean isDay = Theme.isCurrentThemeDay();
+            int progressColor = getThemedColor(Theme.key_player_progress);
+            int inactiveTrackColor = isDay ? 0xFFE5E5EA : 0xFF3A3A3C;
+
+            // 1. Inactive Track: Sleek rounded bar
+            rect.set(left, trackTop, right, trackBottom);
+            glassPaint.setStyle(Paint.Style.FILL);
+            glassPaint.setColor(inactiveTrackColor);
+            canvas.drawRoundRect(rect, trackRadius, trackRadius, glassPaint);
+
+            // 2. Active Track: Glowing blue / theme progress bar
+            float activeRight = Math.max(left, Math.min(right, thumbX + selectorWidth / 2f));
+            if (activeRight > left) {
+                rect.set(left, trackTop, activeRight, trackBottom);
+                glassPaint.setColor(progressColor);
+                canvas.drawRoundRect(rect, trackRadius, trackRadius, glassPaint);
+            }
+
+            // 3. iOS Liquid Glass Thumb (Capsule at rest -> Expands to Translucent Glass Lens when interactive)
+            float cx = thumbX + selectorWidth / 2f;
+            float cy = centerY;
+
+            float restW = AndroidUtilities.dpf2(28f);
+            float restH = AndroidUtilities.dpf2(18f);
+            float lensW = AndroidUtilities.dpf2(46f);
+            float lensH = AndroidUtilities.dpf2(30f);
+
+            float curW = AndroidUtilities.lerp(restW, lensW, iosLensProgress);
+            float curH = AndroidUtilities.lerp(restH, lensH, iosLensProgress);
+            float curRad = curH / 2f;
+
+            // --- A. SOLID WHITE REST CAPSULE LAYER (fades out as user touches) ---
+            if (iosLensProgress < 1.0f) {
+                float whiteAlpha = 1.0f - iosLensProgress;
+
+                // Soft ambient drop shadows
+                glassPaint.setColor(ColorUtils.setAlphaComponent(0x000000, (int) (0x35 * whiteAlpha)));
+                rect.set(cx - curW / 2f, cy - curH / 2f + AndroidUtilities.dpf2(1.5f), cx + curW / 2f, cy + curH / 2f + AndroidUtilities.dpf2(1.5f));
+                canvas.drawRoundRect(rect, curRad, curRad, glassPaint);
+
+                glassPaint.setColor(ColorUtils.setAlphaComponent(0x000000, (int) (0x15 * whiteAlpha)));
+                rect.set(cx - curW / 2f, cy - curH / 2f + AndroidUtilities.dpf2(2.5f), cx + curW / 2f, cy + curH / 2f + AndroidUtilities.dpf2(2.5f));
+                canvas.drawRoundRect(rect, curRad, curRad, glassPaint);
+
+                // Pristine solid white capsule body
+                glassPaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, (int) (0xFF * whiteAlpha)));
+                rect.set(cx - curW / 2f, cy - curH / 2f, cx + curW / 2f, cy + curH / 2f);
+                canvas.drawRoundRect(rect, curRad, curRad, glassPaint);
+            }
+
+            // --- B. TRANSLUCENT LIQUID GLASS LENS LAYER (blooms when touched / dragged) ---
+            if (iosLensProgress > 0.0f) {
+                float lensAlpha = iosLensProgress;
+
+                // Expanded soft shadow
+                glassPaint.setColor(ColorUtils.setAlphaComponent(0x000000, (int) (0x45 * lensAlpha)));
+                rect.set(cx - curW / 2f, cy - curH / 2f + AndroidUtilities.dpf2(2.5f), cx + curW / 2f, cy + curH / 2f + AndroidUtilities.dpf2(2.5f));
+                canvas.drawRoundRect(rect, curRad, curRad, glassPaint);
+
+                // Translucent tinted glass body (allows track to show through)
+                int glassTint = isDay ? ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x45 * lensAlpha))
+                        : ColorUtils.setAlphaComponent(0x18181A, (int) (0x80 * lensAlpha));
+                glassPaint.setColor(glassTint);
+                rect.set(cx - curW / 2f, cy - curH / 2f, cx + curW / 2f, cy + curH / 2f);
+                canvas.drawRoundRect(rect, curRad, curRad, glassPaint);
+
+                // Glass dome specular reflection on upper half
+                glassPaint.setShader(new LinearGradient(
+                        cx, cy - curH / 2f, cx, cy,
+                        ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x45 * lensAlpha)), 0x00FFFFFF, Shader.TileMode.CLAMP
+                ));
+                rect.set(cx - curW / 2f + AndroidUtilities.dpf2(1f), cy - curH / 2f + AndroidUtilities.dpf2(0.8f), cx + curW / 2f - AndroidUtilities.dpf2(1f), cy);
+                canvas.drawRoundRect(rect, curRad, curRad, glassPaint);
+                glassPaint.setShader(null);
+
+                // Curved caustic / refractive glass rim
+                rect.set(cx - curW / 2f, cy - curH / 2f, cx + curW / 2f, cy + curH / 2f);
+                glassPaint.setStyle(Paint.Style.STROKE);
+                glassPaint.setStrokeWidth(AndroidUtilities.dpf2(1.2f));
+                int causticColor = ColorUtils.blendARGB(progressColor, Color.WHITE, 0.45f);
+                LinearGradient rimGrad = new LinearGradient(
+                        cx - curW / 2f, cy, cx + curW / 2f, cy,
+                        ColorUtils.setAlphaComponent(causticColor, (int) (0x99 * lensAlpha)),
+                        ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x30 * lensAlpha)),
+                        Shader.TileMode.CLAMP
+                );
+                glassPaint.setShader(rimGrad);
+                canvas.drawRoundRect(rect, curRad, curRad, glassPaint);
+                glassPaint.setShader(null);
+                glassPaint.setStyle(Paint.Style.FILL);
+            }
         }
 
         /*if (transitionProgress < 1f) {

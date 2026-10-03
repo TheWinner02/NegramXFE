@@ -105,22 +105,26 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
     private final AbstractConfigCell switchStyleRow = cellGroup.appendCell(new ConfigCellSelectBox("SwitchStyle", NaConfig.INSTANCE.getSwitchStyle(), new String[]{
             getString(R.string.Default),
             getString(R.string.StyleMaterialDesign3),
-            getString(R.string.StyleOneUI)
+            getString(R.string.StyleOneUI),
+            getString(R.string.StyleIosLiquidGlass)
     }, null));
     private final AbstractConfigCell switchStyleConnectedGroupRow = cellGroup.appendCell(new ConfigCellConnectedButtonGroup("SwitchStyle", NaConfig.INSTANCE.getSwitchStyle(), new String[]{
             getString(R.string.Default),
             getString(R.string.StyleMaterialDesign3),
-            getString(R.string.StyleOneUI)
+            getString(R.string.StyleOneUI),
+            getString(R.string.StyleIos)
     }));
     private final AbstractConfigCell sliderStyleRow = cellGroup.appendCell(new ConfigCellSelectBox("SliderStyle", NaConfig.INSTANCE.getSliderStyle(), new String[]{
             getString(R.string.Default),
             getString(R.string.StyleModern),
-            getString(R.string.StyleMaterialDesign3)
+            getString(R.string.StyleMaterialDesign3),
+            getString(R.string.StyleIosLiquidGlass)
     }, null));
     private final AbstractConfigCell sliderStyleConnectedGroupRow = cellGroup.appendCell(new ConfigCellConnectedButtonGroup("SliderStyle", NaConfig.INSTANCE.getSliderStyle(), new String[]{
             getString(R.string.Default),
             getString(R.string.StyleModern),
-            getString(R.string.StyleMaterialDesign3)
+            getString(R.string.StyleMaterialDesign3),
+            getString(R.string.StyleIos)
     }));
     private final AbstractConfigCell notificationIconRow = cellGroup.appendCell(new ConfigCellSelectBox(null, NaConfig.INSTANCE.getNotificationIcon(), new String[]{
             getString(R.string.MapPreviewProviderTelegram),

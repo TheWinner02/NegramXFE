@@ -157,7 +157,7 @@ public class TextCell extends FrameLayout {
         if (needCheck) {
             checkBox = new Switch(context, resourcesProvider);
             checkBox.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
-            addView(checkBox, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 52 : 38, xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 48 : 22, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 22, 0, 22, 0));
+            addView(checkBox, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchWidth(), xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchHeight(), (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 22, 0, 22, 0));
         }
 
         setFocusable(true);
@@ -536,7 +536,7 @@ public class TextCell extends FrameLayout {
         if (checkBox == null) {
             checkBox = new Switch(getContext(), resourcesProvider);
             checkBox.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
-            addView(checkBox, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 52 : 37, xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 48 : 20, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 22, 0, 22, 0));
+            addView(checkBox, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchWidth(), xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchHeight(), (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 22, 0, 22, 0));
         }
         if (checkBox != null) {
             checkBox.setVisibility(VISIBLE);

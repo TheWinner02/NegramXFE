@@ -14,13 +14,18 @@ import static org.telegram.messenger.AndroidUtilities.dpf2;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
+import android.view.MotionEvent;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.RadialGradient;
+import android.graphics.Shader;
 import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
@@ -56,6 +61,7 @@ public class Switch extends View {
     public static final int SWITCH_STYLE_DEFAULT = 0;
     public static final int SWITCH_STYLE_MODERN = 1;
     public static final int SWITCH_STYLE_MD3 = 2;
+    public static final int SWITCH_STYLE_IOS_GLASS = 3;
     private int separateTrackColorKey = -1;
     private int lastCheckColor = Integer.MIN_VALUE;
     private final Paint googleBorderPaint;
@@ -66,6 +72,12 @@ public class Switch extends View {
     private float progress;
     private ObjectAnimator checkAnimator;
     private ObjectAnimator iconAnimator;
+    private float touchLensProgress = 0f;
+    private ValueAnimator touchLensAnimator;
+    private float transitLensProgress = 0f;
+    private ValueAnimator transitLensAnimator;
+    private boolean isIosDragging = false;
+    private float touchStartX, touchStartY;
 
     private boolean attachedToWindow;
     private boolean isChecked;
@@ -168,6 +180,11 @@ public class Switch extends View {
             checkAnimator.cancel();
             checkAnimator = null;
         }
+        if (transitLensAnimator != null) {
+            transitLensAnimator.cancel();
+            transitLensAnimator = null;
+            transitLensProgress = 0f;
+        }
     }
 
     private void cancelIconAnimator() {
@@ -261,9 +278,10 @@ public class Switch extends View {
     }
 
     private void animateToCheckedState(boolean newCheckedState) {
+        boolean isIos = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
         checkAnimator = ObjectAnimator.ofFloat(this, "progress", newCheckedState ? 1 : 0);
-        checkAnimator.setDuration(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 260 : 200);
-        checkAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+        checkAnimator.setDuration(isIos ? 260 : (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 260 : 200));
+        checkAnimator.setInterpolator(isIos ? CubicBezierInterpolator.DEFAULT : CubicBezierInterpolator.EASE_OUT_QUINT);
         checkAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
@@ -271,6 +289,109 @@ public class Switch extends View {
             }
         });
         checkAnimator.start();
+
+        if (isIos) {
+            if (transitLensAnimator != null) {
+                transitLensAnimator.cancel();
+            }
+            transitLensAnimator = ValueAnimator.ofFloat(0f, 1f, 0f);
+            transitLensAnimator.setDuration(260);
+            transitLensAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT);
+            transitLensAnimator.addUpdateListener(animation -> {
+                transitLensProgress = (float) animation.getAnimatedValue();
+                invalidate();
+            });
+            transitLensAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    transitLensProgress = 0f;
+                    transitLensAnimator = null;
+                    invalidate();
+                }
+            });
+            transitLensAnimator.start();
+        }
+    }
+
+    private void animateTouchLens(boolean active) {
+        if (touchLensAnimator != null) {
+            touchLensAnimator.cancel();
+        }
+        touchLensAnimator = ValueAnimator.ofFloat(touchLensProgress, active ? 1f : 0f);
+        touchLensAnimator.setDuration(active ? 150 : 200);
+        touchLensAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT);
+        touchLensAnimator.addUpdateListener(animation -> {
+            touchLensProgress = (float) animation.getAnimatedValue();
+            invalidate();
+        });
+        touchLensAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                touchLensProgress = active ? 1f : 0f;
+                touchLensAnimator = null;
+                invalidate();
+            }
+        });
+        touchLensAnimator.start();
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || !isEnabled()) {
+            return super.onTouchEvent(event);
+        }
+        int action = event.getAction();
+        if (action == MotionEvent.ACTION_DOWN) {
+            touchStartX = event.getX();
+            touchStartY = event.getY();
+            isIosDragging = false;
+            if (getParent() != null) {
+                getParent().requestDisallowInterceptTouchEvent(true);
+            }
+            animateTouchLens(true);
+            return true;
+        } else if (action == MotionEvent.ACTION_MOVE) {
+            float dx = Math.abs(event.getX() - touchStartX);
+            float dy = Math.abs(event.getY() - touchStartY);
+            if (!isIosDragging && (dx > AndroidUtilities.touchSlop || dy > AndroidUtilities.touchSlop)) {
+                if (dx > dy) {
+                    isIosDragging = true;
+                } else {
+                    if (getParent() != null) {
+                        getParent().requestDisallowInterceptTouchEvent(false);
+                    }
+                    animateTouchLens(false);
+                    return false;
+                }
+            }
+            if (isIosDragging) {
+                int width = Math.min(dp(51), getMeasuredWidth());
+                int x = (getMeasuredWidth() - width) / 2;
+                float restThumbW = dpf2(28f);
+                float thumbLeft = x + dpf2(2f) + restThumbW / 2f;
+                float thumbRight = x + width - dpf2(2f) - restThumbW / 2f;
+                float newProgress = (event.getX() - thumbLeft) / (thumbRight - thumbLeft);
+                setProgress(Math.max(0f, Math.min(1f, newProgress)));
+            }
+            return true;
+        } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            animateTouchLens(false);
+            if (action == MotionEvent.ACTION_UP) {
+                boolean newState = isIosDragging ? (progress > 0.5f) : !isChecked;
+                setChecked(newState, true);
+                if (onCheckedChangeListener != null) {
+                    onCheckedChangeListener.onCheckedChanged(this, isChecked);
+                }
+            } else {
+                setChecked(isChecked, true);
+            }
+            isIosDragging = false;
+            if (getParent() != null) {
+                getParent().requestDisallowInterceptTouchEvent(false);
+            }
+            return true;
+        }
+        return super.onTouchEvent(event);
     }
 
     private void animateIcon(boolean newCheckedState) {
@@ -409,6 +530,12 @@ public class Switch extends View {
         int switchStyle = NaConfig.INSTANCE.getSwitchStyle().Int();
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             switchStyle = SWITCH_STYLE_MD3;
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            switchStyle = SWITCH_STYLE_IOS_GLASS;
+        }
+        if (switchStyle == SWITCH_STYLE_IOS_GLASS) {
+            drawIosGlassSwitch(canvas);
+            return;
         }
         if (switchStyle != SWITCH_STYLE_DEFAULT) {
             drawCustomSwitch(canvas, switchStyle);
@@ -844,5 +971,166 @@ public class Switch extends View {
         canvas.drawLine(cx + crossSize, cy - crossSize, cx - crossSize, cy + crossSize, paint2);
         paint2.setStrokeWidth(oldStrokeWidth);
         paint2.setAlpha(oldAlpha);
+    }
+
+    private void drawIosGlassSwitch(Canvas canvas) {
+        int width = Math.min(dp(51), getMeasuredWidth());
+        float trackHeight = Math.min(dpf2(31), getMeasuredHeight());
+        int x = (getMeasuredWidth() - width) / 2;
+        float y = (getMeasuredHeight() - trackHeight) / 2;
+        float trackRadius = trackHeight / 2f;
+
+        float restThumbW = dpf2(28f);
+        float restThumbH = dpf2(27f);
+        float thumbLeft = x + dpf2(2f) + restThumbW / 2f;
+        float thumbRight = x + width - dpf2(2f) - restThumbW / 2f;
+        float thumbTx = AndroidUtilities.lerp(thumbLeft, thumbRight, progress);
+        float ty = getMeasuredHeight() / 2f;
+
+        boolean isDay = Theme.isCurrentThemeDay();
+        int onTrackBaseColor = processColor(Theme.getColor(trackCheckedColorKey, resourcesProvider));
+        int onTrackColor = onTrackBaseColor != 0 ? onTrackBaseColor : 0xFF34C759;
+        int offTrackColor = isDay ? 0xFFE9E9EA : 0xFF39393D;
+
+        float effectiveLensProgress = Math.max(touchLensProgress, transitLensProgress);
+
+        for (int a = 0; a < 2; a++) {
+            if (a == 1 && overrideColorProgress == 0) {
+                continue;
+            }
+            Canvas canvasToDraw = a == 0 ? canvas : overlayCanvas[0];
+            if (a == 1) {
+                overlayBitmap[0].eraseColor(0);
+                paint.setColor(0xff000000);
+                overlayMaskCanvas.drawRect(0, 0, overlayMaskBitmap.getWidth(), overlayMaskBitmap.getHeight(), paint);
+                overlayMaskCanvas.drawCircle(overlayCx - getX(), overlayCy - getY(), overlayRad, overlayEraserPaint);
+            }
+
+            float colorProgress = getLayerColorProgress(a);
+            rectF.set(x, y, x + width, y + trackHeight);
+
+            // 1. Base Track Fill: Rich iOS Green / Soft Inactive Gray
+            int curTrackColor = lerpColor(offTrackColor, onTrackColor, colorProgress);
+            paint.setColor(curTrackColor);
+            canvasToDraw.drawRoundRect(rectF, trackRadius, trackRadius, paint);
+
+            // 2. Inset subtle depth stroke
+            googleBorderPaint.setColor(isDay ? 0x14000000 : 0x22000000);
+            googleBorderPaint.setStrokeWidth(dpf2(1f));
+            canvasToDraw.drawRoundRect(rectF, trackRadius, trackRadius, googleBorderPaint);
+
+            if (a == 1) {
+                canvasToDraw.drawBitmap(overlayMaskBitmap, 0, 0, overlayMaskPaint);
+            }
+        }
+        if (overrideColorProgress != 0) {
+            canvas.drawBitmap(overlayBitmap[0], 0, 0, null);
+        }
+
+        // Draw iOS Liquid Glass Thumb (Capsule at rest -> Expands to Translucent Glass Lens when interactive)
+        for (int a = 0; a < 2; a++) {
+            if (a == 1 && overrideColorProgress == 0) {
+                continue;
+            }
+            Canvas canvasToDraw = a == 0 ? canvas : overlayCanvas[1];
+            if (a == 1) {
+                overlayBitmap[1].eraseColor(0);
+            }
+
+            float colorProgress = getLayerColorProgress(a);
+
+            // Interpolated size between rest capsule and expanded glass lens
+            float expandedThumbW = dpf2(38f);
+            float expandedThumbH = dpf2(33f);
+            float curW = AndroidUtilities.lerp(restThumbW, expandedThumbW, effectiveLensProgress);
+            float curH = AndroidUtilities.lerp(restThumbH, expandedThumbH, effectiveLensProgress);
+            float curRad = curH / 2f;
+
+            // --- 1. SOLID WHITE REST LAYER (fades out as lens opens) ---
+            if (effectiveLensProgress < 1.0f) {
+                float whiteAlpha = 1.0f - effectiveLensProgress;
+
+                // Soft ambient drop shadows
+                paint.setColor(ColorUtils.setAlphaComponent(0x000000, (int) (0x30 * whiteAlpha)));
+                rectF.set(thumbTx - curW / 2f, ty - curH / 2f + dpf2(1.5f), thumbTx + curW / 2f, ty + curH / 2f + dpf2(1.5f));
+                canvasToDraw.drawRoundRect(rectF, curRad, curRad, paint);
+
+                paint.setColor(ColorUtils.setAlphaComponent(0x000000, (int) (0x15 * whiteAlpha)));
+                rectF.set(thumbTx - curW / 2f, ty - curH / 2f + dpf2(2.5f), thumbTx + curW / 2f, ty + curH / 2f + dpf2(2.5f));
+                canvasToDraw.drawRoundRect(rectF, curRad, curRad, paint);
+
+                // Pristine solid white capsule body
+                paint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, (int) (0xFF * whiteAlpha)));
+                rectF.set(thumbTx - curW / 2f, ty - curH / 2f, thumbTx + curW / 2f, ty + curH / 2f);
+                canvasToDraw.drawRoundRect(rectF, curRad, curRad, paint);
+            }
+
+            // --- 2. TRANSLUCENT LIQUID GLASS LENS LAYER (blooms during touch/transit) ---
+            if (effectiveLensProgress > 0.0f) {
+                float lensAlpha = effectiveLensProgress;
+
+                // Expanded soft shadow
+                paint.setColor(ColorUtils.setAlphaComponent(0x000000, (int) (0x45 * lensAlpha)));
+                rectF.set(thumbTx - curW / 2f, ty - curH / 2f + dpf2(2.5f), thumbTx + curW / 2f, ty + curH / 2f + dpf2(2.5f));
+                canvasToDraw.drawRoundRect(rectF, curRad, curRad, paint);
+
+                // Translucent tinted glass body (allows underlying track to show through)
+                int glassTint = isDay ? ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x55 * lensAlpha))
+                        : ColorUtils.setAlphaComponent(0x18181A, (int) (0x85 * lensAlpha));
+                paint.setColor(glassTint);
+                rectF.set(thumbTx - curW / 2f, ty - curH / 2f, thumbTx + curW / 2f, ty + curH / 2f);
+                canvasToDraw.drawRoundRect(rectF, curRad, curRad, paint);
+
+                // Glass dome specular reflection on upper half
+                paint.setShader(new LinearGradient(
+                        thumbTx, ty - curH / 2f, thumbTx, ty,
+                        ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x45 * lensAlpha)), 0x00FFFFFF, Shader.TileMode.CLAMP
+                ));
+                rectF.set(thumbTx - curW / 2f + dpf2(1f), ty - curH / 2f + dpf2(0.8f), thumbTx + curW / 2f - dpf2(1f), ty);
+                canvasToDraw.drawRoundRect(rectF, curRad, curRad, paint);
+                paint.setShader(null);
+
+                // Curved caustic / refractive glass rim
+                rectF.set(thumbTx - curW / 2f, ty - curH / 2f, thumbTx + curW / 2f, ty + curH / 2f);
+                googleBorderPaint.setStrokeWidth(dpf2(1.2f));
+                if (!isDay) {
+                    int causticColor = ColorUtils.blendARGB(onTrackColor, Color.WHITE, 0.45f);
+                    int rimAccent = lerpColor(0x25FFFFFF, causticColor, colorProgress);
+                    LinearGradient rimGrad = new LinearGradient(
+                            thumbTx - curW / 2f, ty + curH / 2f, thumbTx + curW / 2f, ty - curH / 2f,
+                            ColorUtils.setAlphaComponent(rimAccent, (int) (0x99 * lensAlpha)),
+                            ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x45 * lensAlpha)),
+                            Shader.TileMode.CLAMP
+                    );
+                    googleBorderPaint.setShader(rimGrad);
+                } else {
+                    LinearGradient rimGrad = new LinearGradient(
+                            thumbTx, ty - curH / 2f, thumbTx, ty + curH / 2f,
+                            ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x70 * lensAlpha)),
+                            ColorUtils.setAlphaComponent(0x000000, (int) (0x20 * lensAlpha)),
+                            Shader.TileMode.CLAMP
+                    );
+                    googleBorderPaint.setShader(rimGrad);
+                }
+                canvasToDraw.drawRoundRect(rectF, curRad, curRad, googleBorderPaint);
+                googleBorderPaint.setShader(null);
+            }
+
+            if (iconDrawable != null && effectiveLensProgress < 0.9f) {
+                int iconColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon, resourcesProvider);
+                if (lastIconColor != iconColor) {
+                    iconDrawable.setColorFilter(new PorterDuffColorFilter(lastIconColor = iconColor, PorterDuff.Mode.MULTIPLY));
+                }
+                float iconAlpha = (1.0f - effectiveLensProgress) * (1.0f - progress);
+                drawCenteredDrawable(canvasToDraw, iconDrawable, (int) thumbTx, (int) ty, 0.7f, (int) (255 * iconAlpha));
+            }
+
+            if (a == 1) {
+                canvasToDraw.drawBitmap(overlayMaskBitmap, 0, 0, overlayMaskPaint);
+            }
+        }
+        if (overrideColorProgress != 0) {
+            canvas.drawBitmap(overlayBitmap[1], 0, 0, null);
+        }
     }
 }

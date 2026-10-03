@@ -9,9 +9,12 @@
 package org.telegram.ui.Components;
 
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.os.SystemClock;
 import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
@@ -22,11 +25,14 @@ import android.util.Pair;
 import android.view.MotionEvent;
 import android.view.View;
 
+import androidx.core.graphics.ColorUtils;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.Emoji;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.Utilities;
+import org.telegram.ui.ActionBar.Theme;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -94,8 +100,40 @@ public class SeekBar {
         delegate = seekBarDelegate;
     }
 
+    private float iosLensProgress = 0f;
+    private android.animation.ValueAnimator iosLensAnimator;
+
+    private void animateIosLens(boolean active) {
+        if (iosLensAnimator != null) {
+            iosLensAnimator.cancel();
+        }
+        iosLensAnimator = android.animation.ValueAnimator.ofFloat(iosLensProgress, active ? 1f : 0f);
+        iosLensAnimator.setDuration(active ? 150 : 200);
+        iosLensAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT);
+        iosLensAnimator.addUpdateListener(animation -> {
+            iosLensProgress = (float) animation.getAnimatedValue();
+            if (parentView != null) {
+                parentView.invalidate();
+            }
+        });
+        iosLensAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                iosLensProgress = active ? 1f : 0f;
+                iosLensAnimator = null;
+                if (parentView != null) {
+                    parentView.invalidate();
+                }
+            }
+        });
+        iosLensAnimator.start();
+    }
+
     public boolean onTouch(int action, float x, float y) {
         if (action == MotionEvent.ACTION_DOWN) {
+            if (UIStyleEngine.isIosLiquidGlass()) {
+                animateIosLens(true);
+            }
             int additionWidth = (height - thumbWidth) / 2;
             if (x >= -additionWidth && x <= width + additionWidth && y >= 0 && y <= height) {
                 if (!(thumbX - additionWidth <= x && x <= thumbX + thumbWidth + additionWidth)) {
@@ -112,6 +150,9 @@ public class SeekBar {
                 return true;
             }
         } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            if (UIStyleEngine.isIosLiquidGlass()) {
+                animateIosLens(false);
+            }
             if (pressed) {
                 thumbX = draggingThumbX;
                 if (action == MotionEvent.ACTION_UP && delegate != null) {
@@ -212,7 +253,7 @@ public class SeekBar {
         if (alpha < 1) {
             canvas.saveLayerAlpha(0, 0, width, height, (int) (255 * alpha), Canvas.ALL_SAVE_FLAG);
         }
-        int effectiveLineHeight = UIStyleEngine.isMaterial3Expressive() ? Math.max(lineHeight, AndroidUtilities.dp(4)) : lineHeight;
+        int effectiveLineHeight = UIStyleEngine.isIosLiquidGlass() ? Math.round(AndroidUtilities.dpf2(4.5f)) : (UIStyleEngine.isMaterial3Expressive() ? Math.max(lineHeight, AndroidUtilities.dp(5)) : lineHeight);
         rect.set(thumbWidth / 2, height / 2 - effectiveLineHeight / 2, width - thumbWidth / 2, height / 2 + effectiveLineHeight / 2);
         paint.setColor(selected ? backgroundSelectedColor : backgroundColor);
         drawProgressBar(canvas, rect, paint, false);
@@ -226,36 +267,116 @@ public class SeekBar {
         drawProgressBar(canvas, rect, paint, wavyProgressActive);
         paint.setColor(circleColor);
 
-        int newRad = UIStyleEngine.isMaterial3Expressive() ? AndroidUtilities.dp(pressed ? 9 : 7) : AndroidUtilities.dp(pressed ? 8 : 6);
-        if (currentRadius != newRad) {
-            long newUpdateTime = SystemClock.elapsedRealtime();
-            long dt = newUpdateTime - lastUpdateTime;
-            if (dt > 18) {
-                dt = 16;
-            }
-            if (currentRadius < newRad) {
-                currentRadius += AndroidUtilities.dp(1) * (dt / 60.0f);
-                if (currentRadius > newRad) {
-                    currentRadius = newRad;
+        if (UIStyleEngine.isIosLiquidGlass()) {
+            drawIosGlassThumb(canvas);
+        } else {
+            int newRad = UIStyleEngine.isMaterial3Expressive() ? AndroidUtilities.dp(pressed ? 9 : 7) : AndroidUtilities.dp(pressed ? 8 : 6);
+            if (currentRadius != newRad) {
+                long newUpdateTime = SystemClock.elapsedRealtime();
+                long dt = newUpdateTime - lastUpdateTime;
+                if (dt > 18) {
+                    dt = 16;
                 }
-            } else {
-                currentRadius -= AndroidUtilities.dp(1) * (dt / 60.0f);
                 if (currentRadius < newRad) {
-                    currentRadius = newRad;
+                    currentRadius += AndroidUtilities.dp(1) * (dt / 60.0f);
+                    if (currentRadius > newRad) {
+                        currentRadius = newRad;
+                    }
+                } else {
+                    currentRadius -= AndroidUtilities.dp(1) * (dt / 60.0f);
+                    if (currentRadius < newRad) {
+                        currentRadius = newRad;
+                    }
+                }
+                if (parentView != null) {
+                    parentView.invalidate();
                 }
             }
-            if (parentView != null) {
-                parentView.invalidate();
-            }
-        }
 
-        canvas.drawCircle((pressed ? draggingThumbX : thumbX) + thumbWidth / 2, height / 2, currentRadius, paint);
+            canvas.drawCircle((pressed ? draggingThumbX : thumbX) + thumbWidth / 2, height / 2, currentRadius, paint);
+        }
 
         if (alpha < 1) {
             canvas.restore();
         }
 
         updateTimestampAnimation();
+    }
+
+    private void drawIosGlassThumb(Canvas canvas) {
+        float cx = (pressed ? draggingThumbX : thumbX) + thumbWidth / 2f;
+        float cy = height / 2f;
+        boolean isDay = Theme.isCurrentThemeDay();
+
+        float restW = AndroidUtilities.dpf2(28f);
+        float restH = AndroidUtilities.dpf2(18f);
+        float lensW = AndroidUtilities.dpf2(46f);
+        float lensH = AndroidUtilities.dpf2(30f);
+
+        float curW = AndroidUtilities.lerp(restW, lensW, iosLensProgress);
+        float curH = AndroidUtilities.lerp(restH, lensH, iosLensProgress);
+        float curRad = curH / 2f;
+
+        // --- A. SOLID WHITE REST CAPSULE LAYER ---
+        if (iosLensProgress < 1.0f) {
+            float whiteAlpha = 1.0f - iosLensProgress;
+
+            // Soft ambient drop shadows
+            paint.setColor(ColorUtils.setAlphaComponent(0x000000, (int) (0x35 * whiteAlpha)));
+            rect.set(cx - curW / 2f, cy - curH / 2f + AndroidUtilities.dpf2(1.5f), cx + curW / 2f, cy + curH / 2f + AndroidUtilities.dpf2(1.5f));
+            canvas.drawRoundRect(rect, curRad, curRad, paint);
+
+            paint.setColor(ColorUtils.setAlphaComponent(0x000000, (int) (0x15 * whiteAlpha)));
+            rect.set(cx - curW / 2f, cy - curH / 2f + AndroidUtilities.dpf2(2.5f), cx + curW / 2f, cy + curH / 2f + AndroidUtilities.dpf2(2.5f));
+            canvas.drawRoundRect(rect, curRad, curRad, paint);
+
+            // Pristine solid white capsule body
+            paint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, (int) (0xFF * whiteAlpha)));
+            rect.set(cx - curW / 2f, cy - curH / 2f, cx + curW / 2f, cy + curH / 2f);
+            canvas.drawRoundRect(rect, curRad, curRad, paint);
+        }
+
+        // --- B. TRANSLUCENT LIQUID GLASS LENS LAYER ---
+        if (iosLensProgress > 0.0f) {
+            float lensAlpha = iosLensProgress;
+
+            // Expanded soft shadow
+            paint.setColor(ColorUtils.setAlphaComponent(0x000000, (int) (0x45 * lensAlpha)));
+            rect.set(cx - curW / 2f, cy - curH / 2f + AndroidUtilities.dpf2(2.5f), cx + curW / 2f, cy + curH / 2f + AndroidUtilities.dpf2(2.5f));
+            canvas.drawRoundRect(rect, curRad, curRad, paint);
+
+            // Translucent tinted glass body
+            int glassTint = isDay ? ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x45 * lensAlpha))
+                    : ColorUtils.setAlphaComponent(0x18181A, (int) (0x80 * lensAlpha));
+            paint.setColor(glassTint);
+            rect.set(cx - curW / 2f, cy - curH / 2f, cx + curW / 2f, cy + curH / 2f);
+            canvas.drawRoundRect(rect, curRad, curRad, paint);
+
+            // Glass dome specular reflection on upper half
+            paint.setShader(new LinearGradient(
+                    cx, cy - curH / 2f, cx, cy,
+                    ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x45 * lensAlpha)), 0x00FFFFFF, Shader.TileMode.CLAMP
+            ));
+            rect.set(cx - curW / 2f + AndroidUtilities.dpf2(1f), cy - curH / 2f + AndroidUtilities.dpf2(0.8f), cx + curW / 2f - AndroidUtilities.dpf2(1f), cy);
+            canvas.drawRoundRect(rect, curRad, curRad, paint);
+            paint.setShader(null);
+
+            // Curved caustic / refractive glass rim
+            rect.set(cx - curW / 2f, cy - curH / 2f, cx + curW / 2f, cy + curH / 2f);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(AndroidUtilities.dpf2(1.2f));
+            int causticColor = ColorUtils.blendARGB(progressColor != 0 ? progressColor : 0xFF007AFF, Color.WHITE, 0.45f);
+            LinearGradient rimGrad = new LinearGradient(
+                    cx - curW / 2f, cy, cx + curW / 2f, cy,
+                    ColorUtils.setAlphaComponent(causticColor, (int) (0x99 * lensAlpha)),
+                    ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x30 * lensAlpha)),
+                    Shader.TileMode.CLAMP
+            );
+            paint.setShader(rimGrad);
+            canvas.drawRoundRect(rect, curRad, curRad, paint);
+            paint.setShader(null);
+            paint.setStyle(Paint.Style.FILL);
+        }
     }
 
     protected void onTimestampUpdate(URLSpanNoUnderline link) {

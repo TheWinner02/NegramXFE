@@ -75,4 +75,14 @@ object UIStyleEngine {
     fun getGlassAlpha(): Float {
         return tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f
     }
+
+    @JvmStatic
+    fun getSwitchWidth(): Int {
+        return if (isIosLiquidGlass()) 54 else if (isMaterial3Expressive()) 52 else 38
+    }
+
+    @JvmStatic
+    fun getSwitchHeight(): Int {
+        return if (isIosLiquidGlass()) 36 else if (isMaterial3Expressive()) 48 else 22
+    }
 }
