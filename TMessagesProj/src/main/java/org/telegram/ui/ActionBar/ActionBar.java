@@ -689,6 +689,10 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         }
     }
 
+    public boolean isCenterTitle() {
+        return isCenterTitle;
+    }
+
     public void setTitleRightMargin(int value) {
         titleRightMargin = value;
     }

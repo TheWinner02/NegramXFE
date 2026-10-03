@@ -332,11 +332,17 @@ public class DeleteMessagesBottomSheet extends BottomSheetWithRecyclerListView {
     ) {
         super(fragment.getContext(), fragment, false, false, false, true, ActionBarType.SLIDING, fragment.getResourceProvider());
         setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
-        setShowHandle(true);
+        setShowHandle(!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass());
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            centerTitle = true;
+            actionBar.centerTitle();
+        }
         fixNavigationBar();
         this.takeTranslationIntoAccount = true;
         this.isReactionOnlyMode = reactionsOnly;
-        recyclerListView.setPadding(backgroundPaddingLeft, headerTotalHeight, backgroundPaddingLeft, dp(63));
+        int listPadH = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : backgroundPaddingLeft;
+        int listPadB = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(80) : dp(63);
+        recyclerListView.setPadding(listPadH, headerTotalHeight, listPadH, listPadB);
         recyclerListView.setClipToPadding(false);
         recyclerListView.setOnItemClickListener((view, position, x, y) -> {
             UItem item = adapter.getItem(position - 1);
@@ -359,10 +365,17 @@ public class DeleteMessagesBottomSheet extends BottomSheetWithRecyclerListView {
         recyclerListView.setSections();
 
         actionButton = new ButtonWithCounterView(getContext(), true, resourcesProvider);
-        actionButton.setRound();
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            actionButton.setRoundRadius((int) xyz.nextalone.nagram.ui.UIStyleEngine.getButtonCornerRadius());
+        } else {
+            actionButton.setRound();
+        }
         actionButton.setText(getString(R.string.DeleteProceedBtn));
         actionButton.setOnClickListener(e -> proceed());
-        containerView.addView(actionButton, LayoutHelper.createFrameMarginPx(LayoutHelper.MATCH_PARENT, 48, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL, backgroundPaddingLeft + dp(10), 0, backgroundPaddingLeft + dp(10), dp(10)));
+        int btnMarginH = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(16) : (backgroundPaddingLeft + dp(10));
+        int btnMarginB = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(16) : dp(10);
+        int btnHeight = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 50 : 48;
+        containerView.addView(actionButton, LayoutHelper.createFrameMarginPx(LayoutHelper.MATCH_PARENT, btnHeight, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL, btnMarginH, 0, btnMarginH, btnMarginB));
 
         this.inChat = inChat;
         this.isForum = ChatObject.isForum(inChat);
@@ -521,8 +534,16 @@ public class DeleteMessagesBottomSheet extends BottomSheetWithRecyclerListView {
     @Override
     protected void onContainerLayout(int l, int t, int r, int b) {
         super.onContainerLayout(l, t, r, b);
-        AndroidUtilities.rectTmp2.set(0, 0, recyclerListView.getMeasuredWidth(), recyclerListView.getMeasuredHeight() - dp(34));
-        recyclerListView.setClipBounds(AndroidUtilities.rectTmp2);
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (recyclerListView != null && recyclerListView.getMeasuredHeight() > dp(34)) {
+                AndroidUtilities.rectTmp2.set(0, 0, recyclerListView.getMeasuredWidth(), recyclerListView.getMeasuredHeight() - dp(34));
+                recyclerListView.setClipBounds(AndroidUtilities.rectTmp2);
+            }
+        } else {
+            if (recyclerListView != null) {
+                recyclerListView.setClipBounds(null);
+            }
+        }
     }
 
     public void toggleDefaultChecks(boolean[] checks) {
@@ -1390,14 +1411,14 @@ public class DeleteMessagesBottomSheet extends BottomSheetWithRecyclerListView {
     @Override
     protected void onPreDraw(Canvas canvas, int top, float progressToFullView) {
         super.onPreDraw(canvas, top, progressToFullView);
-        if (!NaConfig.INSTANCE.getCenterActionBarTitle().Bool() || NaConfig.INSTANCE.getCenterActionBarTitleType().Int() == 3) {
-            return;
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || (NaConfig.INSTANCE.getCenterActionBarTitle().Bool() && NaConfig.INSTANCE.getCenterActionBarTitleType().Int() != 3)) {
+            final SimpleTextView titleTextView = actionBar.getTitleTextView();
+            if (titleTextView != null && !actionBar.isCenterTitle()) {
+                titleTextView.setTranslationX((actionBar.getMeasuredWidth() - titleTextView.getTextWidth()) / 2f - titleTextView.getLeft());
+            } else if (titleTextView != null) {
+                titleTextView.setTranslationX(0);
+            }
         }
-        final SimpleTextView titleTextView = actionBar.getTitleTextView();
-        if (titleTextView == null) {
-            return;
-        }
-        titleTextView.setTranslationX((actionBar.getMeasuredWidth() - titleTextView.getMeasuredWidth()) / 2f - titleTextView.getLeft());
     }
 
     private void proceed() {

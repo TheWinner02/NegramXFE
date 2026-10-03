@@ -660,6 +660,8 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                     int widthSpec;
                     if (AndroidUtilities.isTablet()) {
                         widthSpec = MeasureSpec.makeMeasureSpec((int) Math.min(dp(500), Math.min(AndroidUtilities.displaySize.x, AndroidUtilities.displaySize.y) * 0.8f) + backgroundPaddingLeft * 2, MeasureSpec.EXACTLY);
+                    } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        widthSpec = MeasureSpec.makeMeasureSpec(getBottomSheetWidth(isPortrait, width, height), MeasureSpec.EXACTLY);
                     } else {
                         widthSpec = MeasureSpec.makeMeasureSpec((getBottomSheetWidth(isPortrait, width, height)) + backgroundPaddingLeft * 2, MeasureSpec.EXACTLY);
                     }
@@ -705,8 +707,11 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                         }
                     }
                 }
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && !fullWidth) {
+                    t -= dp(12);
+                }
                 int l = ((right - left) - containerView.getMeasuredWidth()) / 2;
-                if (lastInsets != null) {
+                if (lastInsets != null && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     l += getLeftInset();
                 }
                 if (smoothKeyboardAnimationEnabled && startAnimationRunnable == null && keyboardChanged && !dismissed && (smoothKeyboardByBottom ? containerView.getBottom() != t + containerView.getMeasuredHeight() : containerView.getTop() != t) || smoothContainerViewLayoutUntil > 0 && System.currentTimeMillis() < smoothContainerViewLayoutUntil) {
@@ -851,7 +856,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
             if (drawDoubleNavigationBar && !shouldOverlayCameraViewOverNavBar()) {
                 drawNavigationBar(canvas, 1f);
             }
-            if (backgroundPaint.getAlpha() < 255 && drawNavigationBar) {
+            if (backgroundPaint.getAlpha() < 255 && drawNavigationBar && (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || fullWidth)) {
                 float translation = 0;
                 if (scrollNavBar || Build.VERSION.SDK_INT >= 29 && getAdditionalMandatoryOffsets() > 0) {
                     float dist = containerView.getMeasuredHeight() - containerView.getTranslationY();
@@ -867,7 +872,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
             }
 
             if (!doNotOverlayNavigationBar) {
-                if (!shouldOverlayCameraViewOverNavBar()) {
+                if (!shouldOverlayCameraViewOverNavBar() && (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || fullWidth)) {
                     drawNavigationBar(canvas, (drawDoubleNavigationBar ? 0.7f * navigationBarAlpha : 1f));
                 }
                 if (drawNavigationBar && rightInset != 0 && rightInset > leftInset && fullWidth && AndroidUtilities.displaySize.x > AndroidUtilities.displaySize.y) {
@@ -877,12 +882,12 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                 if (drawNavigationBar && leftInset != 0 && leftInset > rightInset && fullWidth && AndroidUtilities.displaySize.x > AndroidUtilities.displaySize.y) {
                     canvas.drawRect(0, containerView.getTranslationY(), containerView.getLeft() + backgroundPaddingLeft, getMeasuredHeight(), backgroundPaint);
                 }
-                if (containerView.getY() + containerView.getMeasuredHeight() < getMeasuredHeight()) {
+                if (containerView.getY() + containerView.getMeasuredHeight() < getMeasuredHeight() && (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || fullWidth)) {
                     backgroundPaint.setColor(behindKeyboardColorKey >= 0 ? getThemedColor(behindKeyboardColorKey) : behindKeyboardColor);
                     canvas.drawRect(containerView.getLeft() + backgroundPaddingLeft, containerView.getY() + containerView.getMeasuredHeight(), containerView.getRight() - backgroundPaddingLeft, getMeasuredHeight(), backgroundPaint);
                 }
             } else {
-                if ((getMeasuredHeight() - containerView.getY() - containerView.getMeasuredHeight()) > dp(48)) {
+                if ((getMeasuredHeight() - containerView.getY() - containerView.getMeasuredHeight()) > dp(48) && (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || fullWidth)) {
                     backgroundPaint.setColor(behindKeyboardColorKey >= 0 ? getThemedColor(behindKeyboardColorKey) : behindKeyboardColor);
                     canvas.drawRect(containerView.getLeft() + backgroundPaddingLeft, containerView.getY() + containerView.getMeasuredHeight(), containerView.getRight() - backgroundPaddingLeft, getMeasuredHeight(), backgroundPaint);
                 }
@@ -903,7 +908,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         @Override
         protected void onDraw(Canvas canvas) {
             boolean restore = false;
-            if (backgroundPaint.getAlpha() < 255 && drawNavigationBar) {
+            if (backgroundPaint.getAlpha() < 255 && drawNavigationBar && (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || fullWidth)) {
                 float translation = 0;
                 if (scrollNavBar || Build.VERSION.SDK_INT >= 29 && getAdditionalMandatoryOffsets() > 0) {
                     float dist = containerView.getMeasuredHeight() - containerView.getTranslationY();
@@ -915,7 +920,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                 restore = true;
             }
             super.onDraw(canvas);
-            if (drawNavigationBar && lastInsets != null && keyboardHeight != 0) {
+            if (drawNavigationBar && lastInsets != null && keyboardHeight != 0 && (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || fullWidth)) {
                 backgroundPaint.setColor(behindKeyboardColorKey >= 0 ? getThemedColor(behindKeyboardColorKey) : behindKeyboardColor);
                 canvas.drawRect(containerView.getLeft() + backgroundPaddingLeft, getMeasuredHeight() - keyboardHeight - (drawNavigationBar ? getBottomInset() : 0), containerView.getRight() - backgroundPaddingLeft, getMeasuredHeight() - (drawNavigationBar ? getBottomInset() : 0), backgroundPaint);
             }
@@ -926,6 +931,9 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         }
 
         public void drawNavigationBar(Canvas canvas, float alpha) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && !fullWidth) {
+                return;
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (navBarColorKey >= 0) {
                     backgroundPaint.setColor(getThemedColor(navBarColorKey));
@@ -978,6 +986,9 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
     }
 
     protected int getBottomSheetWidth(boolean isPortrait, int width,int height) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && isPortrait && !fullWidth) {
+            return width - dp(24);
+        }
         return isPortrait ? width : (int) Math.max(width * 0.8f, Math.min(dp(480), width));
     }
 
@@ -1052,6 +1063,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         private ImageView imageView;
         private ImageView imageView2;
         int currentType;
+        private Paint iosDividerPaint;
 
         public BottomSheetCell(Context context, int type) {
             this(context, type, null);
@@ -1062,6 +1074,9 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
             this.resourcesProvider = resourcesProvider;
 
             currentType = type;
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                setWillNotDraw(false);
+            }
             if (type != Builder.CELL_TYPE_CALL) {
                 if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                     M3ExpressiveButtonDrawable selector = new M3ExpressiveButtonDrawable(
@@ -1096,12 +1111,14 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
             textView.setEllipsize(TextUtils.TruncateAt.END);
             if (type == 0 || type == Builder.CELL_TYPE_CALL) {
                 textView.setTextColor(getThemedColor(Theme.key_dialogTextBlack));
-                textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+                int textSize = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 17 : 16;
+                textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, textSize);
                 addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL));
             } else if (type == 1) {
                 textView.setGravity(Gravity.CENTER);
                 textView.setTextColor(getThemedColor(Theme.key_dialogTextBlack));
-                textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+                int textSize = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 17 : 14;
+                textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, textSize);
                 textView.setTypeface(AndroidUtilities.bold());
                 addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
             } else if (type == 2) {
@@ -1126,11 +1143,25 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
 
         @Override
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-            int height = currentType == 2 ? 80 : 48;
+            int height = currentType == 2 ? 80 : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 52 : 48);
             if (currentType == 0) {
                 widthMeasureSpec = MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY);
             }
             super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(dp(height), MeasureSpec.EXACTLY));
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && currentType != 2) {
+                if (iosDividerPaint == null) {
+                    iosDividerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    iosDividerPaint.setStrokeWidth(AndroidUtilities.dp(0.5f));
+                }
+                iosDividerPaint.setColor(Theme.multAlpha(getThemedColor(Theme.key_dialogTextBlack), 0.12f));
+                float y = getHeight() - AndroidUtilities.dp(0.5f);
+                canvas.drawLine(AndroidUtilities.dp(16), y, getWidth() - AndroidUtilities.dp(16), y, iosDividerPaint);
+            }
         }
 
         public void setTextColor(int color) {
@@ -1251,6 +1282,9 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             openInterpolator = xyz.nextalone.nagram.ui.UIStyleEngine.getExpressiveSpringInterpolator();
             openDuration = 360;
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            openInterpolator = xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator();
+            openDuration = 340;
         }
 
         container = new ContainerView(getContext()) {
@@ -1441,24 +1475,36 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                 }
             };
             containerView.setBackgroundDrawable(shadowDrawable);
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 containerView.setOutlineProvider(new ViewOutlineProvider() {
                     @Override
                     public void getOutline(View view, Outline outline) {
-                        float rad = xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius();
-                        outline.setRoundRect(
-                            backgroundPaddingLeft,
-                            backgroundPaddingTop,
-                            view.getWidth() - backgroundPaddingLeft,
-                            view.getHeight() + (int) rad,
-                            rad
-                        );
+                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && !fullWidth) {
+                            float rad = xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius();
+                            outline.setRoundRect(
+                                backgroundPaddingLeft,
+                                backgroundPaddingTop,
+                                view.getWidth() - backgroundPaddingLeft,
+                                view.getHeight() - backgroundPaddingTop,
+                                rad
+                            );
+                        } else {
+                            float rad = xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius();
+                            outline.setRoundRect(
+                                backgroundPaddingLeft,
+                                backgroundPaddingTop,
+                                view.getWidth() - backgroundPaddingLeft,
+                                view.getHeight() + (int) rad,
+                                rad
+                            );
+                        }
                     }
                 });
                 containerView.setClipToOutline(true);
             }
-            int extraTopPadding = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && shouldDrawM3DragHandle() ? dp(14) : 0;
-            containerView.setPadding(backgroundPaddingLeft, (applyTopPadding ? dp(8) : 0) + backgroundPaddingTop - 1 + extraTopPadding, backgroundPaddingLeft, (applyBottomPadding ? dp(8) : 0));
+            int extraTopPadding = (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) && shouldDrawM3DragHandle() ? dp(14) : 0;
+            int bottomPad = (applyBottomPadding ? dp(8) : 0) + (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && !fullWidth ? backgroundPaddingTop : 0);
+            containerView.setPadding(backgroundPaddingLeft, (applyTopPadding ? dp(8) : 0) + backgroundPaddingTop - 1 + extraTopPadding, backgroundPaddingLeft, bottomPad);
         }
         containerView.setVisibility(View.INVISIBLE);
         container.addView(containerView, 0, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM));
@@ -1630,7 +1676,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         showWithoutAnimation = value;
     }
 
-    private int internalBackgroundColor;
+    protected int internalBackgroundColor;
     public void setBackgroundColor(int color) {
         shadowDrawable.setColorFilter(color, PorterDuff.Mode.MULTIPLY);
         if (internalBackgroundColor != color) {

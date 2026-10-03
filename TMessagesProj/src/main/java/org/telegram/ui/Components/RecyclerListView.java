@@ -3927,6 +3927,9 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
             );
             backgroundColor = M3ColorRoles.surfaceContainer(fallbackColor);
         } else if (isIosGlass) {
+            if (isDark) {
+                backgroundColor = ColorUtils.blendARGB(backgroundColor, 0xFFFFFFFF, 0.07f);
+            }
             sectionGlassStrokePaint.setStrokeWidth(dpf2(0.5f));
             sectionGlassStrokePaint.setColor(multAlpha(isDark ? 0x14FFFFFF : 0x06000000, alpha));
         }

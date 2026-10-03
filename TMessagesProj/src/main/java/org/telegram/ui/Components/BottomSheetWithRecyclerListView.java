@@ -5,6 +5,12 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.os.Build;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
@@ -14,6 +20,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -68,6 +75,12 @@ public abstract class BottomSheetWithRecyclerListView extends BottomSheet {
     protected boolean ignoreTouchActionBar = true;
     protected boolean actionBarIgnoreTouchEvents = false;
     protected AnimatedFloat actionBarSlideProgress;
+
+    private RectF iosCardRect = new RectF();
+    private final Path iosCardPath = new Path();
+    private final float[] iosCardRadii = new float[8];
+    private Paint iosCardBgPaint;
+    private Paint iosCardStrokePaint;
 
     /*
     Take padding-view translationY into account when positioning background.
@@ -130,7 +143,14 @@ public abstract class BottomSheetWithRecyclerListView extends BottomSheet {
                 @Override
                 protected void dispatchDraw(Canvas canvas) {
                     preDrawInternal(canvas, this);
-                    super.dispatchDraw(canvas);
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && shouldDrawBackground()) {
+                        canvas.save();
+                        canvas.clipPath(iosCardPath);
+                        super.dispatchDraw(canvas);
+                        canvas.restore();
+                    } else {
+                        super.dispatchDraw(canvas);
+                    }
                     postDrawInternal(canvas, this);
                 }
 
@@ -148,8 +168,16 @@ public abstract class BottomSheetWithRecyclerListView extends BottomSheet {
 
                 @Override
                 public boolean dispatchTouchEvent(MotionEvent event) {
-                    if (event.getAction() == MotionEvent.ACTION_DOWN && event.getY() < shadowDrawable.getBounds().top) {
-                        dismiss();
+                    if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                            Rect b = shadowDrawable.getBounds();
+                            if (b != null && (event.getY() < b.top || event.getY() > b.bottom || event.getX() < b.left || event.getX() > b.right)) {
+                                dismiss();
+                                return true;
+                            }
+                        } else if (event.getY() < shadowDrawable.getBounds().top) {
+                            dismiss();
+                        }
                     }
                     return super.dispatchTouchEvent(event);
                 }
@@ -227,7 +255,14 @@ public abstract class BottomSheetWithRecyclerListView extends BottomSheet {
                  @Override
                  protected void dispatchDraw(Canvas canvas) {
                      preDrawInternal(canvas, this);
-                     super.dispatchDraw(canvas);
+                     if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && shouldDrawBackground()) {
+                         canvas.save();
+                         canvas.clipPath(iosCardPath);
+                         super.dispatchDraw(canvas);
+                         canvas.restore();
+                     } else {
+                         super.dispatchDraw(canvas);
+                     }
                      postDrawInternal(canvas, this);
                  }
 
@@ -245,8 +280,16 @@ public abstract class BottomSheetWithRecyclerListView extends BottomSheet {
 
                  @Override
                  public boolean dispatchTouchEvent(MotionEvent event) {
-                     if (event.getAction() == MotionEvent.ACTION_DOWN && event.getY() < shadowDrawable.getBounds().top) {
-                          dismiss();
+                     if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                         if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                             Rect b = shadowDrawable.getBounds();
+                             if (b != null && (event.getY() < b.top || event.getY() > b.bottom || event.getX() < b.left || event.getX() > b.right)) {
+                                 dismiss();
+                                 return true;
+                             }
+                         } else if (event.getY() < shadowDrawable.getBounds().top) {
+                             dismiss();
+                         }
                      }
                      return super.dispatchTouchEvent(event);
                  }
@@ -362,10 +405,18 @@ public abstract class BottomSheetWithRecyclerListView extends BottomSheet {
         if (hasFixedSize) {
             recyclerListView.setHasFixedSize(true);
             recyclerListView.setAdapter(createAdapter(recyclerListView));
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                containerView.setClipChildren(false);
+                containerView.setClipToPadding(false);
+            }
             setCustomView(containerView);
             containerView.addView(recyclerListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         } else {
             resetAdapter(context);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                containerView.setClipChildren(false);
+                containerView.setClipToPadding(false);
+            }
             this.containerView = containerView;
             actionBar = new ActionBar(context) {
                 @Override
@@ -384,20 +435,55 @@ public abstract class BottomSheetWithRecyclerListView extends BottomSheet {
 
                 @Override
                 public boolean dispatchTouchEvent(MotionEvent ev) {
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        return super.dispatchTouchEvent(ev);
+                    }
                     if (ignoreTouchActionBar && actionBarIgnoreTouchEvents) {
                         return false;
                     }
                     return super.dispatchTouchEvent(ev);
                 }
             };
-            actionBar.setBackgroundColor(getThemedColor(Theme.key_dialogBackground));
             actionBar.setTitleColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText));
             actionBar.setItemsBackgroundColor(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), false);
-            actionBar.setBackButtonImage(R.drawable.ic_ab_back);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                actionBar.setBackgroundColor(Color.TRANSPARENT);
+                actionBar.setAddToContainer(false);
+                actionBar.setCastShadows(false);
+                actionBar.setBackButtonImage(R.drawable.ic_ab_close);
+                actionBar.centerTitle();
+                centerTitle = true;
+            } else {
+                actionBar.setBackgroundColor(getThemedColor(Theme.key_dialogBackground));
+                actionBar.setCastShadows(true);
+                actionBar.setBackButtonImage(R.drawable.ic_ab_back);
+            }
             actionBar.setItemsColor(getThemedColor(Theme.key_actionBarActionModeDefaultIcon), false);
-
-            actionBar.setCastShadows(true);
             actionBar.setTitle(getTitle());
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                if (actionBar.backButtonImageView != null) {
+                    actionBar.backButtonImageView.setOnClickListener(v -> dismiss());
+                    int size = dp(30);
+                    FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) actionBar.backButtonImageView.getLayoutParams();
+                    if (lp != null) {
+                        lp.width = size;
+                        lp.height = size;
+                        lp.gravity = Gravity.LEFT | Gravity.CENTER_VERTICAL;
+                        lp.leftMargin = dp(16);
+                        actionBar.backButtonImageView.setLayoutParams(lp);
+                    }
+                    actionBar.backButtonImageView.setScaleType(ImageView.ScaleType.CENTER);
+                    int circleBg = Theme.multAlpha(getThemedColor(Theme.key_windowBackgroundWhiteBlackText), 0.12f);
+                    int circlePress = Theme.multAlpha(getThemedColor(Theme.key_windowBackgroundWhiteBlackText), 0.22f);
+                    actionBar.backButtonImageView.setBackground(Theme.createSimpleSelectorCircleDrawable(size, circleBg, circlePress));
+                    actionBar.backButtonImageView.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_windowBackgroundWhiteBlackText), PorterDuff.Mode.SRC_IN));
+                }
+                SimpleTextView titleTextView = actionBar.getTitleTextView();
+                if (titleTextView != null) {
+                    titleTextView.setTypeface(AndroidUtilities.bold());
+                    titleTextView.setTextSize(17);
+                }
+            }
             actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
                 @Override
                 public void onItemClick(int id) {
@@ -562,34 +648,45 @@ public abstract class BottomSheetWithRecyclerListView extends BottomSheet {
     }
 
     protected void postDrawInternal(Canvas canvas, View parentView) {
-        if (actionBarType == ActionBarType.FADING) {
-            if (showShadow && shadowAlpha != 1f) {
-                shadowAlpha += 16 / 150f;
-                parentView.invalidate();
-            } else if (!showShadow && shadowAlpha != 0) {
-                shadowAlpha -= 16 / 150f;
-                parentView.invalidate();
-            }
-            shadowAlpha = Utilities.clamp(shadowAlpha, 1f, 0f);
-            if (actionBar != null && actionBar.getVisibility() == View.VISIBLE && actionBar.getAlpha() != 0 && shadowAlpha != 0) {
-                headerShadowDrawable.setBounds(backgroundPaddingLeft, actionBar.getBottom(), parentView.getMeasuredWidth() - backgroundPaddingLeft, actionBar.getBottom() + headerShadowDrawable.getIntrinsicHeight());
-                headerShadowDrawable.setAlpha((int) (255 * actionBar.getAlpha() * shadowAlpha));
-                headerShadowDrawable.draw(canvas);
-                if (headerShadowDrawable.getAlpha() < 255) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (actionBarType == ActionBarType.FADING) {
+                if (showShadow && shadowAlpha != 1f) {
+                    shadowAlpha += 16 / 150f;
+                    parentView.invalidate();
+                } else if (!showShadow && shadowAlpha != 0) {
+                    shadowAlpha -= 16 / 150f;
                     parentView.invalidate();
                 }
-            }
-            wasDrawn = true;
-        } else if (actionBarType == ActionBarType.SLIDING) {
-            if ((int) (255 * shadowAlpha) != 0 && showShadow) {
-                headerShadowDrawable.setBounds(backgroundPaddingLeft, actionBar.getBottom() + (int) actionBar.getTranslationY(), parentView.getMeasuredWidth() - backgroundPaddingLeft, actionBar.getBottom() + (int) actionBar.getTranslationY() + headerShadowDrawable.getIntrinsicHeight());
-                headerShadowDrawable.setAlpha((int) (255 * shadowAlpha));
-                headerShadowDrawable.draw(canvas);
+                shadowAlpha = Utilities.clamp(shadowAlpha, 1f, 0f);
+                if (actionBar != null && actionBar.getVisibility() == View.VISIBLE && actionBar.getAlpha() != 0 && shadowAlpha != 0) {
+                    headerShadowDrawable.setBounds(backgroundPaddingLeft, actionBar.getBottom(), parentView.getMeasuredWidth() - backgroundPaddingLeft, actionBar.getBottom() + headerShadowDrawable.getIntrinsicHeight());
+                    headerShadowDrawable.setAlpha((int) (255 * actionBar.getAlpha() * shadowAlpha));
+                    headerShadowDrawable.draw(canvas);
+                    if (headerShadowDrawable.getAlpha() < 255) {
+                        parentView.invalidate();
+                    }
+                }
+                wasDrawn = true;
+            } else if (actionBarType == ActionBarType.SLIDING) {
+                if ((int) (255 * shadowAlpha) != 0 && showShadow) {
+                    headerShadowDrawable.setBounds(backgroundPaddingLeft, actionBar.getBottom() + (int) actionBar.getTranslationY(), parentView.getMeasuredWidth() - backgroundPaddingLeft, actionBar.getBottom() + (int) actionBar.getTranslationY() + headerShadowDrawable.getIntrinsicHeight());
+                    headerShadowDrawable.setAlpha((int) (255 * shadowAlpha));
+                    headerShadowDrawable.draw(canvas);
+                }
             }
         }
         if (restore) {
             canvas.restore();
             restore = false;
+        }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (iosCardStrokePaint == null) {
+                iosCardStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                iosCardStrokePaint.setStyle(Paint.Style.STROKE);
+            }
+            iosCardStrokePaint.setStrokeWidth(AndroidUtilities.dp(0.75f));
+            iosCardStrokePaint.setColor(Theme.multAlpha(getThemedColor(Theme.key_windowBackgroundWhiteBlackText), 0.08f));
+            canvas.drawPath(iosCardPath, iosCardStrokePaint);
         }
     }
 
@@ -645,7 +742,7 @@ public abstract class BottomSheetWithRecyclerListView extends BottomSheet {
                 float actionBarY = Math.max(top - headerMoveTop + dp(8) + headerPaddingTop - AndroidUtilities.statusBarHeight, 0.0f);
                 float t = actionBarSlideProgress.set(actionBarY == 0.0f ? 1.0f : 0.0f);
 
-                if (t != 0 && t != 1) {
+                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && t != 0 && t != 1) {
                     canvas.save();
                     canvas.clipRect(0, actionBarY, containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
                     restore = true;
@@ -653,19 +750,35 @@ public abstract class BottomSheetWithRecyclerListView extends BottomSheet {
                 progressToFullView = t;
                 shadowAlpha = t;
                 handleAlpha = AndroidUtilities.lerp(1.0f, 0.5f, t);
-                actionBar.backButtonImageView.setAlpha(t);
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    if (actionBar.backButtonImageView != null) {
+                        actionBar.backButtonImageView.setVisibility(View.VISIBLE);
+                        actionBar.backButtonImageView.setAlpha(1.0f);
+                        actionBar.backButtonImageView.setScaleX(1.0f);
+                        actionBar.backButtonImageView.setScaleY(1.0f);
+                    }
+                } else {
+                    actionBar.backButtonImageView.setAlpha(t);
+                    actionBar.backButtonImageView.setScaleX(t);
+                    actionBar.backButtonImageView.setScaleY(t);
+                }
                 onActionBarAlpha(t);
-                actionBar.backButtonImageView.setScaleX(t);
                 actionBar.backButtonImageView.setPivotY(actionBar.backButtonImageView.getMeasuredHeight() / 2f);
-                actionBar.backButtonImageView.setScaleY(t);
                 SimpleTextView titleTextView = actionBar.getTitleTextView();
-                titleTextView.setTranslationX(AndroidUtilities.lerp(dp(21) - titleTextView.getLeft(), 0.0f, t) + additionalTitleX);
-                if (centerTitle) {
-                    titleTextView.setTranslationX((actionBar.getMeasuredWidth() - titleTextView.getTextWidth()) / 2f - titleTextView.getLeft());
+                if (centerTitle || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    if (actionBar.isCenterTitle()) {
+                        titleTextView.setTranslationX(0);
+                    } else {
+                        titleTextView.setTranslationX((actionBar.getMeasuredWidth() - titleTextView.getTextWidth()) / 2f - titleTextView.getLeft());
+                    }
+                } else {
+                    titleTextView.setTranslationX(AndroidUtilities.lerp(dp(21) - titleTextView.getLeft(), 0.0f, t) + additionalTitleX);
                 }
                 actionBar.setTranslationY(actionBarY);
                 top -= AndroidUtilities.lerp(0, headerTotalHeight - headerHeight - headerPaddingTop - headerPaddingBottom + dp(13), t);
-                actionBar.getBackground().setBounds(0, AndroidUtilities.lerp(actionBar.getHeight(), 0, t), actionBar.getWidth(), actionBar.getHeight());
+                if (actionBar.getBackground() != null) {
+                    actionBar.getBackground().setBounds(0, AndroidUtilities.lerp(actionBar.getHeight(), 0, t), actionBar.getWidth(), actionBar.getHeight());
+                }
 
                 if (t > 0.5f) {
                     if (actionBarIgnoreTouchEvents) {
@@ -681,22 +794,56 @@ public abstract class BottomSheetWithRecyclerListView extends BottomSheet {
             }
 
             if (shouldDrawBackground()) {
-                if (needPaddingShadow()) {
-                    shadowDrawable.setBounds(0, top, parent.getMeasuredWidth(), parent.getMeasuredHeight());
-                } else {
-                    shadowDrawable.setBounds(-AndroidUtilities.dp(6), top, parent.getMeasuredWidth() + AndroidUtilities.dp(6), parent.getMeasuredHeight());
-                }
-                checkBackDrawableInsets();
-                shadowDrawable.draw(canvas);
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    int cardLeft = 0;
+                    int cardRight = parent.getMeasuredWidth();
+                    int cardTop = top;
+                    int cardBottom = parent.getMeasuredHeight();
+                    float rad = xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius();
 
-                if (showHandle && handleAlpha > 0) {
-                    int w = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(32) : dp(36);
-                    int y = top + AndroidUtilities.dp(20);
-                    handleRect.set((parent.getMeasuredWidth() - w) / 2.0f, y, (parent.getMeasuredWidth() + w) / 2.0f, y + dp(4));
-                    int color = getThemedColor(Theme.key_sheet_scrollUp);
-                    Theme.dialogs_onlineCirclePaint.setColor(color);
-                    Theme.dialogs_onlineCirclePaint.setAlpha((int) (Theme.dialogs_onlineCirclePaint.getAlpha() * handleAlpha));
-                    canvas.drawRoundRect(handleRect, dp(2), dp(2), Theme.dialogs_onlineCirclePaint);
+                    iosCardRect.set(cardLeft, cardTop, cardRight, cardBottom);
+                    iosCardPath.reset();
+                    iosCardRadii[0] = rad;
+                    iosCardRadii[1] = rad;
+                    iosCardRadii[2] = rad;
+                    iosCardRadii[3] = rad;
+                    iosCardRadii[4] = rad;
+                    iosCardRadii[5] = rad;
+                    iosCardRadii[6] = rad;
+                    iosCardRadii[7] = rad;
+                    iosCardPath.addRoundRect(iosCardRect, iosCardRadii, Path.Direction.CW);
+
+                    shadowDrawable.setBounds(cardLeft, cardTop, cardRight, cardBottom);
+                    checkBackDrawableInsets();
+
+                    int bgColor = internalBackgroundColor != 0 ? internalBackgroundColor : getThemedColor(Theme.key_dialogBackground);
+
+                    if (iosCardBgPaint == null) {
+                        iosCardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    }
+                    iosCardBgPaint.setColor(bgColor);
+                    if (Build.VERSION.SDK_INT >= 28) {
+                        iosCardBgPaint.setShadowLayer(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(4), 0x38000000);
+                    }
+                    canvas.drawPath(iosCardPath, iosCardBgPaint);
+                } else {
+                    if (needPaddingShadow()) {
+                        shadowDrawable.setBounds(0, top, parent.getMeasuredWidth(), parent.getMeasuredHeight());
+                    } else {
+                        shadowDrawable.setBounds(-AndroidUtilities.dp(6), top, parent.getMeasuredWidth() + AndroidUtilities.dp(6), parent.getMeasuredHeight());
+                    }
+                    checkBackDrawableInsets();
+                    shadowDrawable.draw(canvas);
+
+                    if (showHandle && handleAlpha > 0) {
+                        int w = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(32) : dp(36);
+                        int y = top + AndroidUtilities.dp(20);
+                        handleRect.set((parent.getMeasuredWidth() - w) / 2.0f, y, (parent.getMeasuredWidth() + w) / 2.0f, y + dp(4));
+                        int color = getThemedColor(Theme.key_sheet_scrollUp);
+                        Theme.dialogs_onlineCirclePaint.setColor(color);
+                        Theme.dialogs_onlineCirclePaint.setAlpha((int) (Theme.dialogs_onlineCirclePaint.getAlpha() * handleAlpha));
+                        canvas.drawRoundRect(handleRect, dp(2), dp(2), Theme.dialogs_onlineCirclePaint);
+                    }
                 }
             }
 

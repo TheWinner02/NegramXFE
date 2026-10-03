@@ -15,6 +15,7 @@ object UIStyleEngine {
     }
 
     // iOS Fluid Spring Interpolator (Natural Damping)
+    @JvmStatic
     val iosSpringInterpolator: Interpolator by lazy {
         PathInterpolatorCompat.create(0.25f, 1.0f, 0.5f, 1.0f)
     }
@@ -47,7 +48,7 @@ object UIStyleEngine {
     fun getCardCornerRadius(): Float {
         return when {
             isMaterial3Expressive() -> AndroidUtilities.dp(24f).toFloat()
-            isIosLiquidGlass() -> AndroidUtilities.dp(32f).toFloat()
+            isIosLiquidGlass() -> AndroidUtilities.dp(24f).toFloat()
             else -> AndroidUtilities.dp(12f).toFloat()
         }
     }
@@ -58,6 +59,15 @@ object UIStyleEngine {
             isMaterial3Expressive() -> AndroidUtilities.dp(28f).toFloat()
             isIosLiquidGlass() -> AndroidUtilities.dp(20f).toFloat()
             else -> AndroidUtilities.dp(14f).toFloat()
+        }
+    }
+
+    @JvmStatic
+    fun getButtonCornerRadius(): Float {
+        return when {
+            isMaterial3Expressive() -> AndroidUtilities.dp(24f).toFloat()
+            isIosLiquidGlass() -> AndroidUtilities.dp(14f).toFloat()
+            else -> AndroidUtilities.dp(8f).toFloat()
         }
     }
 
