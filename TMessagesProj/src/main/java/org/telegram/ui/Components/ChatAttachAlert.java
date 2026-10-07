@@ -1171,7 +1171,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         protected GlassTabView glassTabView;
         public AttachButtonBase(@NonNull Context context) {
             super(context);
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 ScaleStateListAnimator.apply(this, 0.05f, 1.5f);
             }
         }
@@ -1341,9 +1341,9 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             });
 
             iBlur3FactoryLiquidGlass = new BlurredBackgroundDrawableViewFactory(iBlur3SourceGlass);
-            iBlur3FactoryLiquidGlass.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS));
+            iBlur3FactoryLiquidGlass.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass());
             iBlur3FactoryFrostedLiquidGlass = new BlurredBackgroundDrawableViewFactory(iBlur3SourceGlassFrosted);
-            iBlur3FactoryFrostedLiquidGlass.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS));
+            iBlur3FactoryFrostedLiquidGlass.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass());
         } else {
             scrollableViewNoiseSuppressor = null;
             iBlur3SourceGlassFrosted = null;
@@ -1373,7 +1373,11 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         this.showingFromDialog = showingFromDialog;
         // drawNavigationBar = true;
         inBubbleMode = parentFragment instanceof ChatActivity && parentFragment.isInBubbleMode();
-        openInterpolator = new OvershootInterpolator(0.7f);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            openInterpolator = xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator();
+        } else {
+            openInterpolator = new OvershootInterpolator(0.7f);
+        }
         baseFragment = parentFragment;
         useSmoothKeyboard = true;
         setDelegate(this);
@@ -1395,6 +1399,11 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             private RectF rect = new RectF();
             private boolean ignoreLayout;
             private float initialTranslationY;
+            private final RectF iosCardRect = new RectF();
+            private final Path iosCardPath = new Path();
+            private final float[] iosCardRadii = new float[8];
+            private Paint iosCardBgPaint;
+            private Paint iosCardStrokePaint;
 
             AdjustPanLayoutHelper adjustPanLayoutHelper = new AdjustPanLayoutHelper(this) {
 
@@ -1886,9 +1895,52 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                     final int backgroundColor = hasCustomBackground ?
                         currentAttachLayout.getCustomBackground() :
                         getActionBarDrawableColor();
-                    shadowDrawable.setAlpha(viewAlpha);
-                    shadowDrawable.setBounds(0, top, getMeasuredWidth(), getMeasuredHeight() + dp(45) + backgroundPaddingTop);
-                    shadowDrawable.draw(canvas);
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        float cornerRadius = xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() * rad;
+                        int cardLeft = backgroundPaddingLeft;
+                        int cardRight = getMeasuredWidth() - backgroundPaddingLeft;
+                        int cardTop = backgroundPaddingTop + top;
+                        int cardBottom = getMeasuredHeight() + dp(45) + backgroundPaddingTop;
+
+                        iosCardRect.set(cardLeft, cardTop, cardRight, cardBottom);
+                        iosCardPath.reset();
+                        iosCardRadii[0] = cornerRadius;
+                        iosCardRadii[1] = cornerRadius;
+                        iosCardRadii[2] = cornerRadius;
+                        iosCardRadii[3] = cornerRadius;
+                        iosCardRadii[4] = 0;
+                        iosCardRadii[5] = 0;
+                        iosCardRadii[6] = 0;
+                        iosCardRadii[7] = 0;
+                        iosCardPath.addRoundRect(iosCardRect, iosCardRadii, Path.Direction.CW);
+
+                        if (iosCardBgPaint == null) {
+                            iosCardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                        }
+                        iosCardBgPaint.setColor(backgroundColor);
+                        iosCardBgPaint.setAlpha(viewAlpha);
+                        if (Build.VERSION.SDK_INT >= 28) {
+                            iosCardBgPaint.setShadowLayer(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(4), 0x38000000);
+                        } else {
+                            shadowDrawable.setAlpha(viewAlpha);
+                            shadowDrawable.setBounds(0, top, getMeasuredWidth(), getMeasuredHeight() + dp(45) + backgroundPaddingTop);
+                            shadowDrawable.draw(canvas);
+                        }
+                        canvas.drawPath(iosCardPath, iosCardBgPaint);
+
+                        if (iosCardStrokePaint == null) {
+                            iosCardStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                            iosCardStrokePaint.setStyle(Paint.Style.STROKE);
+                        }
+                        iosCardStrokePaint.setStrokeWidth(AndroidUtilities.dp(0.75f));
+                        int strokeColor = Theme.multAlpha(getThemedColor(Theme.key_windowBackgroundWhiteBlackText), 0.08f * (viewAlpha / 255.0f));
+                        iosCardStrokePaint.setColor(strokeColor);
+                        canvas.drawPath(iosCardPath, iosCardStrokePaint);
+                    } else {
+                        shadowDrawable.setAlpha(viewAlpha);
+                        shadowDrawable.setBounds(0, top, getMeasuredWidth(), getMeasuredHeight() + dp(45) + backgroundPaddingTop);
+                        shadowDrawable.draw(canvas);
+                    }
                     if (actionBarType == 2) {
                         Theme.dialogs_onlineCirclePaint.setColor(backgroundColor);
                         Theme.dialogs_onlineCirclePaint.setAlpha(viewAlpha);
@@ -2005,9 +2057,52 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                         getActionBarDrawableColor();
                     boolean drawBackground = !(currentAttachLayout == photoPreviewLayout || nextAttachLayout == photoPreviewLayout || (currentAttachLayout == photoLayout && nextAttachLayout == null));
                     if (drawBackground) {
-                        shadowDrawable.setAlpha(viewAlpha);
-                        shadowDrawable.setBounds(0, top, getMeasuredWidth(), height);
-                        shadowDrawable.draw(canvas);
+                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                            float cornerRadius = xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() * rad;
+                            int cardLeft = backgroundPaddingLeft;
+                            int cardRight = getMeasuredWidth() - backgroundPaddingLeft;
+                            int cardTop = backgroundPaddingTop + top;
+                            int cardBottom = height;
+
+                            iosCardRect.set(cardLeft, cardTop, cardRight, cardBottom);
+                            iosCardPath.reset();
+                            iosCardRadii[0] = cornerRadius;
+                            iosCardRadii[1] = cornerRadius;
+                            iosCardRadii[2] = cornerRadius;
+                            iosCardRadii[3] = cornerRadius;
+                            iosCardRadii[4] = 0;
+                            iosCardRadii[5] = 0;
+                            iosCardRadii[6] = 0;
+                            iosCardRadii[7] = 0;
+                            iosCardPath.addRoundRect(iosCardRect, iosCardRadii, Path.Direction.CW);
+
+                            if (iosCardBgPaint == null) {
+                                iosCardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                            }
+                            iosCardBgPaint.setColor(backgroundColor);
+                            iosCardBgPaint.setAlpha(viewAlpha);
+                            if (Build.VERSION.SDK_INT >= 28) {
+                                iosCardBgPaint.setShadowLayer(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(4), 0x38000000);
+                            } else {
+                                shadowDrawable.setAlpha(viewAlpha);
+                                shadowDrawable.setBounds(0, top, getMeasuredWidth(), height);
+                                shadowDrawable.draw(canvas);
+                            }
+                            canvas.drawPath(iosCardPath, iosCardBgPaint);
+
+                            if (iosCardStrokePaint == null) {
+                                iosCardStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                                iosCardStrokePaint.setStyle(Paint.Style.STROKE);
+                            }
+                            iosCardStrokePaint.setStrokeWidth(AndroidUtilities.dp(0.75f));
+                            int strokeColor = Theme.multAlpha(getThemedColor(Theme.key_windowBackgroundWhiteBlackText), 0.08f * (viewAlpha / 255.0f));
+                            iosCardStrokePaint.setColor(strokeColor);
+                            canvas.drawPath(iosCardPath, iosCardStrokePaint);
+                        } else {
+                            shadowDrawable.setAlpha(viewAlpha);
+                            shadowDrawable.setBounds(0, top, getMeasuredWidth(), height);
+                            shadowDrawable.draw(canvas);
+                        }
                         if (actionBarType == 2) {
                             Theme.dialogs_onlineCirclePaint.setColor(backgroundColor);
                             Theme.dialogs_onlineCirclePaint.setAlpha(viewAlpha);
@@ -2065,11 +2160,12 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                     if (alpha <= 0) {
                         return false;
                     }
-                    if (alpha >= 1) {
-                        return super.drawChild(canvas, child, drawingTime);
-                    }
                     canvas.save();
-                    canvas.clipRect(actionBar.getX(), getY(currentAttachLayout), actionBar.getX() + actionBar.getWidth(), actionBar.getY() + actionBar.getHeight());
+                    if (alpha >= 1) {
+                        canvas.clipRect(actionBar.getX(), actionBar.getY(), actionBar.getX() + actionBar.getWidth(), actionBar.getY() + actionBar.getHeight());
+                    } else {
+                        canvas.clipRect(actionBar.getX(), getY(currentAttachLayout), actionBar.getX() + actionBar.getWidth(), actionBar.getY() + actionBar.getHeight());
+                    }
                     boolean result = super.drawChild(canvas, child, drawingTime);
                     canvas.restore();
                     return result;
@@ -2243,6 +2339,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                 }
             }
         };
+        actionBar.setAddToContainer(false);
         actionBar.alwaysApplyColorFilterToBackButton();
         actionBar.setForcedMenuWidth(dp(46));
         // actionBar.setBackgroundColor(getThemedColor(Theme.key_dialogBackground));
@@ -2610,6 +2707,26 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         //containerView.addView(actionBarShadow, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 1));
 
         buttonsRecyclerViewWrapper = new FrameLayout(context) {
+            private Paint iosTabsBorderPaint;
+            private final RectF iosTabsRect = new RectF();
+
+            @Override
+            protected void dispatchDraw(Canvas canvas) {
+                super.dispatchDraw(canvas);
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    if (iosTabsBorderPaint == null) {
+                        iosTabsBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                        iosTabsBorderPaint.setStyle(Paint.Style.STROKE);
+                    }
+                    iosTabsBorderPaint.setStrokeWidth(AndroidUtilities.dp(0.75f));
+                    iosTabsBorderPaint.setColor(Theme.multAlpha(getThemedColor(Theme.key_windowBackgroundWhiteBlackText), 0.12f));
+                    float pad = AndroidUtilities.dp(7);
+                    iosTabsRect.set(pad, pad, getWidth() - pad, getHeight() - pad);
+                    float rad = AndroidUtilities.dp(56 / 2f);
+                    canvas.drawRoundRect(iosTabsRect, rad, rad, iosTabsBorderPaint);
+                }
+            }
+
             @Override
             protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
                 if (isPollAttach && pollAllowedLayouts != 0) {
@@ -3562,6 +3679,9 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         writeButtonContainer.setAlpha(0.0f);
         writeButtonContainer.setClipChildren(false);
         writeButtonContainer.setClipToPadding(false);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            ScaleStateListAnimator.apply(writeButtonContainer, 0.06f, 1.3f);
+        }
         containerView.addView(writeButtonContainer, LayoutHelper.createFrame(110, 50, Gravity.RIGHT | Gravity.BOTTOM));
 
         writeButton = new ChatActivityEnterView.SendButton(context, R.drawable.send_plane_24, resourcesProvider) {

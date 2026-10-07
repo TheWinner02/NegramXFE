@@ -107,6 +107,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
     private BackupImageView backupImageView;
     private Theme.ResourcesProvider resourcesProvider;
     private final Paint paintCounterBackground = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private Paint iosTabStrokePaint;
     private final AnimatedTextView.AnimatedTextDrawable counter;
 
     private static final int ANIMATOR_ID_IS_SELECTED = 0;
@@ -247,6 +248,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         if (selectedFactor > 0 && !skipDrawSelector) {
             final float alpha = AnimatorUtils.DECELERATE_INTERPOLATOR.getInterpolation(selectedFactor);
             boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+            boolean isIos = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
             if (isM3) {
                 paintCounterBackground.setColor(Theme.multAlpha(colorSelected, 0.25f * alpha));
                 float pillHeight = Math.min(dp(38), getHeight() - dp(6));
@@ -261,6 +263,26 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
                 canvas.save();
                 canvas.scale(s, s, tmpRectF.centerX(), tmpRectF.centerY());
                 canvas.drawRoundRect(tmpRectF, r, r, paintCounterBackground);
+                canvas.restore();
+            } else if (isIos) {
+                paintCounterBackground.setColor(Theme.multAlpha(colorSelected, 0.18f * alpha));
+                float pillHeight = Math.min(dp(40), getHeight() - dp(4));
+                float pillPaddingH = dp(3);
+                float pillWidth = getWidth() - pillPaddingH * 2f;
+                float pillLeft = (getWidth() - pillWidth) / 2f;
+                tmpRectF.set(pillLeft, (getHeight() - pillHeight) / 2f, pillLeft + pillWidth, (getHeight() + pillHeight) / 2f);
+                final float r = dp(16);
+                final float s = lerp(0.88f, 1f, selectedFactor);
+                canvas.save();
+                canvas.scale(s, s, tmpRectF.centerX(), tmpRectF.centerY());
+                canvas.drawRoundRect(tmpRectF, r, r, paintCounterBackground);
+                if (iosTabStrokePaint == null) {
+                    iosTabStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    iosTabStrokePaint.setStyle(Paint.Style.STROKE);
+                }
+                iosTabStrokePaint.setStrokeWidth(dp(0.75f));
+                iosTabStrokePaint.setColor(Theme.multAlpha(colorSelected, 0.22f * alpha));
+                canvas.drawRoundRect(tmpRectF, r, r, iosTabStrokePaint);
                 canvas.restore();
             } else {
                 paintCounterBackground.setColor(Theme.multAlpha(colorSelected, 0.09f * alpha));

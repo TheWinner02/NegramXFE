@@ -2665,7 +2665,10 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 int bgColor = adaptive_topColorKey != 0 && adaptive_topColorKey != -1
                         ? getThemedColor(adaptive_topColorKey)
                         : getThemedColor(Theme.key_windowBackgroundGray);
+                canvas.save();
+                canvas.clipRect(0, 0, getWidth(), getHeight());
                 canvas.drawColor(bgColor);
+                canvas.restore();
             }
             // iOS-style: three separate floating pill islands
             final int edge = dp(6);     // margin from screen edge

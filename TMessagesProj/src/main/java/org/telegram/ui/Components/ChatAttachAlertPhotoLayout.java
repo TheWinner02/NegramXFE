@@ -139,6 +139,9 @@ import tw.nekomimi.nekogram.NekoConfig;
 public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayout implements NotificationCenter.NotificationCenterDelegate {
 
     private static final float RADIUS = 16f;
+    private static float getRadius() {
+        return xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 20f : RADIUS;
+    }
     private static final int VIEW_TYPE_AVATAR_CONSTRUCTOR = 4;
     private static final int SHOW_FAST_SCROLL_MIN_COUNT = 30;
     private final boolean needCamera;
@@ -2732,7 +2735,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                         AndroidUtilities.rectTmp.set(animationClipLeft + cameraViewOffsetX * (1f - cameraOpenProgress), animationClipTop + cameraViewOffsetY * (1f - cameraOpenProgress), animationClipRight, animationClipBottom);
                         outline.setRect((int) AndroidUtilities.rectTmp.left, (int) AndroidUtilities.rectTmp.top, (int) AndroidUtilities.rectTmp.right, Math.min(maxY, (int) AndroidUtilities.rectTmp.bottom));
                     } else if (!cameraAnimationInProgress && !cameraOpened) {
-                        int rad = dp(RADIUS);
+                        int rad = dp(getRadius());
                         outline.setRoundRect((int) cameraViewOffsetX, (int) cameraViewOffsetY, view.getMeasuredWidth() + rad, Math.min(maxY, view.getMeasuredHeight()) + rad, rad);
                     } else {
                         outline.setRect(0, 0, view.getMeasuredWidth(), Math.min(maxY, view.getMeasuredHeight()));
@@ -4333,7 +4336,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             }
             return true;
         } else if (view == cameraLensSelectorView) {
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 cameraLensSelectorView.measure(
                         View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.AT_MOST),
                         View.MeasureSpec.makeMeasureSpec(dp(46), View.MeasureSpec.EXACTLY));
@@ -4388,7 +4391,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             }
             return true;
         } else if (view == cameraLensSelectorView) {
-            boolean expressive = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+            boolean expressive = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
             if (isPortrait) {
                 int panelTop = bottom - dp(126) - navbar;
                 if (cameraPhotoRecyclerView.getVisibility() == View.VISIBLE) {
@@ -4421,7 +4424,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         } else if (view == zoomControlView) {
             int lensSelectorOffset = cameraLensSelectorView != null
                     && cameraLensSelectorView.getVisibility() == View.VISIBLE
-                    && (isPortrait || !xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) ? 46 : 0;
+                    && (isPortrait || !(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) ? 46 : 0;
             if (isPortrait) {
                 if (cameraPhotoRecyclerView.getVisibility() == View.VISIBLE) {
                     zoomControlView.layout(0, bottom - dp(126 + 96 + 38 + lensSelectorOffset + 50) - navbar, width, bottom - dp(126 + 96 + 38 + lensSelectorOffset) - navbar);
@@ -4600,10 +4603,10 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                             position++;
                         }
                         if (position == 0) {
-                            int rad = dp(RADIUS);
+                            int rad = dp(getRadius());
                             outline.setRoundRect(0, 0, view.getMeasuredWidth() + rad, view.getMeasuredHeight() + rad, rad);
                         } else if (position == itemsPerRow - 1) {
-                            int rad = dp(RADIUS);
+                            int rad = dp(getRadius());
                             outline.setRoundRect(-rad, 0, view.getMeasuredWidth(), view.getMeasuredHeight() + rad, rad);
                         } else {
                             outline.setRect(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
@@ -5064,7 +5067,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                 return;
             }
 
-            final float r = dp(RADIUS);
+            final float r = dp(getRadius());
             clipPath.rewind();
             clipPath.addRoundRect(left, top , right + r, bottom + r, r, r, Path.Direction.CW);
             c.save();
