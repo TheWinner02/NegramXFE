@@ -87,7 +87,9 @@ public class ScrollSlidingTabStrip extends HorizontalScrollView {
     private int tabCount;
 
     private int currentPosition;
-    private AnimatedFloat currentPositionAnimated = new AnimatedFloat(this, 350, CubicBezierInterpolator.EASE_OUT_QUINT);
+    private AnimatedFloat currentPositionAnimated = new AnimatedFloat(this,
+            xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 320 : 350,
+            xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : CubicBezierInterpolator.EASE_OUT_QUINT);
     private RectF leftTabBounds = new RectF();
     private RectF rightTabBounds = new RectF();
     private RectF tabBounds = new RectF();
@@ -806,8 +808,8 @@ public class ScrollSlidingTabStrip extends HorizontalScrollView {
             h *= AndroidUtilities.lerp(1f, 0.55f, expandProgressInterpolated);
             tabBounds.set(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2);
 
-            if (isGlassDesign) {
-                selectorPaint.setColor(getGlassIconColor(0.05f));
+            if (isGlassDesign || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                selectorPaint.setColor(getGlassIconColor(0.12f));
             } else {
                 selectorPaint.setColor(ColorUtils.setAlphaComponent(getThemedColor(Theme.key_chat_emojiPanelIcon), 0x2e));
                 selectorPaint.setAlpha((int) (selectorPaint.getAlpha() * selectedAlpha));
@@ -817,7 +819,7 @@ public class ScrollSlidingTabStrip extends HorizontalScrollView {
 
         super.dispatchDraw(canvas);
 
-        if (!(isInEditMode() || tabCount == 0) && underlineHeight > 0) {
+        if (!(isInEditMode() || tabCount == 0) && underlineHeight > 0 && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             rectPaint.setColor(underlineColor);
             canvas.drawRect(0, height - underlineHeight, tabsContainer.getWidth(), height, rectPaint);
         }

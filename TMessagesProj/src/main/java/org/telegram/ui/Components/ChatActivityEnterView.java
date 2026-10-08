@@ -13022,16 +13022,18 @@ public class ChatActivityEnterView extends FrameLayout implements
             }
         };
         emojiView.shouldDrawStickerSettings = true;
-        if (!shouldDrawBackground) {
+        if (!shouldDrawBackground || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             emojiView.updateColors();
         }
         emojiView.setAllow(allowStickers, allowGifs, true);
         emojiView.setVisibility(GONE);
         emojiView.setShowing(false);
-        if (windowInsetsInAppController != null) {
+        if (windowInsetsInAppController != null || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             emojiView.shouldLightenBackground = false;
             emojiView.setShouldDrawBackground(false);
-            emojiView.isNewHeightControl = true;
+            if (windowInsetsInAppController != null) {
+                emojiView.isNewHeightControl = true;
+            }
         }
         emojiView.setDelegate(new EmojiView.EmojiViewDelegate() {
 

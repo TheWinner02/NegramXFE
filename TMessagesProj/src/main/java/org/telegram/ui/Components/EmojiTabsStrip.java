@@ -270,8 +270,8 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
 
                 path.rewind();
                 path.addRoundRect(rect,
-                    (isGlassDesign || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) ? rect.height() / 2f : r,
-                    (isGlassDesign || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) ? rect.height() / 2f : r,
+                    (isGlassDesign || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? rect.height() / 2f : r,
+                    (isGlassDesign || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? rect.height() / 2f : r,
                     Path.Direction.CW);
                 canvas.drawPath(path, paint);
 
@@ -744,8 +744,8 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
                     selectT = AndroidUtilities.lerp(from, to, selectAnimationT);
                     contentView.invalidate();
                 });
-                selectAnimator.setDuration(350);
-                selectAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                selectAnimator.setDuration(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 320 : 350);
+                selectAnimator.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : CubicBezierInterpolator.EASE_OUT_QUINT);
                 selectAnimator.start();
             } else {
                 selectAnimationT = 1f;
@@ -778,8 +778,8 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
     }
 
     private int selectorColor() {
-        if (isGlassDesign) {
-            return getGlassIconColor(0.05f);
+        if (isGlassDesign || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            return getGlassIconColor(0.12f);
         }
 
         if (currentType == SelectAnimatedEmojiDialog.TYPE_SET_REPLY_ICON || currentType == SelectAnimatedEmojiDialog.TYPE_SET_REPLY_ICON_BOTTOM) {

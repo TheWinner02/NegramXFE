@@ -807,7 +807,7 @@ public class EmojiView extends FrameLayout implements
             addView(shadowView, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, AndroidUtilities.getShadowHeight(), Gravity.BOTTOM | Gravity.LEFT));
 
             backgroundView = new View(context);
-            if (shouldDrawBackground) {
+            if (shouldDrawBackground && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 backgroundView.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
             }
             addView(backgroundView, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, searchFieldHeight));
@@ -930,7 +930,7 @@ public class EmojiView extends FrameLayout implements
                 }
             });
 
-            if (shouldDrawBackground) {
+            if (shouldDrawBackground && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 inputBoxGradient = new View(context);
                 Drawable gradientDrawable = context.getResources().getDrawable(R.drawable.gradient_right).mutate();
                 gradientDrawable.setColorFilter(new PorterDuffColorFilter(Theme.blendOver(getThemedColor(Theme.key_chat_emojiPanelBackground), getThemedColor(Theme.key_chat_emojiSearchBackground)), PorterDuff.Mode.MULTIPLY));
@@ -987,7 +987,7 @@ public class EmojiView extends FrameLayout implements
                 };
                 categoriesListView.isGlassDesign = glassDesign;
                 categoriesListView.setDontOccupyWidth((int) (searchEditText.getPaint().measureText(searchEditText.getHint() + "")) + dp(16));
-                if (shouldDrawBackground) {
+                if (shouldDrawBackground && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     categoriesListView.setBackgroundColor(Theme.blendOver(getThemedColor(Theme.key_chat_emojiPanelBackground), getThemedColor(Theme.key_chat_emojiSearchBackground)));
                 }
                 categoriesListView.setOnScrollIntoOccupiedWidth(scrolled -> {
@@ -1573,7 +1573,7 @@ public class EmojiView extends FrameLayout implements
         this.fragment = fragment;
         this.allowAnimatedEmoji = needAnimatedEmoji;
         this.resourcesProvider = resourcesProvider;
-        this.glassDesign = glassDesign;
+        this.glassDesign = glassDesign || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
 
         blurredBackgroundSourceColor = new BlurredBackgroundSourceColor();
         blurredBackgroundSourceColor.setColor(getThemedColor(Theme.key_windowBackgroundWhite));
@@ -1965,7 +1965,7 @@ public class EmojiView extends FrameLayout implements
         }
 
         final int emojiTabsColor = getThemedColor(Theme.key_chat_emojiPanelBackground);
-        if (Color.alpha(emojiTabsColor) >= 0xFF) {
+        if (Color.alpha(emojiTabsColor) >= 0xFF && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             emojiTabs.setBackgroundColor(emojiTabsColor);
         }
         emojiAdapter.processEmoji(true);
@@ -2138,7 +2138,9 @@ public class EmojiView extends FrameLayout implements
                 gifTabs.setUnderlineHeight(AndroidUtilities.getShadowHeight());
                 gifTabs.setIndicatorColor(getThemedColor(Theme.key_chat_emojiPanelStickerPackSelectorLine));
                 gifTabs.setUnderlineColor(getThemedColor(Theme.key_chat_emojiPanelShadowLine));
-                gifTabs.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
+                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    gifTabs.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
+                }
 //                gifContainer.addView(gifTabs, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, StickerTabView.SMALL_HEIGHT, Gravity.LEFT | Gravity.TOP));
                 updateGifTabs();
 
@@ -2515,8 +2517,10 @@ public class EmojiView extends FrameLayout implements
                         if (searchProgressOffset != 0) {
                             canvas.clipRect(0, searchProgressOffset, getMeasuredWidth(), getMeasuredHeight());
                         }
-                        paint.setColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
-                        canvas.drawRect(0, 0, getMeasuredWidth(), AndroidUtilities.dp(36) + stickersTab.getExpandedOffset(), paint);
+                        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                            paint.setColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
+                            canvas.drawRect(0, 0, getMeasuredWidth(), AndroidUtilities.dp(36) + stickersTab.getExpandedOffset(), paint);
+                        }
                         super.dispatchDraw(canvas);
                         stickersTab.drawOverlays(canvas);
                         canvas.restore();
@@ -2693,6 +2697,9 @@ public class EmojiView extends FrameLayout implements
         bottomTabContainer = new FrameLayout(context);
 
         bottomTabContainerBackground = new View(context);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            bottomTabContainerBackground.setVisibility(View.GONE);
+        }
         bottomTabContainer.addView(bottomTabContainerBackground, new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, AndroidUtilities.dp(40), Gravity.LEFT | Gravity.BOTTOM));
 
         if (needSearch) {
@@ -2719,7 +2726,7 @@ public class EmojiView extends FrameLayout implements
             typeTabs.setViewPager(pager);
             typeTabs.setShouldExpand(false);
             typeTabs.setIndicatorHeight(AndroidUtilities.dp(3));
-            typeTabs.setIndicatorColor(ColorUtils.setAlphaComponent(getThemedColor(Theme.key_chat_emojiPanelIconSelected), 20));
+            typeTabs.setIndicatorColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? getGlassIconColor(0.20f) : ColorUtils.setAlphaComponent(getThemedColor(Theme.key_chat_emojiPanelIconSelected), 20));
             typeTabs.setUnderlineHeight(0);
             typeTabs.setTabPaddingLeftRight(AndroidUtilities.dp(11));
             typeTabs.setPadding(dp(4), dp(11), dp(4), dp(11));
@@ -2867,7 +2874,7 @@ public class EmojiView extends FrameLayout implements
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             blurredBackgroundSourceRenderNode = new BlurredBackgroundSourceRenderNode(null);
             blurredBackgroundDrawableFactory = new BlurredBackgroundDrawableViewFactory(blurredBackgroundSourceRenderNode);
-            blurredBackgroundDrawableFactory.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS));
+            blurredBackgroundDrawableFactory.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass());
 
             scrollableViewNoiseSuppressor = new DownscaleScrollableNoiseSuppressor();
         } else {
@@ -2880,6 +2887,17 @@ public class EmojiView extends FrameLayout implements
         ViewPositionWatcher viewPositionWatcher = new ViewPositionWatcher(this);
         if (typeTabs != null) {
             viewPositionWatcher.subscribe(typeTabs, this, (v, p) -> invalidateBlurCaptures());
+        }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (stickersTab != null) {
+                viewPositionWatcher.subscribe(stickersTab, this, (v, p) -> invalidateBlurCaptures());
+            }
+            if (emojiTabs != null) {
+                viewPositionWatcher.subscribe(emojiTabs, this, (v, p) -> invalidateBlurCaptures());
+            }
+            if (gifTabs != null) {
+                viewPositionWatcher.subscribe(gifTabs, this, (v, p) -> invalidateBlurCaptures());
+            }
         }
 
         blurredBackgroundDrawableFactory.setSourceRootView(viewPositionWatcher, this);
@@ -2968,6 +2986,27 @@ public class EmojiView extends FrameLayout implements
                 .setColorProvider(BlurredBackgroundProviderImpl.emojiViewButton(resourcesProvider))
                 .setRadius(dp(18))
                 .setPadding(dp(6)));
+        }
+
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (emojiTabs != null) {
+                emojiTabs.setBackground(factory.create(emojiTabs)
+                    .setColorProvider(BlurredBackgroundProviderImpl.topPanel(resourcesProvider))
+                    .setRadius(dp(16))
+                    .setPadding(dp(2)));
+            }
+            if (stickersTab != null) {
+                stickersTab.setBackground(factory.create(stickersTab)
+                    .setColorProvider(BlurredBackgroundProviderImpl.topPanel(resourcesProvider))
+                    .setRadius(dp(16))
+                    .setPadding(dp(2)));
+            }
+            if (gifTabs != null) {
+                gifTabs.setBackground(factory.create(gifTabs)
+                    .setColorProvider(BlurredBackgroundProviderImpl.topPanel(resourcesProvider))
+                    .setRadius(dp(16))
+                    .setPadding(dp(2)));
+            }
         }
     }
 
@@ -4516,8 +4555,10 @@ public class EmojiView extends FrameLayout implements
     }
 
     private final RectF blurredRectF = new RectF();
-    private final ArrayList<RectF> blurredRectList = new ArrayList<>(1); {
+    private final RectF blurredRectTopF = new RectF();
+    private final ArrayList<RectF> blurredRectList = new ArrayList<>(2); {
         blurredRectList.add(blurredRectF);
+        blurredRectList.add(blurredRectTopF);
     }
 
     @Override
@@ -4541,13 +4582,31 @@ public class EmojiView extends FrameLayout implements
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null) {
             ViewPositionWatcher.computeRectInParent(typeTabs, this, blurredRectF);
             blurredRectF.inset(
-                LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0 : -dp(48),
-                LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0 : -dp(48)
+                LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : -dp(48),
+                LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : -dp(48)
             );
             blurredRectF.right = getMeasuredWidth();
             blurredRectF.bottom = Math.min(blurredRectF.bottom, getMeasuredHeight());
 
-            scrollableViewNoiseSuppressor.setupRenderNodes(blurredRectList, 1);
+            int rectCount = 1;
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                View topTabsView = null;
+                int currentItem = pager != null ? pager.getCurrentItem() : 0;
+                if (currentItem == 0 && emojiTabs != null && emojiTabs.getVisibility() == View.VISIBLE) {
+                    topTabsView = emojiTabs;
+                } else if (currentItem == 1 && gifTabs != null && gifTabs.getVisibility() == View.VISIBLE) {
+                    topTabsView = gifTabs;
+                } else if (stickersTab != null && stickersTab.getVisibility() == View.VISIBLE) {
+                    topTabsView = stickersTab;
+                }
+                if (topTabsView != null) {
+                    ViewPositionWatcher.computeRectInParent(topTabsView, this, blurredRectTopF);
+                    blurredRectTopF.right = getMeasuredWidth();
+                    rectCount = 2;
+                }
+            }
+
+            scrollableViewNoiseSuppressor.setupRenderNodes(blurredRectList, rectCount);
             scrollableViewNoiseSuppressor.invalidateResultRenderNodes(blurCaptureMethod, getWidth(), getHeight());
         }
     }
@@ -4572,7 +4631,7 @@ public class EmojiView extends FrameLayout implements
 
             boolean res = super.drawChild(canvas, child, drawingTime);
             float navbarAlpha = AndroidUtilities.getNavigationBarThirdButtonsFactor(bottomInset); // * 0.75f;
-            if (navbarAlpha > 0) {
+            if (navbarAlpha > 0 && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 final int color = Theme.multAlpha(getThemedColor(Theme.key_chat_emojiPanelBackground), navbarAlpha);
                 if (lastFadeColor != color) {
                     fadeDrawable.setColors(new int[] {color, Theme.multAlpha(color, 0.66f), ColorUtils.setAlphaComponent(color, 0)});
@@ -5823,7 +5882,7 @@ public class EmojiView extends FrameLayout implements
     }
 
     public void updateColors() {
-        if (!shouldDrawBackground) {
+        if (!shouldDrawBackground || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             setBackground(null);
             bottomTabContainerBackground.setBackground(null);
         } else if (AndroidUtilities.isInMultiwindow || forseMultiwindowLayout) {
@@ -5834,15 +5893,22 @@ public class EmojiView extends FrameLayout implements
         } else {
             setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
             if (needEmojiSearch) {
-                bottomTabContainerBackground.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    bottomTabContainerBackground.setVisibility(View.GONE);
+                } else {
+                    bottomTabContainerBackground.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
+                }
             }
         }
         if (emojiTabs != null) {
-            if (shouldDrawBackground) {
+            if (shouldDrawBackground && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 emojiTabs.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
                 emojiTabsShadow.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelShadowLine));
-            } else {
+            } else if (!shouldDrawBackground) {
                 emojiTabs.setBackground(null);
+            }
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && emojiTabsShadow != null) {
+                emojiTabsShadow.setVisibility(View.GONE);
             }
         }
         if (colorPickerView != null) {
@@ -5860,12 +5926,12 @@ public class EmojiView extends FrameLayout implements
             if (searchField == null) {
                 continue;
             }
-            if (shouldDrawBackground) {
+            if (shouldDrawBackground && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 searchField.backgroundView.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
             } else {
                 searchField.backgroundView.setBackground(null);
             }
-            searchField.shadowView.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelShadowLine));
+            searchField.shadowView.setBackgroundColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Color.TRANSPARENT : getThemedColor(Theme.key_chat_emojiPanelShadowLine));
             searchField.searchStateDrawable.setColor(glassDesign ? getGlassIconColor(0.4f) : getThemedColor(Theme.key_chat_emojiSearchIcon));
             Theme.setDrawableColor(searchField.box.getBackground(), glassDesign ? getGlassIconColor(0.06f) : getThemedColor(Theme.key_chat_emojiSearchBackground));
             searchField.box.invalidate();
@@ -5884,26 +5950,30 @@ public class EmojiView extends FrameLayout implements
         if (stickersTab != null) {
             stickersTab.setIndicatorColor(getThemedColor(Theme.key_chat_emojiPanelStickerPackSelectorLine));
             stickersTab.setUnderlineColor(getThemedColor(Theme.key_chat_emojiPanelShadowLine));
-            if (shouldDrawBackground) {
+            if (shouldDrawBackground && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 stickersTab.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
-            } else {
+            } else if (!shouldDrawBackground) {
                 stickersTab.setBackground(null);
             }
         }
         if (gifTabs != null) {
             gifTabs.setIndicatorColor(getThemedColor(Theme.key_chat_emojiPanelStickerPackSelectorLine));
             gifTabs.setUnderlineColor(getThemedColor(Theme.key_chat_emojiPanelShadowLine));
-            if (shouldDrawBackground) {
+            if (shouldDrawBackground && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 gifTabs.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
-            } else {
+            } else if (!shouldDrawBackground) {
                 gifTabs.setBackground(null);
             }
         }
         if (backspaceButton != null) {
             backspaceButton.setColorFilter(new PorterDuffColorFilter(glassDesign ? getGlassIconColor(0.6f) : getThemedColor(Theme.key_chat_emojiPanelBackspace), PorterDuff.Mode.MULTIPLY));
-            if (emojiSearchField == null) {
-                Theme.setSelectorDrawableColor(backspaceButton.getBackground(), getThemedColor(Theme.key_chat_emojiPanelBackground), false);
-                Theme.setSelectorDrawableColor(backspaceButton.getBackground(), getThemedColor(Theme.key_chat_emojiPanelBackground), true);
+            if (emojiSearchField == null && backspaceButton.getBackground() != null) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    backspaceButton.setBackground(Theme.createSimpleSelectorCircleDrawable(AndroidUtilities.dp(56), 0x00000000, getGlassIconColor(0.12f)));
+                } else {
+                    Theme.setSelectorDrawableColor(backspaceButton.getBackground(), getThemedColor(Theme.key_chat_emojiPanelBackground), false);
+                    Theme.setSelectorDrawableColor(backspaceButton.getBackground(), getThemedColor(Theme.key_chat_emojiPanelBackground), true);
+                }
             }
         }
         if (stickerSettingsButton != null) {
@@ -5953,6 +6023,9 @@ public class EmojiView extends FrameLayout implements
         if (emojiLockDrawable != null) {
             emojiLockDrawable.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_chat_emojiPanelStickerSetName), PorterDuff.Mode.MULTIPLY));
         }
+        if (typeTabs != null) {
+            typeTabs.setIndicatorColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? getGlassIconColor(0.20f) : ColorUtils.setAlphaComponent(getThemedColor(Theme.key_chat_emojiPanelIconSelected), 20));
+        }
     }
 
     public boolean customOutline;
@@ -5967,10 +6040,15 @@ public class EmojiView extends FrameLayout implements
                     setClipToOutline(true);
                     setElevation(AndroidUtilities.dp(2));
                 }
-                setBackgroundResource(R.drawable.smiles_popup);
-                getBackground().setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_chat_emojiPanelBackground), PorterDuff.Mode.MULTIPLY));
-                if (needEmojiSearch && shouldDrawBackground) {
-                    bottomTabContainerBackground.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
+                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    setBackgroundResource(R.drawable.smiles_popup);
+                    getBackground().setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_chat_emojiPanelBackground), PorterDuff.Mode.MULTIPLY));
+                    if (needEmojiSearch && shouldDrawBackground) {
+                        bottomTabContainerBackground.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
+                    }
+                } else {
+                    setBackground(null);
+                    bottomTabContainerBackground.setBackground(null);
                 }
                 currentBackgroundType = 1;
             }
@@ -5981,11 +6059,14 @@ public class EmojiView extends FrameLayout implements
                     setClipToOutline(false);
                     setElevation(0);
                 }
-                if (shouldDrawBackground) {
+                if (shouldDrawBackground && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
                     if (needEmojiSearch) {
                         bottomTabContainerBackground.setBackgroundColor(getThemedColor(Theme.key_chat_emojiPanelBackground));
                     }
+                } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    setBackground(null);
+                    bottomTabContainerBackground.setBackground(null);
                 }
                 currentBackgroundType = 0;
             }

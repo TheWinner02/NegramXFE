@@ -246,8 +246,12 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
         }
     }
 
-    private AnimatedFloat lineLeftAnimated = new AnimatedFloat(this, 350, CubicBezierInterpolator.EASE_OUT_QUINT);
-    private AnimatedFloat lineRightAnimated = new AnimatedFloat(this, 350, CubicBezierInterpolator.EASE_OUT_QUINT);
+    private AnimatedFloat lineLeftAnimated = new AnimatedFloat(this,
+            xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 320 : 350,
+            xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : CubicBezierInterpolator.EASE_OUT_QUINT);
+    private AnimatedFloat lineRightAnimated = new AnimatedFloat(this,
+            xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 320 : 350,
+            xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : CubicBezierInterpolator.EASE_OUT_QUINT);
 
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
