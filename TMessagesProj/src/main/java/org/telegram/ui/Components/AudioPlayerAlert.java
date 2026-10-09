@@ -28,6 +28,7 @@ import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.PorterDuffXfermode;
@@ -193,6 +194,11 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
     private boolean blurredAnimationInProgress;
     private View[] buttons = new View[7];
     private SpringAnimation seekBarBufferSpring;
+    private final Path iosCardPath = new Path();
+    private final RectF iosCardRect = new RectF();
+    private final float[] iosCardRadii = new float[8];
+    private Paint iosCardBgPaint;
+    private Paint iosCardStrokePaint;
 
     private boolean draggingSeekBar;
 
@@ -416,8 +422,102 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             }
 
             @Override
+            protected void dispatchDraw(Canvas canvas) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    canvas.save();
+                    canvas.clipPath(iosCardPath);
+                    super.dispatchDraw(canvas);
+                    canvas.restore();
+                } else {
+                    super.dispatchDraw(canvas);
+                }
+            }
+
+            @Override
             protected void onDraw(Canvas canvas) {
-                if (playlist.size() <= 1) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    int cardTop;
+                    int y;
+                    float rad = 1.0f;
+                    if (playlist.size() <= 1) {
+                        cardTop = getMeasuredHeight() - playerLayout.getMeasuredHeight() - backgroundPaddingTop;
+                        y = cardTop + dp(12);
+                        if (isProfilePlaylist) {
+                            actionBar.setVisibility(View.GONE);
+                        }
+                    } else {
+                        if (listView.getVisibility() != View.VISIBLE) return;
+                        int offset = dp(13);
+                        int top = scrollOffsetY - backgroundPaddingTop - offset;
+                        top += listView.getTranslationY();
+                        if (isProfilePlaylist) {
+                            top -= ActionBar.getCurrentActionBarHeight();
+                            top += dp(10);
+                        }
+                        y = top + dp(20);
+
+                        float moveProgress = 0;
+                        if (!isProfilePlaylist && top + backgroundPaddingTop < ActionBar.getCurrentActionBarHeight()) {
+                            float toMove = offset + dp(11 - 7);
+                            moveProgress = Math.min(1.0f, (ActionBar.getCurrentActionBarHeight() - top - backgroundPaddingTop) / toMove);
+                            float availableToMove = ActionBar.getCurrentActionBarHeight() - toMove;
+                            int diff = (int) (availableToMove * moveProgress);
+                            top -= diff;
+                            y -= diff;
+                            rad = 1.0f - moveProgress;
+                        }
+                        top += (int) (AndroidUtilities.statusBarHeight * (1f - moveProgress));
+                        y += (int) (AndroidUtilities.statusBarHeight * (1f - moveProgress));
+                        cardTop = top;
+                    }
+
+                    float cornerRad = xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() * rad;
+                    iosCardRect.set(0, cardTop, getMeasuredWidth(), getMeasuredHeight());
+                    iosCardPath.reset();
+                    iosCardRadii[0] = cornerRad;
+                    iosCardRadii[1] = cornerRad;
+                    iosCardRadii[2] = cornerRad;
+                    iosCardRadii[3] = cornerRad;
+                    iosCardRadii[4] = 0;
+                    iosCardRadii[5] = 0;
+                    iosCardRadii[6] = 0;
+                    iosCardRadii[7] = 0;
+                    iosCardPath.addRoundRect(iosCardRect, iosCardRadii, Path.Direction.CW);
+
+                    if (iosCardBgPaint == null) {
+                        iosCardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    }
+                    int bgColor = Theme.multAlpha(
+                        getThemedColor(Theme.key_dialogBackground),
+                        tw.nekomimi.nekogram.NekoConfig.actionBarGlassAlpha.Int() / 100f
+                    );
+                    iosCardBgPaint.setColor(bgColor);
+                    if (Build.VERSION.SDK_INT >= 28) {
+                        iosCardBgPaint.setShadowLayer(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(4), 0x38000000);
+                    }
+                    canvas.drawPath(iosCardPath, iosCardBgPaint);
+
+                    if (iosCardStrokePaint == null) {
+                        iosCardStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                        iosCardStrokePaint.setStyle(Paint.Style.STROKE);
+                        iosCardStrokePaint.setStrokeWidth(AndroidUtilities.dp(0.75f));
+                    }
+                    iosCardStrokePaint.setColor(Theme.multAlpha(getThemedColor(Theme.key_dialogTextBlack), 0.12f));
+                    canvas.drawPath(iosCardPath, iosCardStrokePaint);
+
+                    if (!isProfilePlaylist && rad != 0) {
+                        int w = dp(36);
+                        rect.set((getMeasuredWidth() - w) / 2, y, (getMeasuredWidth() + w) / 2, y + dp(5));
+                        Theme.dialogs_onlineCirclePaint.setColor(Theme.multAlpha(getThemedColor(Theme.key_dialogTextBlack), 0.20f));
+                        canvas.drawRoundRect(rect, dp(2.5f), dp(2.5f), Theme.dialogs_onlineCirclePaint);
+                    }
+
+                    if (isProfilePlaylist) {
+                        actionBar.setVisibility(View.VISIBLE);
+                        actionBar.setTranslationY(Math.max(0, cardTop - backgroundPaddingTop - dp(10) + dp(6) * (1.0f - actionBarSlide) - actionBar.getTop()));
+                        actionBarShadow.setTranslationY(Math.max(0, cardTop - backgroundPaddingTop - dp(10) + dp(6) * (1.0f - actionBarSlide) - actionBar.getTop()));
+                    }
+                } else if (playlist.size() <= 1) {
                     shadowDrawable.setBounds(0, getMeasuredHeight() - playerLayout.getMeasuredHeight() - backgroundPaddingTop, getMeasuredWidth(), getMeasuredHeight());
                     shadowDrawable.draw(canvas);
                     if (isProfilePlaylist) {
@@ -510,7 +610,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             }
         };
         actionBar.setBackgroundColor(0);
-        actionBar.setBackButtonImage(R.drawable.ic_ab_back);
+        actionBar.setBackButtonImage(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? R.drawable.ic_ab_close : R.drawable.ic_ab_back);
         actionBar.setItemsColor(getThemedColor(Theme.key_player_actionBarTitle), false);
         actionBar.setItemsBackgroundColor(getThemedColor(Theme.key_player_actionBarSelector), false);
         actionBar.setTitleColor(getThemedColor(Theme.key_player_actionBarTitle));
@@ -521,7 +621,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         final ActionBarMenu menu = actionBar.createMenu();
         menu.setLayoutParams(LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.FILL));
         actionBarBackground = new View(context);
-        actionBarBackground.setBackgroundColor(getThemedColor(Theme.key_dialogBackground));
+        actionBarBackground.setBackgroundColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Color.TRANSPARENT : getThemedColor(Theme.key_dialogBackground));
         actionBar.addView(actionBarBackground, 0, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.FILL));
         actionBarBackground.setAlpha(0.0f);
         actionBar.setAlpha(0.0f);
@@ -539,10 +639,14 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
 
         actionBarShadow = new View(context);
         actionBarShadow.setAlpha(0.0f);
-        actionBarShadow.setBackgroundResource(R.drawable.header_shadow);
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            actionBarShadow.setBackgroundResource(R.drawable.header_shadow);
+        }
 
         playerShadow = new View(context);
-        playerShadow.setBackgroundColor(getThemedColor(Theme.key_dialogShadowLine));
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            playerShadow.setBackgroundColor(getThemedColor(Theme.key_dialogShadowLine));
+        }
         playerLayout = new FrameLayout(context) {
             @Override
             protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
@@ -844,7 +948,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         repeatButton.setShowSubmenuByMove(false);
         repeatButton.setAdditionalYOffset(-dp(166));
         M3ExpressiveButtonDrawable repeatDrawable = isM3 ? new M3ExpressiveButtonDrawable(tonalBg, tonalPressed, dp(26), dp(14), 0) : null;
-        repeatButton.setBackgroundDrawable(isM3 ? repeatDrawable : Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(18)));
+        repeatButton.setBackgroundDrawable(isM3 ? repeatDrawable : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.createSimpleSelectorCircleDrawable(dp(48), 0x00000000, Theme.multAlpha(getThemedColor(Theme.key_player_button), 0.15f)) : Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(18))));
         repeatButton.setVisibility(isVoice ? View.GONE : View.VISIBLE);
         bottomView.addView(repeatButton, LayoutHelper.createFrame(48, isM3 ? 52 : 48, Gravity.LEFT | Gravity.TOP));
         if (m3ButtonGroup != null) {
@@ -1044,7 +1148,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         prevButton.setLayerColor("Triangle 4", iconColor);
         prevButton.setLayerColor("Rectangle 4", iconColor);
         M3ExpressiveButtonDrawable prevDrawable = isM3 ? new M3ExpressiveButtonDrawable(tonalBg, tonalPressed, dp(26), dp(14), 0) : null;
-        prevButton.setBackgroundDrawable(isM3 ? prevDrawable : Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(22)));
+        prevButton.setBackgroundDrawable(isM3 ? prevDrawable : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.createSimpleSelectorCircleDrawable(dp(48), 0x00000000, Theme.multAlpha(getThemedColor(Theme.key_player_button), 0.15f)) : Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(22))));
         prevButton.setVisibility(isVoice ? View.GONE : View.VISIBLE);
         bottomView.addView(prevButton, LayoutHelper.createFrame(48, isM3 ? 52 : 48, Gravity.LEFT | Gravity.TOP));
         if (m3ButtonGroup != null) {
@@ -1088,7 +1192,11 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             playIconView.setImageDrawable(playPauseDrawable = new PlayPauseDrawable(28));
             playPauseDrawable.setPause(!MediaController.getInstance().isMessagePaused(), false);
             playIconView.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_player_button), PorterDuff.Mode.MULTIPLY));
-            playIconView.setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(24)));
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                playIconView.setBackground(Theme.createSimpleSelectorCircleDrawable(dp(48), Theme.multAlpha(getThemedColor(Theme.key_player_button), 0.12f), Theme.multAlpha(getThemedColor(Theme.key_player_button), 0.24f)));
+            } else {
+                playIconView.setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(24)));
+            }
             buttons[3] = playButton = playIconView;
             bottomView.addView(playButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.TOP));
         }
@@ -1202,7 +1310,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         nextButton.setLayerColor("Rectangle 4", iconColor);
         nextButton.setRotation(180f);
         M3ExpressiveButtonDrawable nextDrawable = isM3 ? new M3ExpressiveButtonDrawable(tonalBg, tonalPressed, dp(26), dp(14), 0) : null;
-        nextButton.setBackground(isM3 ? nextDrawable : Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(22)));
+        nextButton.setBackground(isM3 ? nextDrawable : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.createSimpleSelectorCircleDrawable(dp(48), 0x00000000, Theme.multAlpha(getThemedColor(Theme.key_player_button), 0.15f)) : Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(22))));
         nextButton.setVisibility(isVoice ? View.GONE : View.VISIBLE);
         bottomView.addView(nextButton, LayoutHelper.createFrame(48, isM3 ? 52 : 48, Gravity.LEFT | Gravity.TOP));
         if (m3ButtonGroup != null) {
@@ -1215,7 +1323,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         optionsButton.setLongClickEnabled(false);
         optionsButton.setAdditionalYOffset(-dp(157 + 40));
         M3ExpressiveButtonDrawable optionsDrawable = isM3 ? new M3ExpressiveButtonDrawable(tonalBg, tonalPressed, dp(26), dp(14), 0) : null;
-        optionsButton.setBackgroundDrawable(isM3 ? optionsDrawable : Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(18)));
+        optionsButton.setBackgroundDrawable(isM3 ? optionsDrawable : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.createSimpleSelectorCircleDrawable(dp(48), 0x00000000, Theme.multAlpha(getThemedColor(Theme.key_player_button), 0.15f)) : Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(18))));
         optionsButton.setOnClickListener(this::showMenuOptions);
 
         bottomView.addView(optionsButton, LayoutHelper.createFrame(48, isM3 ? 52 : 48, Gravity.LEFT | Gravity.TOP));
@@ -1816,7 +1924,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             if (speedIcon != null) {
                 speedIcon.setColor(color);
             }
-            playbackSpeedButton.setBackground(Theme.createSelectorDrawable(color & 0x19ffffff, 1, dp(14)));
+            playbackSpeedButton.setBackground(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.createSimpleSelectorCircleDrawable(dp(36), 0x00000000, Theme.multAlpha(color, 0.15f)) : Theme.createSelectorDrawable(color & 0x19ffffff, 1, dp(14)));
         }
         if (castItem != null) {
             castItem.setEnabledByColor(castItemButton != null && castItemButton.isConnected(), getThemedColor(Theme.key_actionBarDefaultSubmenuItem), getThemedColor(Theme.key_actionBarDefaultSubmenuItemIcon), getThemedColor(Theme.key_featuredStickers_addButton));
@@ -2632,12 +2740,22 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
                 }
             }
             if (playlist.size() > 1) {
-                playerLayout.setBackgroundColor(getThemedColor(Theme.key_player_background));
-                playerShadow.setVisibility(View.VISIBLE);
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    playerLayout.setBackground(null);
+                    playerShadow.setVisibility(View.GONE);
+                } else {
+                    playerLayout.setBackgroundColor(getThemedColor(Theme.key_player_background));
+                    playerShadow.setVisibility(View.VISIBLE);
+                }
                 listView.setPadding(0, listView.getPaddingTop(), 0, dp(179 + 52));
             } else {
-                playerLayout.setBackgroundColor(getThemedColor(Theme.key_player_background));
-                playerShadow.setVisibility(View.VISIBLE);
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    playerLayout.setBackground(null);
+                    playerShadow.setVisibility(View.GONE);
+                } else {
+                    playerLayout.setBackgroundColor(getThemedColor(Theme.key_player_background));
+                    playerShadow.setVisibility(View.VISIBLE);
+                }
                 listView.setPadding(0, listView.getPaddingTop(), 0, 0);
             }
             updateEmptyView();

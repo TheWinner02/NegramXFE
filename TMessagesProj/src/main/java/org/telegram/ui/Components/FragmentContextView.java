@@ -417,7 +417,7 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
         playButton.setScaleType(ImageView.ScaleType.CENTER);
         playButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_inappPlayerPlayPause), PorterDuff.Mode.MULTIPLY));
         playButton.setImageDrawable(playPauseDrawable = new PlayPauseDrawable(16));
-        playButton.setBackground(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? Theme.getRoundRectSelectorDrawable(dp(12), getThemedColor(Theme.key_inappPlayerPlayPause) & 0x2affffff) : Theme.createSelectorDrawable(getThemedColor(Theme.key_inappPlayerPlayPause) & 0x19ffffff, 1, dp(14)));
+        playButton.setBackground(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.createSimpleSelectorCircleDrawable(dp(36), 0x00000000, Theme.multAlpha(getThemedColor(Theme.key_inappPlayerPlayPause), 0.15f)) : (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? Theme.getRoundRectSelectorDrawable(dp(12), getThemedColor(Theme.key_inappPlayerPlayPause) & 0x2affffff) : Theme.createSelectorDrawable(getThemedColor(Theme.key_inappPlayerPlayPause) & 0x19ffffff, 1, dp(14))));
         addView(playButton, LayoutHelper.createFrame(36, 36, Gravity.TOP | Gravity.LEFT));
         ScaleStateListAnimator.apply(playButton);
         playButton.setOnClickListener(v -> {
@@ -707,7 +707,7 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
         closeButton = new ImageView(context);
         closeButton.setImageResource(R.drawable.miniplayer_close);
         closeButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_inappPlayerClose), PorterDuff.Mode.MULTIPLY));
-        closeButton.setBackground(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? Theme.getRoundRectSelectorDrawable(dp(12), getThemedColor(Theme.key_inappPlayerClose) & 0x2affffff) : Theme.createSelectorDrawable(getThemedColor(Theme.key_inappPlayerClose) & 0x19ffffff, 1, dp(14)));
+        closeButton.setBackground(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.createSimpleSelectorCircleDrawable(dp(36), 0x00000000, Theme.multAlpha(getThemedColor(Theme.key_inappPlayerClose), 0.15f)) : (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? Theme.getRoundRectSelectorDrawable(dp(12), getThemedColor(Theme.key_inappPlayerClose) & 0x2affffff) : Theme.createSelectorDrawable(getThemedColor(Theme.key_inappPlayerClose) & 0x19ffffff, 1, dp(14))));
         closeButton.setScaleType(ImageView.ScaleType.CENTER);
         addView(closeButton, LayoutHelper.createFrame(36, 36, Gravity.RIGHT | Gravity.TOP, 0, 0, 4, 0));
         ScaleStateListAnimator.apply(closeButton);
@@ -1018,7 +1018,7 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
             speedIcon.setColor(color);
         }
         if (playbackSpeedButton != null) {
-            playbackSpeedButton.setBackground(Theme.createSelectorDrawable(color & 0x19ffffff, 1, dp(14)));
+            playbackSpeedButton.setBackground(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.createSimpleSelectorCircleDrawable(dp(36), 0x00000000, Theme.multAlpha(color, 0.15f)) : Theme.createSelectorDrawable(color & 0x19ffffff, 1, dp(14)));
         }
 
         if (playButton != null) {
