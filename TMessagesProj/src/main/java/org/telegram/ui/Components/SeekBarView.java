@@ -553,32 +553,34 @@ public class SeekBarView extends FrameLayout {
         float left = selectorWidth / 2f, right = getMeasuredWidth() - selectorWidth / 2;
         float top = centerY - AndroidUtilities.dp(lineWidthDp) / 2f, bottom = centerY + AndroidUtilities.dp(lineWidthDp) / 2f;
 
-        rect.set(left, top, right, bottom);
-        drawProgressBar(canvas, rect, innerPaint1);
-        if (bufferedProgress > 0) {
-            innerPaint1.setColor(getThemedColor(Theme.key_player_progressCachedBackground));
-            rect.set(left, top, selectorWidth / 2f + bufferedProgress * (getMeasuredWidth() - selectorWidth), bottom);
+        if (needCustomDraw() != SLIDER_STYLE_IOS_GLASS) {
+            rect.set(left, top, right, bottom);
             drawProgressBar(canvas, rect, innerPaint1);
-        }
-        if (twoSided) {
-            canvas.drawRect(getMeasuredWidth() / 2 - AndroidUtilities.dp(1), getMeasuredHeight() / 2 - AndroidUtilities.dp(6), getMeasuredWidth() / 2 + AndroidUtilities.dp(1), getMeasuredHeight() / 2 + AndroidUtilities.dp(6), outerPaint1);
-            if (thumbX > (getMeasuredWidth() - selectorWidth) / 2) {
-                canvas.drawRect(getMeasuredWidth() / 2, getMeasuredHeight() / 2 - AndroidUtilities.dp(1), selectorWidth / 2 + thumbX, getMeasuredHeight() / 2 + AndroidUtilities.dp(1), outerPaint1);
-            } else {
-                canvas.drawRect(thumbX + selectorWidth / 2, getMeasuredHeight() / 2 - AndroidUtilities.dp(1), getMeasuredWidth() / 2, getMeasuredHeight() / 2 + AndroidUtilities.dp(1), outerPaint1);
+            if (bufferedProgress > 0) {
+                innerPaint1.setColor(getThemedColor(Theme.key_player_progressCachedBackground));
+                rect.set(left, top, selectorWidth / 2f + bufferedProgress * (getMeasuredWidth() - selectorWidth), bottom);
+                drawProgressBar(canvas, rect, innerPaint1);
             }
-        } else {
-            if (minProgress >= 0) {
-                rect.set(left + minProgress * (right - left), top, left + thumbX, bottom);
-                drawProgressBar(canvas, rect, outerPaint1);
-                int wasAlpha = outerPaint1.getAlpha();
-                rect.set(left, top, left + minProgress * (right - left), bottom);
-                outerPaint1.setAlpha((int) (0.50f * wasAlpha));
-                drawProgressBar(canvas, rect, outerPaint1);
-                outerPaint1.setAlpha(wasAlpha);
+            if (twoSided) {
+                canvas.drawRect(getMeasuredWidth() / 2 - AndroidUtilities.dp(1), getMeasuredHeight() / 2 - AndroidUtilities.dp(6), getMeasuredWidth() / 2 + AndroidUtilities.dp(1), getMeasuredHeight() / 2 + AndroidUtilities.dp(6), outerPaint1);
+                if (thumbX > (getMeasuredWidth() - selectorWidth) / 2) {
+                    canvas.drawRect(getMeasuredWidth() / 2, getMeasuredHeight() / 2 - AndroidUtilities.dp(1), selectorWidth / 2 + thumbX, getMeasuredHeight() / 2 + AndroidUtilities.dp(1), outerPaint1);
+                } else {
+                    canvas.drawRect(thumbX + selectorWidth / 2, getMeasuredHeight() / 2 - AndroidUtilities.dp(1), getMeasuredWidth() / 2, getMeasuredHeight() / 2 + AndroidUtilities.dp(1), outerPaint1);
+                }
             } else {
-                rect.set(left, top, left + thumbX, bottom);
-                drawProgressBar(canvas, rect, outerPaint1);
+                if (minProgress >= 0) {
+                    rect.set(left + minProgress * (right - left), top, left + thumbX, bottom);
+                    drawProgressBar(canvas, rect, outerPaint1);
+                    int wasAlpha = outerPaint1.getAlpha();
+                    rect.set(left, top, left + minProgress * (right - left), bottom);
+                    outerPaint1.setAlpha((int) (0.50f * wasAlpha));
+                    drawProgressBar(canvas, rect, outerPaint1);
+                    outerPaint1.setAlpha(wasAlpha);
+                } else {
+                    rect.set(left, top, left + thumbX, bottom);
+                    drawProgressBar(canvas, rect, outerPaint1);
+                }
             }
         }
 
@@ -672,6 +674,14 @@ public class SeekBarView extends FrameLayout {
             glassPaint.setStyle(Paint.Style.FILL);
             glassPaint.setColor(inactiveTrackColor);
             canvas.drawRoundRect(rect, trackRadius, trackRadius, glassPaint);
+
+            // 1.5. Buffered Track
+            if (bufferedProgress > 0) {
+                float buffRight = Math.max(left, Math.min(right, selectorWidth / 2f + bufferedProgress * (getMeasuredWidth() - selectorWidth)));
+                rect.set(left, trackTop, buffRight, trackBottom);
+                glassPaint.setColor(getThemedColor(Theme.key_player_progressCachedBackground));
+                canvas.drawRoundRect(rect, trackRadius, trackRadius, glassPaint);
+            }
 
             // 2. Active Track: Glowing blue / theme progress bar
             float activeRight = Math.max(left, Math.min(right, thumbX + selectorWidth / 2f));

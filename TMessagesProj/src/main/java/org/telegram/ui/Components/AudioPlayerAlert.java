@@ -750,7 +750,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             }
         };
         seekBarView.setLineWidth(4);
-        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             seekBarView.setSliderStyleOverride(SeekBarView.SLIDER_STYLE_DEFAULT);
         }
         seekBarView.setDelegate(new SeekBarView.SeekBarViewDelegate() {
@@ -882,12 +882,36 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             bottomView = new FrameLayout(context) {
                 @Override
                 protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-                    int count = 5;
-                    int dist = ((right - left) - dp(8 + 48 * 5)) / 4;
-                    for (int a = 0; a < count; a++) {
-                        int l = dp(4 + 48 * a) + dist * a;
-                        int t = dp(9);
-                        buttons[a].layout(l, t, l + buttons[a].getMeasuredWidth(), t + buttons[a].getMeasuredHeight());
+                    MessageObject currentMsg = MediaController.getInstance().getPlayingMessageObject();
+                    boolean isVoice = currentMsg != null && currentMsg.isVoice();
+                    int t = dp(9);
+                    if (!isVoice) {
+                        int count = 5;
+                        int dist = ((right - left) - dp(8 + 48 * 5)) / 4;
+                        for (int a = 0; a < count; a++) {
+                            if (buttons[a] != null) {
+                                int l = dp(4 + 48 * a) + dist * a;
+                                buttons[a].layout(l, t, l + buttons[a].getMeasuredWidth(), t + buttons[a].getMeasuredHeight());
+                            }
+                        }
+                    } else {
+                        int cx = (right - left) / 2;
+                        if (playButton != null) {
+                            playButton.layout(cx - playButton.getMeasuredWidth() / 2, t, cx + playButton.getMeasuredWidth() / 2, t + playButton.getMeasuredHeight());
+                        }
+                        int spacing = dp(24);
+                        if (backwardButton != null && playButton != null) {
+                            int bl = cx - playButton.getMeasuredWidth() / 2 - spacing - backwardButton.getMeasuredWidth();
+                            backwardButton.layout(bl, t, bl + backwardButton.getMeasuredWidth(), t + backwardButton.getMeasuredHeight());
+                        }
+                        if (forwardButton != null && playButton != null) {
+                            int fl = cx + playButton.getMeasuredWidth() / 2 + spacing;
+                            forwardButton.layout(fl, t, fl + forwardButton.getMeasuredWidth(), t + forwardButton.getMeasuredHeight());
+                        }
+                        if (optionsButton != null && optionsButton.getVisibility() != GONE) {
+                            int r = (right - left) - dp(4);
+                            optionsButton.layout(r - optionsButton.getMeasuredWidth(), t, r, t + optionsButton.getMeasuredHeight());
+                        }
                     }
                 }
             };
@@ -909,6 +933,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             forwardButton.setTextColor(getThemedColor(Theme.key_player_button));
             forwardButton.setPadding(0, 0, 0, 0);
             forwardButton.setVisibility(isVoice ? View.VISIBLE : View.GONE);
+            buttons[6] = forwardButton;
             bottomView.addView(forwardButton, frame);
 
             backwardButton = new TextView(context);
@@ -918,6 +943,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             backwardButton.setTextColor(getThemedColor(Theme.key_player_button));
             backwardButton.setPadding(0, 0, 0, 0);
             backwardButton.setVisibility(isVoice ? View.VISIBLE : View.GONE);
+            buttons[5] = backwardButton;
             bottomView.addView(backwardButton, frame);
 
             if (Build.VERSION.SDK_INT >= 21) {
@@ -1007,9 +1033,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         final int iconColor = getThemedColor(Theme.key_player_button);
         float touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
 
-        buttons[1] = backwardButton;
-
-        buttons[2] = prevButton = new RLottieImageView(context) {
+        buttons[1] = prevButton = new RLottieImageView(context) {
             float startX;
             float startY;
 
@@ -1181,7 +1205,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
 
             M3ExpressiveButtonDrawable playDrawable = new M3ExpressiveButtonDrawable(getThemedColor(Theme.key_featuredStickers_addButton), getThemedColor(Theme.key_featuredStickers_addButtonPressed), dp(26), dp(14), 0);
             playLayout.setBackground(playDrawable);
-            buttons[3] = playButton = playLayout;
+            buttons[2] = playButton = playLayout;
             bottomView.addView(playButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 52, Gravity.LEFT | Gravity.TOP));
             if (m3ButtonGroup != null) {
                 m3ButtonGroup.registerChild(playButton, 2.4f, playDrawable);
@@ -1192,12 +1216,8 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             playIconView.setImageDrawable(playPauseDrawable = new PlayPauseDrawable(28));
             playPauseDrawable.setPause(!MediaController.getInstance().isMessagePaused(), false);
             playIconView.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_player_button), PorterDuff.Mode.MULTIPLY));
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
-                playIconView.setBackground(Theme.createSimpleSelectorCircleDrawable(dp(48), Theme.multAlpha(getThemedColor(Theme.key_player_button), 0.12f), Theme.multAlpha(getThemedColor(Theme.key_player_button), 0.24f)));
-            } else {
-                playIconView.setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(24)));
-            }
-            buttons[3] = playButton = playIconView;
+            playIconView.setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(24)));
+            buttons[2] = playButton = playIconView;
             bottomView.addView(playButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.TOP));
         }
         playButton.setOnClickListener(v -> {
@@ -1211,7 +1231,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             }
         });
 
-        buttons[4] = nextButton = new RLottieImageView(context) {
+        buttons[3] = nextButton = new RLottieImageView(context) {
 
             float startX;
             float startY;
