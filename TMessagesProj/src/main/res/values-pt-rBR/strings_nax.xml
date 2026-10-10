@@ -342,5 +342,5 @@
     <string name="UiStyle">Estilo de design da interface</string>
     <string name="UiStyleClassic">Telegram Clássico</string>
     <string name="UiStyleMaterial3Expressive">Expressive</string>
-    <string name="UiStyleIosLiquidGlass">Liquid Glass</string>
+    <string name="UiStyleIosLiquidGlass">Glass</string>
 </resources>

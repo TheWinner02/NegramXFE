@@ -278,7 +278,7 @@
     <string name="BlurRadiusGlobal">Genel bulanıklık yoğunluğu</string>
     <string name="MainTabsGlassAlpha">Alt çubuk cam opaklığı</string>
     <string name="MainTabsBlurRadius">Alt çubuk bulanıklık yoğunluğu</string>
-    <string name="ActionBarGlassAlpha">Liquid Glass cam opaklığı (Genel)</string>
+    <string name="ActionBarGlassAlpha">Glass cam opaklığı (Genel)</string>
     <string name="ActionBarBlurRadius">Üst çubuk bulanıklık yoğunluğu</string>
     <string name="OpenProfileByAvatar">Avatara dokunarak profili aç</string>
 </resources>

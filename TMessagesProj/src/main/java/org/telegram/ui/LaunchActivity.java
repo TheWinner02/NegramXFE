@@ -1162,8 +1162,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) sideMenuContainer.getLayoutParams();
         if (layoutParams != null) {
             android.graphics.Point screenSize = AndroidUtilities.getRealScreenSize();
-            int maxDrawerWidth = isM3 ? AndroidUtilities.dp(360) : AndroidUtilities.dp(320);
-            layoutParams.width = AndroidUtilities.isTablet() ? maxDrawerWidth : Math.min(maxDrawerWidth, Math.min(screenSize.x, screenSize.y) - AndroidUtilities.dp(56));
+            layoutParams.width = (int) (Math.min(screenSize.x, screenSize.y) * 0.75f);
             layoutParams.height = LayoutHelper.MATCH_PARENT;
             sideMenuContainer.setLayoutParams(layoutParams);
         }
@@ -7559,6 +7558,14 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         AndroidUtilities.resetTabletFlag();
         invalidateTabletMode();
         checkLayout();
+        if (sideMenuContainer != null) {
+            FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) sideMenuContainer.getLayoutParams();
+            if (layoutParams != null) {
+                android.graphics.Point screenSize = AndroidUtilities.getRealScreenSize();
+                layoutParams.width = (int) (Math.min(screenSize.x, screenSize.y) * 0.75f);
+                sideMenuContainer.setLayoutParams(layoutParams);
+            }
+        }
         PipRoundVideoView pipRoundVideoView = PipRoundVideoView.getInstance();
         if (pipRoundVideoView != null) {
             pipRoundVideoView.onConfigurationChanged();

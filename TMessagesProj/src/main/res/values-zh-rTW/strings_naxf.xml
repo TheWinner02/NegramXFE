@@ -302,7 +302,7 @@
     <string name="BlurRadiusGlobal">全域模糊強度</string>
     <string name="MainTabsGlassAlpha">底欄毛玻璃不透明度</string>
     <string name="MainTabsBlurRadius">底欄模糊強度</string>
-    <string name="ActionBarGlassAlpha">Liquid Glass 不透明度（全域）</string>
+    <string name="ActionBarGlassAlpha">Glass 不透明度（全域）</string>
     <string name="ActionBarBlurRadius">頂欄模糊強度</string>
     <string name="TranslatorModeAppend">追加 (Append)</string>
     <string name="TranslatorModeInline">替換 (Inline)</string>

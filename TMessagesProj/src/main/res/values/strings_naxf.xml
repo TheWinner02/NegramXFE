@@ -151,7 +151,7 @@
     <string name="MainTabsGlassAlpha">Navbar glass opacity</string>
     <string name="MainTabsBlurRadius">Navbar blur intensity</string>
     <string name="ForceActionBarBlur">Blur chat top bar</string>
-    <string name="ActionBarGlassAlpha">Liquid Glass opacity (Global)</string>
+    <string name="ActionBarGlassAlpha">Glass opacity (Global)</string>
     <string name="ActionBarBlurRadius">Topbar blur intensity</string>
     <string name="AyuMoments" translatable="false">Ayugram</string>
     <string name="AyuMomentsPreviewMessage">Do your best, leave the rest to fate</string>

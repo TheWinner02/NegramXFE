@@ -278,7 +278,7 @@
     <string name="BlurRadiusGlobal">شدت تار شدن سراسری</string>
     <string name="MainTabsGlassAlpha">میزان ماتی شیشه‌ای نوار پایین</string>
     <string name="MainTabsBlurRadius">شدت تار شدن نوار پایین</string>
-    <string name="ActionBarGlassAlpha">میزان ماتی Liquid Glass (سراسری)</string>
+    <string name="ActionBarGlassAlpha">میزان ماتی Glass (سراسری)</string>
     <string name="ActionBarBlurRadius">شدت تار شدن نوار بالا</string>
     <string name="OpenProfileByAvatar">باز کردن نمایه با لمس تصویر نمایه</string>
 </resources>

@@ -278,7 +278,7 @@
     <string name="MainTabsGlassAlpha">Opacità vetro barra inferiore</string>
     <string name="MainTabsBlurRadius">Intensità sfocatura barra inferiore</string>
     <string name="ForceActionBarBlur">Sfoca barra superiore nelle chat</string>
-    <string name="ActionBarGlassAlpha">Opacità vetro Liquid Glass (Globale)</string>
+    <string name="ActionBarGlassAlpha">Opacità vetro Glass (Globale)</string>
     <string name="ActionBarBlurRadius">Intensità sfocatura barra superiore</string>
     <string name="OpenProfileByAvatar">Apri il profilo toccando l\'avatar</string>
 </resources>

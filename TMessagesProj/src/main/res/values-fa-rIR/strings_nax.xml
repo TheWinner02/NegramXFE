@@ -339,5 +339,5 @@
     <string name="UiStyle">سبک طراحی رابط کاربری</string>
     <string name="UiStyleClassic">تلگرام کلاسیک</string>
     <string name="UiStyleMaterial3Expressive">Expressive</string>
-    <string name="UiStyleIosLiquidGlass">Liquid Glass</string>
+    <string name="UiStyleIosLiquidGlass">Glass</string>
 </resources>

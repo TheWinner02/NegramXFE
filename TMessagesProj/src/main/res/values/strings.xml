@@ -6277,7 +6277,7 @@
     <string name="LiteOptionsTopics">Side menu in topics</string>
     <string name="LiteOptionsSpoiler">Animated spoiler effect</string>
     <string name="LiteOptionsBlur2">Blur</string>
-    <string name="LiteOptionsLiquidGlass">Liquid Glass</string>
+    <string name="LiteOptionsLiquidGlass">Glass</string>
     <string name="LiteOptionsScale">Zoom animations</string>
     <string name="LiteOptionsThanos">Dust-effect deletion</string>
     <string name="LiteOptionsCalls">Animations in Calls</string>

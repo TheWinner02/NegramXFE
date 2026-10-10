@@ -301,7 +301,7 @@
     <string name="BlurRadiusGlobal">グローバルぼかし強度</string>
     <string name="MainTabsGlassAlpha">下部バーのすりガラス不透明度</string>
     <string name="MainTabsBlurRadius">下部バーのぼかし強度</string>
-    <string name="ActionBarGlassAlpha">Liquid Glassの不透明度（全体）</string>
+    <string name="ActionBarGlassAlpha">Glassの不透明度（全体）</string>
     <string name="ActionBarBlurRadius">上部バーのぼかし強度</string>
     <string name="TranslatorModeAppend">追記 (Append)</string>
     <string name="TranslatorModeInline">置き換え (Inline)</string>

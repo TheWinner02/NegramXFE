@@ -243,7 +243,7 @@
     <string name="SliderStyle">Slider Style</string>
     <string name="StyleModern">Modern</string>
     <string name="StyleMaterialDesign3" translatable="false">Material Design 3</string>
-    <string name="StyleIosLiquidGlass" translatable="false">iOS Liquid Glass</string>
+    <string name="StyleIosLiquidGlass" translatable="false">iOS Glass</string>
     <string name="StyleIos" translatable="false">iOS</string>
     <string name="SaveDeletedExclusionMenu">Save Deleted</string>
     <string name="SaveDeletedExcluded">Exclude</string>
@@ -467,5 +467,5 @@
     <string name="UiStyle">UI Design Style</string>
     <string name="UiStyleClassic">Telegram</string>
     <string name="UiStyleMaterial3Expressive">Expressive</string>
-    <string name="UiStyleIosLiquidGlass">Liquid Glass</string>
+    <string name="UiStyleIosLiquidGlass">Glass</string>
 </resources>

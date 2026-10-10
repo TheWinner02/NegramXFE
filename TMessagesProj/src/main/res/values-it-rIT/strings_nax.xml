@@ -350,5 +350,5 @@ Non possiamo aiutarti in questo caso; se hai problemi di accesso, contatta il Su
     <string name="DisableSwipeToNext">Disabilita \"Scorri verso il Prossimo\"</string>
     <string name="UiStyle">Stile Interfaccia UI</string>
     <string name="UiStyleMaterial3Expressive">Expressive</string>
-    <string name="UiStyleIosLiquidGlass">Liquid Glass</string>
+    <string name="UiStyleIosLiquidGlass">Glass</string>
 </resources>

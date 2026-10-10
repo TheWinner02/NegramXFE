@@ -449,5 +449,5 @@
     <string name="UiStyle">介面設計風格</string>
     <string name="UiStyleClassic">傳統 Telegram</string>
     <string name="UiStyleMaterial3Expressive">Expressive</string>
-    <string name="UiStyleIosLiquidGlass">Liquid Glass</string>
+    <string name="UiStyleIosLiquidGlass">Glass</string>
 </resources>

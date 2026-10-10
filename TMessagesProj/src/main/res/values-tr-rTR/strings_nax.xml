@@ -335,5 +335,5 @@
     <string name="UiStyle">Arayüz Tasarım Stili</string>
     <string name="UiStyleClassic">Klasik Telegram</string>
     <string name="UiStyleMaterial3Expressive">Expressive</string>
-    <string name="UiStyleIosLiquidGlass">Liquid Glass</string>
+    <string name="UiStyleIosLiquidGlass">Glass</string>
 </resources>

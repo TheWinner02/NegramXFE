@@ -280,7 +280,7 @@
     <string name="BlurRadiusGlobal">Intensitas buram global</string>
     <string name="MainTabsGlassAlpha">Opasitas kaca bilah bawah</string>
     <string name="MainTabsBlurRadius">Intensitas buram bilah bawah</string>
-    <string name="ActionBarGlassAlpha">Opasitas Liquid Glass (Global)</string>
+    <string name="ActionBarGlassAlpha">Opasitas Glass (Global)</string>
     <string name="ActionBarBlurRadius">Intensitas buram bilah atas</string>
     <string name="OpenProfileByAvatar">Buka profil dengan mengetuk avatar</string>
 </resources>

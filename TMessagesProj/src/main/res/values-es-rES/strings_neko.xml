@@ -278,7 +278,7 @@
     <string name="BlurRadiusGlobal">Intensidad de desenfoque global</string>
     <string name="MainTabsGlassAlpha">Opacidad de cristal de la barra inferior</string>
     <string name="MainTabsBlurRadius">Intensidad de desenfoque de la barra inferior</string>
-    <string name="ActionBarGlassAlpha">Opacidad de Liquid Glass (Global)</string>
+    <string name="ActionBarGlassAlpha">Opacidad de Glass (Global)</string>
     <string name="ActionBarBlurRadius">Intensidad de desenfoque de la barra superior</string>
     <string name="OpenProfileByAvatar">Abrir el perfil al tocar el avatar</string>
 </resources>
