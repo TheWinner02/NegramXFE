@@ -920,7 +920,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             if (child == viewPages[0] || (viewPages.length > 1 && child == viewPages[1]) || child == topPanelLayout || child == filterTabsView) {
                 canvas.save();
 
-                final boolean doNotClip = child == topPanelLayout || child == filterTabsView;
+                final boolean doNotClip = child == topPanelLayout || child == filterTabsView || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
                 if (!doNotClip) {
                     canvas.clipRect(0, -getY() + getActionBarTop() + getActionBarFullHeight(), getMeasuredWidth(), getMeasuredHeight());
                 }
@@ -1144,7 +1144,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
             }
             if (!hasMainTabs && communityId == 0) {
-                AndroidUtilities.drawNavigationBarProtection(canvas, this, getThemedColor(Theme.key_windowBackgroundWhite), navigationBarHeight);
+                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    AndroidUtilities.drawNavigationBarProtection(canvas, this, getThemedColor(Theme.key_windowBackgroundWhite), navigationBarHeight);
+                }
             }
             wasDrawn = true;
         }
@@ -2115,13 +2117,16 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
             ignoreLayout = true;
             t = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                t += dp(10);
+            }
             if (hasStories && !actionModeFullyShowed) {
                 t += dp(DialogStoriesCell.HEIGHT_IN_DP);
             }
             if (!actionModeFullyShowed) {
                 t += dp(SEARCH_FIELD_HEIGHT);
             }
-            additionalPadding = 0;
+            additionalPadding = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(10) : 0;
 
             final float filterTabsVisibility = getFilterTabsVisibilityFactor(false);
             final float topPanelsVisibility = topPanelLayout != null ? topPanelLayout.getMetadata().getTotalVisibility() : 0f;
@@ -3635,7 +3640,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             } else {
                 actionBar.setTitle(actionBarTitleNax = getString(R.string.SelectChat));
             }
-            actionBar.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+            if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                actionBar.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+            }
             actionBar.setOnLongClickListener(v -> {
                 if (NekoConfig.hideAllTab.Bool() && filterTabsView != null && filterTabsView.getDefaultTabId() != filterTabsView.getCurrentTabId()) {
                     filterTabsView.toggleAllTabs(true);
@@ -4225,6 +4232,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         ContentView contentView = new ContentView(context);
         fragmentView = contentView;
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            hasOwnBackground = true;
+            contentView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+        }
 
         viewPositionWatcher = new ViewPositionWatcher(contentView);
         iBlur3FactoryFrostedLiquidGlass.setSourceRootView(viewPositionWatcher, contentView);
@@ -14758,13 +14769,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         int validNodeCount = 1;
         if (hasMainTabs && !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool()) {
             iBlur3PositionMainTabs.set(0, mainTabTop, fragmentView.getMeasuredWidth(), mainTabBottom);
-            iBlur3PositionMainTabs.inset(0, LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0 : -dp(48));
+            iBlur3PositionMainTabs.inset(0, LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : -dp(48));
             validNodeCount = 2;
         } else if (commentView != null && chatInputViewsContainer != null) {
             iBlur3PositionMainTabs.set(0,
                 fragmentView.getMeasuredHeight() - calculateListViewPaddingBottom(),
                 fragmentView.getMeasuredWidth(), fragmentView.getMeasuredHeight());
-            iBlur3PositionMainTabs.inset(0, LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0 : -dp(48));
+            iBlur3PositionMainTabs.inset(0, LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : -dp(48));
             validNodeCount = 2;
         }
 

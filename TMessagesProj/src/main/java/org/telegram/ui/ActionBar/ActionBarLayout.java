@@ -519,7 +519,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             if (fragment == null || fragment.getActionBar() == null) {
                 return;
             }
-            if (fragment instanceof ChatActivity || fragment instanceof SettingsActivity) {
+            if (fragment instanceof ChatActivity || fragment instanceof SettingsActivity || fragment instanceof org.telegram.ui.DialogsActivity) {
                 return;
             }
             if (fragment.getGlassSource() != null && !(fragment.getGlassSource().getFallbackSource() instanceof SubSettingsFallbackColor)) {
