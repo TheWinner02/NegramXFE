@@ -877,7 +877,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     }
 
     public float getActionModeFactor() {
-        return actionMode != null ? actionMode.getAlpha() : 0;
+        return actionMode != null && actionMode.getVisibility() == VISIBLE ? actionMode.getAlpha() : 0;
     }
 
     public ActionBarMenu createActionMode(boolean needTop, String tag) {
@@ -949,6 +949,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         layoutParams.gravity = Gravity.RIGHT;
         actionMode.setLayoutParams(layoutParams);
         actionMode.setVisibility(INVISIBLE);
+        actionMode.setAlpha(0.0f);
 
 //        if (occupyStatusBar && needTop && actionModeTop == null && !blurredBackground) {
 //            actionModeTop = new View(getContext());
@@ -1234,6 +1235,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 if (actionModeAnimation != null && actionModeAnimation.equals(animation)) {
                     actionModeAnimation = null;
                     actionMode.setVisibility(INVISIBLE);
+                    actionMode.setAlpha(0.0f);
                     if (actionModeExtraView != null) {
                         actionModeExtraView.setVisibility(INVISIBLE);
                     }
