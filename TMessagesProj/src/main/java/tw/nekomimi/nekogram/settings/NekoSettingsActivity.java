@@ -191,16 +191,15 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
         SizeNotifierFrameLayout frameLayout = (SizeNotifierFrameLayout) fragmentView;
         searchListView = new BlurredRecyclerView(context);
         searchListView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
-        searchListView.setVerticalScrollBarEnabled(false);
-        searchListView.setClipToPadding(false);
-        searchListView.setPadding(0, getM3HeaderTopPadding(), 0, dp(80));
+        int searchTopPadding = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? getIosGlassHeaderTopPadding() : getM3HeaderTopPadding();
+        searchListView.setPadding(0, searchTopPadding, 0, dp(80));
         searchListView.setVisibility(View.GONE);
 
         searchEmptyView = new StickerEmptyView(context, null, StickerEmptyView.STICKER_TYPE_SEARCH);
         searchEmptyView.title.setText(getString(R.string.NoResult));
         searchEmptyView.subtitle.setVisibility(View.GONE);
         searchEmptyView.setVisibility(View.GONE);
-        searchEmptyView.setPadding(0, getM3HeaderTopPadding(), 0, dp(80));
+        searchEmptyView.setPadding(0, searchTopPadding, 0, dp(80));
         frameLayout.addView(searchEmptyView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
@@ -388,6 +387,21 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
             SettingsBackupHelper.backupSettings(getParentActivity(), resourceProvider);
         } else if (position == appRestartRow) {
             AppRestartHelper.triggerRebirth(getParentActivity(), new Intent(getParentActivity(), LaunchActivity.class));
+        }
+    }
+
+    @Override
+    public void onInsets(int left, int top, int right, int bottom) {
+        super.onInsets(left, top, right, bottom);
+        boolean m3Expressive = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+        boolean iosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        int topPadding = m3Expressive ? getM3HeaderTopPadding() : (iosGlass ? getIosGlassHeaderTopPadding() : 0);
+        int bottomPadding = bottom + ((m3Expressive || iosGlass) ? dp(80) : 0);
+        if (searchListView != null) {
+            searchListView.setPadding(0, topPadding, 0, bottomPadding);
+        }
+        if (searchEmptyView != null) {
+            searchEmptyView.setPadding(0, topPadding, 0, bottomPadding);
         }
     }
 

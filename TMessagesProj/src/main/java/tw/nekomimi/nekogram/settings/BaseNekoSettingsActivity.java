@@ -170,7 +170,7 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
             });
             actionBar.setM3CollapseProgress(0.0f);
         } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
-            listView.setPadding(0, 0, 0, dp(80));
+            listView.setPadding(0, getIosGlassHeaderTopPadding(), 0, dp(80));
             listView.setSections(
                 this::isM3SettingsSectionView,
                 this::isM3SettingsSectionViewType,
@@ -248,6 +248,11 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
         int statusBar = actionBar != null && actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0;
         int extra = actionBar != null ? actionBar.getM3ExpandedExtraHeight() : AndroidUtilities.dp(76);
         return statusBar + ActionBar.getCurrentActionBarHeight() + extra;
+    }
+
+    protected int getIosGlassHeaderTopPadding() {
+        int statusBar = actionBar != null && actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0;
+        return statusBar + ActionBar.getCurrentActionBarHeight() + AndroidUtilities.dp(10);
     }
 
     protected String getKey() {
@@ -342,8 +347,9 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
     @Override
     public void onInsets(int left, int top, int right, int bottom) {
         boolean m3Expressive = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-        int topPadding = m3Expressive ? getM3HeaderTopPadding() : 0;
-        int bottomPadding = bottom + (m3Expressive ? dp(80) : 0);
+        boolean iosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        int topPadding = m3Expressive ? getM3HeaderTopPadding() : (iosGlass ? getIosGlassHeaderTopPadding() : 0);
+        int bottomPadding = bottom + ((m3Expressive || iosGlass) ? dp(80) : 0);
         listView.setPadding(0, topPadding, 0, bottomPadding);
         listView.setClipToPadding(false);
         if (actionBar != null && actionBar.isM3LargeFlexible()) {

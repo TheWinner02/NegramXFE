@@ -185,7 +185,7 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
                 true
             );
         } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
-            listView.setPadding(0, 0, 0, dp(80));
+            listView.setPadding(0, getIosGlassHeaderTopPadding(), 0, dp(80));
             actionBar.setAdaptiveBackground(listView);
             listView.setSections(
                 this::isM3SettingsSectionView,
@@ -239,6 +239,11 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
         return statusBar + ActionBar.getCurrentActionBarHeight() + extra;
     }
 
+    protected int getIosGlassHeaderTopPadding() {
+        int statusBar = actionBar != null && actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0;
+        return statusBar + ActionBar.getCurrentActionBarHeight() + AndroidUtilities.dp(10);
+    }
+
     protected void onActionBarItemClick(int id) {
     }
 
@@ -259,7 +264,7 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
     @Override
     public void onInsets(int left, int top, int right, int bottom) {
         int topPadding = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ?
-                getM3HeaderTopPadding() : 0;
+                getM3HeaderTopPadding() : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? getIosGlassHeaderTopPadding() : 0);
         listView.setPadding(0, topPadding, 0, bottom + dp(80));
         listView.setClipToPadding(false);
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) tooltip.getLayoutParams();

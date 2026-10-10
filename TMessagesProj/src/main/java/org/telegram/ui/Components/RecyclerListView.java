@@ -2865,6 +2865,17 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
 
     private boolean ignoreLayout;
 
+    @Override
+    public void setPadding(int left, int top, int right, int bottom) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            Integer glassPadding = (Integer) getTag(R.id.ios_glass_padded_tag);
+            if (glassPadding != null && top < glassPadding) {
+                top = glassPadding;
+            }
+        }
+        super.setPadding(left, top, right, bottom);
+    }
+
     public void setPadding(int left, int top, int right, int bottom, boolean doNotRequestLayout) {
         if (doNotRequestLayout) {
             setPaddingWithoutRequestLayout(left, top, right, bottom);
@@ -2874,9 +2885,15 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
     }
 
     public void setPaddingWithoutRequestLayout(int left, int top, int right, int bottom) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            Integer glassPadding = (Integer) getTag(R.id.ios_glass_padded_tag);
+            if (glassPadding != null && top < glassPadding) {
+                top = glassPadding;
+            }
+        }
         if (getPaddingLeft() != left || getPaddingTop() != top || getPaddingRight() != right || getPaddingBottom() != bottom) {
             ignoreLayout = true;
-            setPadding(left, top, right, bottom);
+            super.setPadding(left, top, right, bottom);
             ignoreLayout = false;
         }
     }

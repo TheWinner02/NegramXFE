@@ -90,6 +90,7 @@ import org.telegram.ui.Components.FloatingDebug.FloatingDebugProvider;
 import org.telegram.ui.Components.GroupCallPip;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.LaunchActivity;
+import org.telegram.ui.SettingsActivity;
 import org.telegram.ui.Stories.StoryViewer;
 
 import java.util.ArrayList;
@@ -131,6 +132,24 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             lastFragment = fragmentsStack.get(fragmentsStack.size() - 1);
         }
         return lastFragment != null && lastFragment.getLastStoryViewer() != null && lastFragment.getLastStoryViewer().attachedToParent();
+    }
+
+    public static View findScrollableView(View view) {
+        if (view instanceof RecyclerView
+                || view instanceof android.widget.ScrollView
+                || view instanceof androidx.core.widget.NestedScrollView) {
+            return view;
+        }
+        if (view instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) view;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                View found = findScrollableView(vg.getChildAt(i));
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     public class LayoutContainer extends FrameLayout {
@@ -345,40 +364,32 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             }
         }
 
-        private View findScrollableView(View view) {
-            if (view instanceof RecyclerView
-                    || view instanceof android.widget.ScrollView
-                    || view instanceof androidx.core.widget.NestedScrollView) {
-                return view;
-            }
-            if (view instanceof ViewGroup) {
-                ViewGroup vg = (ViewGroup) view;
-                for (int i = 0; i < vg.getChildCount(); i++) {
-                    View found = findScrollableView(vg.getChildAt(i));
-                    if (found != null) {
-                        return found;
-                    }
-                }
-            }
-            return null;
-        }
-
         private void applyLiquidGlassPadding(View view, int actionBarHeight) {
-            if (view == null || actionBarHeight <= 0) return;
+            if (view == null) return;
+            BaseFragment fragment = getLastFragment();
+            if (fragment instanceof ChatActivity || fragment instanceof SettingsActivity) {
+                return;
+            }
             setupSubSettingsGlass(view);
+
+            int abHeight = actionBarHeight;
+            if (abHeight <= 0 && fragment != null && fragment.getActionBar() != null) {
+                ActionBar bar = fragment.getActionBar();
+                abHeight = (bar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight();
+            }
+            if (abHeight <= 0) return;
+
+            final int targetPaddingTop = abHeight + AndroidUtilities.dp(10);
             View scrollableView = findScrollableView(view);
             if (scrollableView != null) {
                 if (scrollableView instanceof ViewGroup) {
                     ((ViewGroup) scrollableView).setClipToPadding(false);
                 }
-                Integer appliedPadding = (Integer) scrollableView.getTag(R.id.ios_glass_padded_tag);
-                if (appliedPadding == null || appliedPadding != actionBarHeight) {
-                    int currentPaddingTop = scrollableView.getPaddingTop();
-                    int basePaddingTop = (appliedPadding != null) ? (currentPaddingTop - appliedPadding) : currentPaddingTop;
-                    scrollableView.setTag(R.id.ios_glass_padded_tag, actionBarHeight);
+                scrollableView.setTag(R.id.ios_glass_padded_tag, targetPaddingTop);
+                if (scrollableView.getPaddingTop() < targetPaddingTop) {
                     scrollableView.setPadding(
                         scrollableView.getPaddingLeft(),
-                        basePaddingTop + actionBarHeight,
+                        targetPaddingTop,
                         scrollableView.getPaddingRight(),
                         scrollableView.getPaddingBottom()
                     );
@@ -393,14 +404,11 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     parent = (View) parent.getParent();
                 }
             } else {
-                Integer appliedPadding = (Integer) view.getTag(R.id.ios_glass_padded_tag);
-                if (appliedPadding == null || appliedPadding != actionBarHeight) {
-                    int currentPaddingTop = view.getPaddingTop();
-                    int basePaddingTop = (appliedPadding != null) ? (currentPaddingTop - appliedPadding) : currentPaddingTop;
-                    view.setTag(R.id.ios_glass_padded_tag, actionBarHeight);
+                view.setTag(R.id.ios_glass_padded_tag, targetPaddingTop);
+                if (view.getPaddingTop() < targetPaddingTop) {
                     view.setPadding(
                         view.getPaddingLeft(),
-                        basePaddingTop + actionBarHeight,
+                        targetPaddingTop,
                         view.getPaddingRight(),
                         view.getPaddingBottom()
                     );
@@ -511,7 +519,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             if (fragment == null || fragment.getActionBar() == null) {
                 return;
             }
-            if (fragment instanceof ChatActivity) {
+            if (fragment instanceof ChatActivity || fragment instanceof SettingsActivity) {
                 return;
             }
             if (fragment.getGlassSource() != null && !(fragment.getGlassSource().getFallbackSource() instanceof SubSettingsFallbackColor)) {

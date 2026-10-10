@@ -56,14 +56,17 @@ import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.NotificationsController;
 import org.telegram.messenger.SecretChatHelper;
 import org.telegram.messenger.SendMessagesHelper;
+import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.utils.LeakDetector;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.ui.ArticleViewer;
+import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.LaunchActivity;
+import org.telegram.ui.SettingsActivity;
 import org.telegram.ui.Stories.StoryViewer;
 import org.telegram.ui.bots.BotWebViewAttachedSheet;
 
@@ -1495,6 +1498,25 @@ public abstract class BaseFragment {
     public WindowInsetsCompat onInsetsInternal(@NonNull View view, @NonNull WindowInsetsCompat windowInsets) {
         final Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars() | WindowInsetsCompat.Type.statusBars());
         onInsets(insets.left, insets.top, insets.right, bottomInset = insets.bottom);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && !(this instanceof ChatActivity) && !(this instanceof SettingsActivity) && actionBar != null) {
+            int abHeight = (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight();
+            int targetPaddingTop = abHeight + AndroidUtilities.dp(10);
+            View scrollableView = fragmentView != null ? ActionBarLayout.findScrollableView(fragmentView) : null;
+            if (scrollableView != null) {
+                scrollableView.setTag(R.id.ios_glass_padded_tag, targetPaddingTop);
+                if (scrollableView.getPaddingTop() < targetPaddingTop) {
+                    scrollableView.setPadding(
+                        scrollableView.getPaddingLeft(),
+                        targetPaddingTop,
+                        scrollableView.getPaddingRight(),
+                        scrollableView.getPaddingBottom()
+                    );
+                }
+                if (scrollableView instanceof ViewGroup) {
+                    ((ViewGroup) scrollableView).setClipToPadding(false);
+                }
+            }
+        }
         return WindowInsetsCompat.CONSUMED;
     }
 
