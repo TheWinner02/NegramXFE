@@ -1922,7 +1922,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 if (animationSupportListView != null) {
                     int restoreCount = canvas.save();
 
-                    canvas.translate(view.getX(), view.getY());
+                    float vx = AndroidUtilities.lerp(view.getX(), 0, rightFragmentOpenedProgress);
+                    canvas.translate(vx, view.getY());
                     if (dialogCell != null) {
                         dialogCell.rightFragmentOffset = -scrollOffset;
                     } else {
@@ -2000,10 +2001,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         dialogCell.setRightFragmentOpenedProgress(rightFragmentOpenedProgress);
 
                         int restoreCount = canvas.save();
+                        float vx = AndroidUtilities.lerp(view.getX(), 0, rightFragmentOpenedProgress);
                         if (position > maxSupportedViewsPosition) {
-                            canvas.translate(view.getX(), maxBottom + view.getBottom() - maxUndrawBottom);
+                            canvas.translate(vx, maxBottom + view.getBottom() - maxUndrawBottom);
                         } else {
-                            canvas.translate(view.getX(), maxBottom + view.getTop() - maxUndrawTop);
+                            canvas.translate(vx, maxBottom + view.getTop() - maxUndrawTop);
                         }
                         view.draw(canvas);
 
@@ -2049,6 +2051,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 poller = UserListPoller.getInstance(currentAccount);
             }
             poller.checkList( this);
+            canvas.restore();
         }
 
         @Override
@@ -2068,6 +2071,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         public boolean drawChild(Canvas canvas, View child, long drawingTime) {
             if (drawMovingViewsOverlayed() && child instanceof DialogCell && ((DialogCell) child).isMoving()) {
                 return true;
+            }
+            if (rightFragmentOpenedProgress > 0 && child.getX() != 0) {
+                int count = canvas.save();
+                float shiftX = AndroidUtilities.lerp(0, -child.getX(), rightFragmentOpenedProgress);
+                canvas.translate(shiftX, 0);
+                boolean result = super.drawChild(canvas, child, drawingTime);
+                canvas.restoreToCount(count);
+                return result;
             }
             return super.drawChild(canvas, child, drawingTime);
         }

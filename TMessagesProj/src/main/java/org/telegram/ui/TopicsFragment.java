@@ -1048,8 +1048,8 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
                     return holder != null && isM3TopicSectionViewType(holder.getItemViewType());
                 },
                 this::isM3TopicSectionViewType,
-                AndroidUtilities.dp(12),
-                AndroidUtilities.dp(16),
+                xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dp(16) : AndroidUtilities.dp(12),
+                xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
                 recyclerListView::drawBackgroundRect,
                 false
             );
