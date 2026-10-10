@@ -696,7 +696,7 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
             seekBarView = new SeekBarView(context);
             seekBarView.setReportChanges(true);
             seekBarView.setDelegate((stop, progress) -> {
-                if (parentSwitch != null && !parentSwitch.Bool()) {
+                if (!isSliderEnabled()) {
                     return;
                 }
                 int val = min + Math.round(progress * (max - min));
@@ -718,7 +718,7 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
                     : Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), 1));
             resetButton.setPadding(AndroidUtilities.dp(2), AndroidUtilities.dp(2), AndroidUtilities.dp(2), AndroidUtilities.dp(2));
             resetButton.setOnClickListener(v -> {
-                if (parentSwitch != null && !parentSwitch.Bool()) {
+                if (!isSliderEnabled()) {
                     return;
                 }
                 configItem.setConfigInt(defaultValue);
@@ -748,8 +748,12 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
             updateEnabledState(false);
         }
 
+        private boolean isSliderEnabled() {
+            return parentSwitch == null || parentSwitch.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        }
+
         public void updateEnabledState(boolean animate) {
-            boolean enabled = parentSwitch == null || parentSwitch.Bool();
+            boolean enabled = isSliderEnabled();
             setEnabled(enabled);
             seekBarView.setEnabled(enabled);
             resetButton.setEnabled(enabled);
@@ -798,7 +802,7 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
 
         @Override
         public boolean onInterceptTouchEvent(MotionEvent ev) {
-            if (parentSwitch != null && !parentSwitch.Bool()) {
+            if (!isSliderEnabled()) {
                 return true;
             }
             return super.onInterceptTouchEvent(ev);
@@ -806,7 +810,7 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
-            if (parentSwitch != null && !parentSwitch.Bool()) {
+            if (!isSliderEnabled()) {
                 return false;
             }
             return super.onTouchEvent(event);

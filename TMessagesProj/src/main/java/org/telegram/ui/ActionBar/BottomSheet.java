@@ -1459,6 +1459,9 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                     onContainerTranslationYChanged(translationY);
                 }
 
+                private final Paint iosStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                private final RectF iosStrokeRect = new RectF();
+
                 @Override
                 protected void dispatchDraw(Canvas canvas) {
                     super.dispatchDraw(canvas);
@@ -1471,6 +1474,32 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                         int color = getThemedColor(Theme.key_sheet_scrollUp);
                         m3HandlePaint.setColor(color);
                         canvas.drawRoundRect(m3HandleRect, AndroidUtilities.dp(2), AndroidUtilities.dp(2), m3HandlePaint);
+                    }
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        iosStrokePaint.setStyle(Paint.Style.STROKE);
+                        iosStrokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.6f));
+                        boolean isDark = Theme.isCurrentThemeDark();
+                        iosStrokePaint.setColor(xyz.nextalone.nagram.ui.UIStyleEngine.getGlassStrokeColor(isDark));
+                        float strokeHalf = AndroidUtilities.dpf2(0.3f);
+                        if (!fullWidth) {
+                            float rad = xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius();
+                            iosStrokeRect.set(
+                                backgroundPaddingLeft + strokeHalf,
+                                backgroundPaddingTop + strokeHalf,
+                                getWidth() - backgroundPaddingLeft - strokeHalf,
+                                getHeight() - backgroundPaddingTop - strokeHalf
+                            );
+                            canvas.drawRoundRect(iosStrokeRect, rad, rad, iosStrokePaint);
+                        } else {
+                            float rad = xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius();
+                            iosStrokeRect.set(
+                                backgroundPaddingLeft + strokeHalf,
+                                backgroundPaddingTop + strokeHalf,
+                                getWidth() - backgroundPaddingLeft - strokeHalf,
+                                getHeight() + rad
+                            );
+                            canvas.drawRoundRect(iosStrokeRect, rad, rad, iosStrokePaint);
+                        }
                     }
                 }
             };
@@ -1700,10 +1729,11 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
             super.show();
         }
         setShowing(true);
-        if (getWindow() != null && Build.VERSION.SDK_INT >= 31 && tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool()) {
+        if (getWindow() != null && Build.VERSION.SDK_INT >= 31 && (tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
             WindowManager.LayoutParams params = getWindow().getAttributes();
-            params.setBlurBehindRadius(AndroidUtilities.dp(tw.nekomimi.nekogram.NekoConfig.blurRadiusGlobal.Int()));
+            int blurRad = tw.nekomimi.nekogram.NekoConfig.blurRadiusGlobal.Int();
+            params.setBlurBehindRadius(AndroidUtilities.dp(blurRad > 0 ? blurRad : 20));
             getWindow().setAttributes(params);
         }
         if (focusable) {

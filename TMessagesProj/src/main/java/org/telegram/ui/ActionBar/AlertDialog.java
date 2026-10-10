@@ -685,6 +685,8 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
             super.draw(canvas);
         }
 
+        private Paint iosStrokePaint;
+
         @Override
         protected void dispatchDraw(Canvas canvas) {
             if (drawBackground && !blurredBackground) {
@@ -700,6 +702,20 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                 }
             }
             super.dispatchDraw(canvas);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                if (iosStrokePaint == null) {
+                    iosStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    iosStrokePaint.setStyle(Paint.Style.STROKE);
+                    iosStrokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.6f));
+                }
+                boolean isDark = Theme.isCurrentThemeDark();
+                iosStrokePaint.setColor(xyz.nextalone.nagram.ui.UIStyleEngine.getGlassStrokeColor(isDark));
+                int pad = dp(8);
+                float rad = xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius();
+                AndroidUtilities.rectTmp.set(pad, pad, getWidth() - pad, getHeight() - pad);
+                AndroidUtilities.rectTmp.inset(AndroidUtilities.dpf2(0.3f), AndroidUtilities.dpf2(0.3f));
+                canvas.drawRoundRect(AndroidUtilities.rectTmp, rad, rad, iosStrokePaint);
+            }
         }
     }
 
@@ -1614,6 +1630,11 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                     containerView.invalidate();
                 }, 8);
             }
+        }
+        if (Build.VERSION.SDK_INT >= 31 && xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            params.flags |= WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
+            int blurRad = tw.nekomimi.nekogram.NekoConfig.blurRadiusGlobal.Int();
+            params.setBlurBehindRadius(AndroidUtilities.dp(blurRad > 0 ? blurRad : 20));
         }
 
         window.setAttributes(params);

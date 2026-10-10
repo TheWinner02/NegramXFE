@@ -1367,6 +1367,9 @@ public class ItemOptions {
             if (allowMoveScrim) {
                 dimAnimator.setDuration(380);
                 dimAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                dimAnimator.setDuration(220);
+                dimAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
             } else {
                 dimAnimator.setDuration(150);
             }
@@ -1415,7 +1418,13 @@ public class ItemOptions {
         actionBarPopupWindow.setOutsideTouchable(true);
         actionBarPopupWindow.setFocusable(!dontFocus);
         actionBarPopupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        actionBarPopupWindow.setAnimationStyle(R.style.PopupContextAnimation);
+        boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        if (isIosGlass) {
+            actionBarPopupWindow.setAnimationStyle(0);
+            actionBarPopupWindow.setDismissAnimationDuration(220);
+        } else {
+            actionBarPopupWindow.setAnimationStyle(R.style.PopupContextAnimation);
+        }
         if (allowShowingOnTopOfKeyboard) {
             actionBarPopupWindow.setInputMethodMode(ActionBarPopupWindow.INPUT_METHOD_NOT_NEEDED);
             actionBarPopupWindow.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_UNSPECIFIED);
@@ -1460,7 +1469,23 @@ public class ItemOptions {
             final int usableViewHeight = rootView.getHeight() - (visible.top != 0 ? AndroidUtilities.statusBarHeight : 0) - AndroidUtilities.getViewInset(rootView);
             keyboardHeight = Math.max(0, usableViewHeight - (visible.bottom - visible.top));
         }
-        final int bottomLimit = AndroidUtilities.displaySize.y - AndroidUtilities.navigationBarHeight - keyboardHeight;
+        int navBarH = AndroidUtilities.navigationBarHeight;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && container != null && container.getRootWindowInsets() != null) {
+            android.view.WindowInsets insets = container.getRootWindowInsets();
+            if (insets != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    navBarH = Math.max(navBarH, insets.getInsets(android.view.WindowInsets.Type.navigationBars()).bottom);
+                    navBarH = Math.max(navBarH, insets.getInsets(android.view.WindowInsets.Type.systemBars()).bottom);
+                } else {
+                    navBarH = Math.max(navBarH, insets.getStableInsetBottom());
+                    navBarH = Math.max(navBarH, insets.getSystemWindowInsetBottom());
+                }
+            }
+        }
+        if (navBarH <= 0 && isIosGlass) {
+            navBarH = AndroidUtilities.dp(24);
+        }
+        final int bottomLimit = AndroidUtilities.displaySize.y - navBarH - keyboardHeight - (isIosGlass ? dp(16) : 0);
         int Y;
         float scrimHeight = onTopOfScrim ? 0 : scrimViewBounds.height();
         boolean above = false;
@@ -1522,7 +1547,6 @@ public class ItemOptions {
 
         if (blurForMenu && scrimBlur3SourceBitmap != null) {
             setGapBackgroundColor(Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuItem, resourcesProvider), 0.06f));
-            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
             float cardRad = isIosGlass ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(12);
             BlurredBackgroundDrawable bg = new BlurredBackgroundDrawableViewFactory(scrimBlur3SourceBitmap)
                 .create(layout, true)
@@ -1542,6 +1566,21 @@ public class ItemOptions {
             (int) (offsetX = (X + this.translateX)),
             (int) (offsetY = (Y + this.translateY))
         );
+
+        if (isIosGlass) {
+            layout.setPivotX(layout.getMeasuredWidth() * 0.5f);
+            layout.setPivotY(above ? layout.getMeasuredHeight() : 0);
+            layout.setScaleX(0.85f);
+            layout.setScaleY(0.85f);
+            layout.setAlpha(0.0f);
+            layout.animate()
+                .scaleX(1.0f)
+                .scaleY(1.0f)
+                .alpha(1.0f)
+                .setDuration(220)
+                .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT)
+                .start();
+        }
 
         if (longPressSelectionEnabled) {
             installHoverReleaseListener();
@@ -1825,6 +1864,9 @@ public class ItemOptions {
         if (allowMoveScrim) {
             dimAnimator.setDuration(380);
             dimAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            dimAnimator.setDuration(220);
+            dimAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
         } else {
             dimAnimator.setDuration(150);
         }
@@ -2037,9 +2079,9 @@ public class ItemOptions {
 
             if (blur || blurForMenu) {
                 blurPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-                scrimView.setAlpha(0.0f);
+                if (scrimView != null) scrimView.setAlpha(0.0f);
                 ScrimOptions.makeGlobalBlurBitmaps(pointContainer, (bitmapBg, bitmapOptions) -> {
-                    scrimView.setAlpha(1.0f);
+                    if (scrimView != null) scrimView.setAlpha(1.0f);
                     if (blur) blurBitmap = bitmapBg;
                     if (scrimBlur3SourceBitmap != null) {
                         scrimBlur3SourceBitmap.setBitmap(bitmapOptions);

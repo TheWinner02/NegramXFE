@@ -87,6 +87,14 @@ object UIStyleEngine {
     }
 
     @JvmStatic
+    fun getGlassStrokeColor(isDark: Boolean): Int {
+        val alphaScale = getGlassAlpha() / 0.76f
+        val baseAlpha = if (isDark) 0x24 else 0x18
+        val strokeAlpha = Math.max(0x08, Math.min(0x60, Math.round(baseAlpha * alphaScale)))
+        return if (isDark) (strokeAlpha shl 24) or 0x00FFFFFF else (strokeAlpha shl 24)
+    }
+
+    @JvmStatic
     fun getSwitchWidth(): Int {
         return if (isIosLiquidGlass()) 54 else if (isMaterial3Expressive()) 52 else 38
     }
