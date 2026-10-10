@@ -211,6 +211,16 @@ public abstract class BaseFragment {
         sheetsStack.clear();
     }
 
+    protected org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode customGlassSource;
+
+    public org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode getGlassSource() {
+        return customGlassSource;
+    }
+
+    public void setCustomGlassSource(org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode source) {
+        this.customGlassSource = source;
+    }
+
     public BaseFragment() {
         this(null);
     }
@@ -436,11 +446,16 @@ public abstract class BaseFragment {
 
     public ActionBar createActionBar(Context context) {
         ActionBar actionBar = new ActionBar(context, getResourceProvider());
-        actionBar.setBackgroundColor(getThemedColor(Theme.key_actionBarDefault));
-        actionBar.setItemsBackgroundColor(getThemedColor(Theme.key_actionBarDefaultSelector), false);
-        actionBar.setItemsBackgroundColor(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), true);
-        actionBar.setItemsColor(getThemedColor(Theme.key_actionBarDefaultIcon), false);
-        actionBar.setItemsColor(getThemedColor(Theme.key_actionBarActionModeDefaultIcon), true);
+        actionBar.parentFragment = this;
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            actionBar.applyIosLiquidGlassTopBar();
+        } else {
+            actionBar.setBackgroundColor(getThemedColor(Theme.key_actionBarDefault));
+            actionBar.setItemsBackgroundColor(getThemedColor(Theme.key_actionBarDefaultSelector), false);
+            actionBar.setItemsBackgroundColor(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), true);
+            actionBar.setItemsColor(getThemedColor(Theme.key_actionBarDefaultIcon), false);
+            actionBar.setItemsColor(getThemedColor(Theme.key_actionBarActionModeDefaultIcon), true);
+        }
         if (inPreviewMode || inBubbleMode || parentLayout != null && parentLayout.isLayersLayout()) {
             actionBar.setOccupyStatusBar(false);
         }

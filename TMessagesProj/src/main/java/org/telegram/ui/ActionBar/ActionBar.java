@@ -22,6 +22,7 @@ import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -79,6 +80,8 @@ import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProvider;
 import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
+import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode;
+import org.telegram.ui.Components.chat.ViewPositionWatcher;
 import org.telegram.ui.MainTabsLayout;
 
 import java.util.ArrayList;
@@ -2663,15 +2666,6 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         final int b = t + s + p * 2;
 
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
-            if (shouldAddToContainer()) {
-                int bgColor = adaptive_topColorKey != 0 && adaptive_topColorKey != -1
-                        ? getThemedColor(adaptive_topColorKey)
-                        : getThemedColor(Theme.key_windowBackgroundGray);
-                canvas.save();
-                canvas.clipRect(0, 0, getWidth(), getHeight());
-                canvas.drawColor(bgColor);
-                canvas.restore();
-            }
             // iOS-style: three separate floating pill islands
             final int edge = dp(6);     // margin from screen edge
             final int gap  = dp(8);     // gap between islands
@@ -3263,10 +3257,25 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
 
     public void applyIosLiquidGlassTopBar() {
         if (!glassMode) {
-            BlurredBackgroundSourceColor sourceColor = new BlurredBackgroundSourceColor();
-            sourceColor.setColor(getThemedColor(adaptive_topColorKey != 0 && adaptive_topColorKey != -1 ? adaptive_topColorKey : Theme.key_windowBackgroundGray));
-            BlurredBackgroundDrawableViewFactory factory = new BlurredBackgroundDrawableViewFactory(sourceColor);
-            setupGlass(factory, BlurredBackgroundProviderImpl.topPanel(resourcesProvider));
+            BlurredBackgroundDrawableViewFactory factory;
+            if (parentFragment != null && parentFragment.getGlassSource() != null) {
+                factory = new BlurredBackgroundDrawableViewFactory(parentFragment.getGlassSource());
+                if (parentFragment.getFragmentView() instanceof ViewGroup) {
+                    factory.setSourceRootView(new ViewPositionWatcher((ViewGroup) parentFragment.getFragmentView()), (ViewGroup) parentFragment.getFragmentView());
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                BlurredBackgroundSourceColor sourceColor = new BlurredBackgroundSourceColor();
+                sourceColor.setColor(getThemedColor(adaptive_topColorKey != 0 && adaptive_topColorKey != -1 ? adaptive_topColorKey : Theme.key_windowBackgroundGray));
+                BlurredBackgroundSourceRenderNode renderNodeSource = new BlurredBackgroundSourceRenderNode(sourceColor);
+                renderNodeSource.setUnderSource(sourceColor);
+                factory = new BlurredBackgroundDrawableViewFactory(renderNodeSource);
+            } else {
+                BlurredBackgroundSourceColor sourceColor = new BlurredBackgroundSourceColor();
+                sourceColor.setColor(getThemedColor(adaptive_topColorKey != 0 && adaptive_topColorKey != -1 ? adaptive_topColorKey : Theme.key_windowBackgroundGray));
+                factory = new BlurredBackgroundDrawableViewFactory(sourceColor);
+            }
+            factory.setLiquidGlassEffectAllowed(true);
+            setupGlass(factory, BlurredBackgroundProviderImpl.topPanelChatActivity(resourcesProvider));
         }
         setBackground(null);
         setCastShadows(false);
@@ -3290,13 +3299,13 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         }
 
         if (menu != null) {
-            menu.setTranslationX(-dp(10));
+            menu.setTranslationX(0);
             menu.setGlassMode(true);
             menu.updateItemsColor();
             menu.updateItemsBackgroundColor();
         }
         if (actionMode != null) {
-            actionMode.setTranslationX(-dp(10));
+            actionMode.setTranslationX(0);
             actionMode.setGlassMode(true);
             actionMode.updateItemsColor();
             actionMode.updateItemsBackgroundColor();

@@ -405,11 +405,26 @@ public class DownscaleScrollableNoiseSuppressor {
         final Rect position = new Rect();
         long lastHash;
 
+        private int lastConfiguredBlurRadius = -1;
+
+        private void checkBlurRadius() {
+            if (isLiquidGlassEnabled && renderNodesForGlass != null) {
+                int configRadius = tw.nekomimi.nekogram.NekoConfig.actionBarBlurRadius.Int();
+                if (lastConfiguredBlurRadius != configRadius) {
+                    lastConfiguredBlurRadius = configRadius;
+                    float radius = Math.max(1f, (float) configRadius / 2.5f);
+                    renderNodesForGlass.setPrimaryEffectBlur(dpf2(radius), RenderNodeEffects.getSaturationX3RenderEffect());
+                }
+            }
+        }
+
         private SourcePart() {
             if (isLiquidGlassEnabled) {
                 renderNodesForGlass = new DownscaledRenderNode("glass", 0, true);
                 renderNodesForGlass.setScale(4, 4);
-                renderNodesForGlass.setPrimaryEffectBlur(dpf2(6f), RenderNodeEffects.getSaturationX3RenderEffect());
+                lastConfiguredBlurRadius = tw.nekomimi.nekogram.NekoConfig.actionBarBlurRadius.Int();
+                float radius = Math.max(1f, (float) lastConfiguredBlurRadius / 2.5f);
+                renderNodesForGlass.setPrimaryEffectBlur(dpf2(radius), RenderNodeEffects.getSaturationX3RenderEffect());
                 renderNodesForBlur = new DownscaledRenderNode("blur", 0);
                 renderNodesForBlur.setScale(8, 8);
                 renderNodesForBlur.setPrimaryEffectBlur(dpf2(40 - 1.66f));
@@ -436,6 +451,7 @@ public class DownscaleScrollableNoiseSuppressor {
         }
 
         public void invalidate() {
+            checkBlurRadius();
             if (renderNodesForGlass != null) {
                 renderNodesForGlass.invalidateRenderNodes(renderNode);
                 renderNodesForBlur.invalidateRenderNodes(renderNodesForGlass.renderNodeRestored[0]);

@@ -58,6 +58,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.graphics.Insets;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.core.math.MathUtils;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -99,6 +100,19 @@ import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.utils.AndroidUtil;
 import xyz.nextalone.nagram.NaConfig;
 
+import android.graphics.RectF;
+import androidx.annotation.RequiresApi;
+import org.telegram.messenger.utils.RectFMergeBounding;
+import org.telegram.ui.Components.RecyclerListView;
+import org.telegram.ui.Components.blur3.DownscaleScrollableNoiseSuppressor;
+import org.telegram.ui.Components.blur3.ViewGroupPartRenderer;
+import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
+import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode;
+import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
+import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
+import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
+import org.telegram.ui.Components.chat.ViewPositionWatcher;
+
 public class ActionBarLayout extends FrameLayout implements INavigationLayout, FloatingDebugProvider {
 
     public boolean highlightActionButtons = false;
@@ -133,6 +147,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         public LayoutContainer(Context context) {
             super(context);
             setWillNotDraw(false);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                setClipChildren(false);
+            }
         }
 
         @Override
@@ -219,7 +236,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     }
                 }
                 boolean result = super.drawChild(canvas, child, drawingTime);
-                if (actionBarHeight != 0 && headerShadowDrawable != null) {
+                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && actionBarHeight != 0 && headerShadowDrawable != null) {
                     int wasAlpha = headerShadowDrawable.getAlpha();
                     headerShadowDrawable.setBounds(0, actionBarY + actionBarHeight, getMeasuredWidth(), actionBarY + actionBarHeight + headerShadowDrawable.getIntrinsicHeight());
                     headerShadowDrawable.setAlpha(actionBarShadowAlpha);
@@ -279,6 +296,19 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     drawInsets(canvas, Theme.multAlpha(color, hasSheets), drawNavigationBar);
                 }
             } else {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    BaseFragment fragment = (this == containerViewBack && oldFragment != null) ? oldFragment : getLastFragment();
+                    int bgColor = color;
+                    if (fragment != null) {
+                        if (fragment.hasOwnBackground && fragment.fragmentView != null && fragment.fragmentView.getBackground() instanceof ColorDrawable) {
+                            bgColor = ((ColorDrawable) fragment.fragmentView.getBackground()).getColor();
+                        } else if (fragment.hasOwnBackground) {
+                            bgColor = Theme.getColor(Theme.key_windowBackgroundWhite);
+                        }
+                    }
+                    canvas.drawColor(bgColor);
+                }
+
                 final BaseFragment fragment = getLastFragment();
                 if (fragment != null && !fragment.inPreviewMode) {
                     boolean drawNavbar = false;
@@ -315,6 +345,192 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             }
         }
 
+        private View findScrollableView(View view) {
+            if (view instanceof RecyclerView
+                    || view instanceof android.widget.ScrollView
+                    || view instanceof androidx.core.widget.NestedScrollView) {
+                return view;
+            }
+            if (view instanceof ViewGroup) {
+                ViewGroup vg = (ViewGroup) view;
+                for (int i = 0; i < vg.getChildCount(); i++) {
+                    View found = findScrollableView(vg.getChildAt(i));
+                    if (found != null) {
+                        return found;
+                    }
+                }
+            }
+            return null;
+        }
+
+        private void applyLiquidGlassPadding(View view, int actionBarHeight) {
+            if (view == null || actionBarHeight <= 0) return;
+            setupSubSettingsGlass(view);
+            View scrollableView = findScrollableView(view);
+            if (scrollableView != null) {
+                if (scrollableView instanceof ViewGroup) {
+                    ((ViewGroup) scrollableView).setClipToPadding(false);
+                }
+                Integer appliedPadding = (Integer) scrollableView.getTag(R.id.ios_glass_padded_tag);
+                if (appliedPadding == null || appliedPadding != actionBarHeight) {
+                    int currentPaddingTop = scrollableView.getPaddingTop();
+                    int basePaddingTop = (appliedPadding != null) ? (currentPaddingTop - appliedPadding) : currentPaddingTop;
+                    scrollableView.setTag(R.id.ios_glass_padded_tag, actionBarHeight);
+                    scrollableView.setPadding(
+                        scrollableView.getPaddingLeft(),
+                        basePaddingTop + actionBarHeight,
+                        scrollableView.getPaddingRight(),
+                        scrollableView.getPaddingBottom()
+                    );
+                }
+                View parent = (View) scrollableView.getParent();
+                while (parent != null && parent != this) {
+                    if (parent instanceof ViewGroup) {
+                        ((ViewGroup) parent).setClipToPadding(false);
+                        ((ViewGroup) parent).setClipChildren(false);
+                    }
+                    if (parent == view) break;
+                    parent = (View) parent.getParent();
+                }
+            } else {
+                Integer appliedPadding = (Integer) view.getTag(R.id.ios_glass_padded_tag);
+                if (appliedPadding == null || appliedPadding != actionBarHeight) {
+                    int currentPaddingTop = view.getPaddingTop();
+                    int basePaddingTop = (appliedPadding != null) ? (currentPaddingTop - appliedPadding) : currentPaddingTop;
+                    view.setTag(R.id.ios_glass_padded_tag, actionBarHeight);
+                    view.setPadding(
+                        view.getPaddingLeft(),
+                        basePaddingTop + actionBarHeight,
+                        view.getPaddingRight(),
+                        view.getPaddingBottom()
+                    );
+                }
+            }
+        }
+
+        public static class SubSettingsFallbackColor extends BlurredBackgroundSourceColor {}
+
+        @RequiresApi(Build.VERSION_CODES.S)
+        private final class SubSettingsGlassUpdater {
+            private final LayoutContainer container;
+            private final ViewGroup captureViewGroup;
+            private final ActionBar actionBar;
+            private final BaseFragment fragment;
+            private final BlurredBackgroundSourceRenderNode source;
+            private final DownscaleScrollableNoiseSuppressor noiseSuppressor;
+            private final ArrayList<RectF> positions = new ArrayList<>();
+            private final ArrayList<RectF> positionsMerged = new ArrayList<>();
+            private final IBlur3Capture capture;
+            private boolean updateScheduled;
+
+            private SubSettingsGlassUpdater(LayoutContainer container, ViewGroup captureViewGroup, ActionBar actionBar, BaseFragment fragment) {
+                this.container = container;
+                this.captureViewGroup = captureViewGroup;
+                this.actionBar = actionBar;
+                this.fragment = fragment;
+
+                SubSettingsFallbackColor fallbackColor = new SubSettingsFallbackColor();
+                fallbackColor.setColor(Theme.getColor(fragment.hasOwnBackground ? Theme.key_windowBackgroundWhite : Theme.key_windowBackgroundGray, fragment.getResourceProvider()));
+
+                this.source = new BlurredBackgroundSourceRenderNode(fallbackColor);
+                this.source.setUnderSource(fallbackColor);
+                this.noiseSuppressor = new DownscaleScrollableNoiseSuppressor();
+                this.source.setScrollableNoiseSuppressor(noiseSuppressor, DownscaleScrollableNoiseSuppressor.DRAW_GLASS);
+
+                if (captureViewGroup instanceof RecyclerListView) {
+                    this.capture = new ViewGroupPartRenderer(captureViewGroup, container, ((RecyclerListView) captureViewGroup)::drawChild);
+                } else {
+                    this.capture = new ViewGroupPartRenderer(captureViewGroup, container, (canvas, child, time) -> {
+                        child.draw(canvas);
+                        return true;
+                    });
+                }
+            }
+
+            public void init() {
+                BlurredBackgroundDrawableViewFactory factory = new BlurredBackgroundDrawableViewFactory(source);
+                factory.setSourceRootView(new ViewPositionWatcher(container), container);
+                factory.setLiquidGlassEffectAllowed(true);
+                actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.topPanelChatActivity(fragment.getResourceProvider()));
+                fragment.setCustomGlassSource(source);
+
+                if (captureViewGroup instanceof androidx.recyclerview.widget.RecyclerView) {
+                    ((androidx.recyclerview.widget.RecyclerView) captureViewGroup).addOnScrollListener(new androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+                        @Override
+                        public void onScrolled(@NonNull androidx.recyclerview.widget.RecyclerView recyclerView, int dx, int dy) {
+                            noiseSuppressor.onScrolled(dx, dy);
+                            requestUpdate();
+                        }
+                    });
+                }
+
+                View.OnLayoutChangeListener l = (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> requestUpdate();
+                container.addOnLayoutChangeListener(l);
+                captureViewGroup.addOnLayoutChangeListener(l);
+                source.setOnDrawablesRelativePositionChangeListener(this::requestUpdate);
+                requestUpdate();
+            }
+
+            public void requestUpdate() {
+                if (updateScheduled) {
+                    return;
+                }
+                updateScheduled = true;
+                container.post(() -> {
+                    updateScheduled = false;
+                    update();
+                });
+            }
+
+            public void update() {
+                if (capture == null || container.getWidth() == 0 || container.getHeight() == 0) {
+                    return;
+                }
+                int count = source.getVisiblePositions(positions, 0, AndroidUtilities.dp(8));
+                if (count == 0) {
+                    if (positions.isEmpty()) {
+                        positions.add(new RectF());
+                    }
+                    positions.get(0).set(0, 0, container.getWidth(), actionBar.getMeasuredHeight() + AndroidUtilities.dp(16));
+                    count = 1;
+                }
+                count = RectFMergeBounding.mergeOverlapping(positions, count, positionsMerged);
+                noiseSuppressor.setupRenderNodes(positionsMerged, count);
+                if (noiseSuppressor.invalidateResultRenderNodes(capture, container.getWidth(), container.getHeight())) {
+                    source.invalidateDisplayListForDrawables();
+                    actionBar.invalidate();
+                }
+            }
+        }
+
+        private void setupSubSettingsGlass(View view) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                return;
+            }
+            BaseFragment fragment = getLastFragment();
+            if (fragment == null || fragment.getActionBar() == null) {
+                return;
+            }
+            if (fragment instanceof ChatActivity) {
+                return;
+            }
+            if (fragment.getGlassSource() != null && !(fragment.getGlassSource().getFallbackSource() instanceof SubSettingsFallbackColor)) {
+                return;
+            }
+            View scrollableView = findScrollableView(view);
+            View targetView = scrollableView != null ? scrollableView : view;
+            if (targetView.getTag(R.id.ios_glass_updater_tag) != null) {
+                return;
+            }
+            if (!(targetView instanceof ViewGroup)) {
+                return;
+            }
+            ViewGroup targetViewGroup = (ViewGroup) targetView;
+            SubSettingsGlassUpdater updater = new SubSettingsGlassUpdater(this, targetViewGroup, fragment.getActionBar(), fragment);
+            targetView.setTag(R.id.ios_glass_updater_tag, updater);
+            updater.init();
+        }
+
         @Override
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
             int width = MeasureSpec.getSize(widthMeasureSpec);
@@ -347,9 +563,12 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             for (int a = 0; a < count; a++) {
                 View child = getChildAt(a);
                 if (!(child instanceof ActionBar)) {
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && actionBarHeight > 0) {
+                        applyLiquidGlassPadding(child, actionBarHeight);
+                    }
                     if (child instanceof BaseFragment.AttachedSheetWindow) {
                         measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, getBottomTabsHeight(false) > 0 || !isSupportEdgeToEdge ? 0 : systemAndDisplayInsets.bottom);
-                    } else if (child.getTag(R.id.sheet_attached_to_fragment_tag) != null || child.getFitsSystemWindows()) {
+                    } else if (child.getTag(R.id.sheet_attached_to_fragment_tag) != null || child.getFitsSystemWindows() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                         int addHeight = isSupportEdgeToEdge ? systemAndDisplayInsets.bottom : 0;
                         measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, addHeight);
                     } else {
@@ -378,13 +597,16 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 View child = getChildAt(a);
                 if (!(child instanceof ActionBar)) {
                     FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) child.getLayoutParams();
-                    if (child.getTag(R.id.sheet_attached_to_fragment_tag) != null || child.getFitsSystemWindows() || child instanceof BaseFragment.AttachedSheetWindow) {
+                    if (child.getTag(R.id.sheet_attached_to_fragment_tag) != null || child.getFitsSystemWindows() || child instanceof BaseFragment.AttachedSheetWindow || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                         child.layout(
                             paddingLeft + layoutParams.leftMargin,
                             layoutParams.topMargin,
                             paddingLeft + layoutParams.leftMargin + child.getMeasuredWidth(),
                             layoutParams.topMargin + child.getMeasuredHeight()
                         );
+                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && actionBarHeight > 0) {
+                            applyLiquidGlassPadding(child, actionBarHeight);
+                        }
                     } else {
                         child.layout(
                             paddingLeft + layoutParams.leftMargin,
@@ -956,7 +1178,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
     @Override
     public void drawHeaderShadow(Canvas canvas, int alpha, int y) {
-        if (headerShadowDrawable != null && SharedConfig.drawActionBarShadow) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && headerShadowDrawable != null && SharedConfig.drawActionBarShadow) {
             alpha = alpha / 2;
             if (headerShadowDrawable.getAlpha() != alpha) {
                 headerShadowDrawable.setAlpha(alpha);

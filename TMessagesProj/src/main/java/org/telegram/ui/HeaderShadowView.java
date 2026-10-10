@@ -25,6 +25,9 @@ public class HeaderShadowView extends View implements FactorAnimator.Target {
 
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            return;
+        }
         super.dispatchDraw(canvas);
         iNavigationLayout.drawHeaderShadow(canvas, 0);
     }

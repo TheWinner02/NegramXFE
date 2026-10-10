@@ -421,8 +421,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && iBlur3SourceGlass != null) {
             final ViewPositionWatcher vw = new ViewPositionWatcher(contentView);
             final BlurredBackgroundDrawableViewFactory factory = new BlurredBackgroundDrawableViewFactory(iBlur3SourceGlass);
+            factory.setLiquidGlassEffectAllowed(true);
             factory.setSourceRootView(vw, contentView);
-            actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
+            actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.topPanelChatActivity(resourceProvider));
         } else {
             actionBar.setDrawBlurBackground(contentView);
         }
