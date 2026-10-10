@@ -63,8 +63,9 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
         imageView = new BackupImageView(context);
         imageView.setRoundRadius(dp(18));
         boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-        int iconLeft = isM3 ? 12 : 14;
-        int textLeft = isM3 ? 56 : 72;
+        boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        int iconLeft = (isM3 || isIosGlass) ? 12 : 14;
+        int textLeft = (isM3 || isIosGlass) ? 56 : 72;
         addView(imageView, LayoutHelper.createFrame(36, 36, Gravity.LEFT | Gravity.CENTER_VERTICAL, iconLeft, 0, 0, 0));
 
         textView = new SimpleTextView(context);
@@ -88,13 +89,17 @@ public class DrawerUserCell extends FrameLayout implements NotificationCenter.No
         checkBox.setColorKeysOverrides(Theme.key_chats_unreadCounterText, Theme.key_chats_unreadCounter, Theme.key_chats_menuBackground);
         addView(checkBox, LayoutHelper.createFrame(18, 18, Gravity.LEFT | Gravity.CENTER_VERTICAL, iconLeft + 23, 9, 0, 0));
 
+        if (isM3 || isIosGlass) {
+            org.telegram.ui.Components.ScaleStateListAnimator.apply(this, 0.03f, 1.2f);
+        }
+
         setWillNotDraw(false);
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-        int h = isM3 ? 56 : 48;
+        boolean isGrouped = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        int h = isGrouped ? 56 : 48;
         super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(dp(h), MeasureSpec.EXACTLY));
     }
 

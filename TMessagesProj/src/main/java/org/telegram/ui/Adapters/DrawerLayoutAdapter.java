@@ -199,7 +199,8 @@ public class DrawerLayoutAdapter extends RecyclerListView.SelectionAdapter imple
                 break;
             case 1:
             default:
-                view = new EmptyCell(mContext, AndroidUtilities.dp(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 12 : 8));
+                boolean isGrouped = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+                view = new EmptyCell(mContext, AndroidUtilities.dp(isGrouped ? 12 : 8));
                 break;
         }
         view.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -216,12 +217,19 @@ public class DrawerLayoutAdapter extends RecyclerListView.SelectionAdapter imple
             }
             case 3: {
                 DrawerActionCell drawerActionCell = (DrawerActionCell) holder.itemView;
-                position -= 2;
+                int itemPos = position - 2;
                 if (accountsShown) {
-                    position -= getAccountRowsCount();
+                    itemPos -= getAccountRowsCount();
                 }
-                items.get(position).bind(drawerActionCell);
+                items.get(itemPos).bind(drawerActionCell);
                 drawerActionCell.setPadding(0, 0, 0, 0);
+                boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+                if (isIosGlass) {
+                    boolean hasNextInIsland = (itemPos + 1 < items.size()) && (items.get(itemPos + 1) != null);
+                    drawerActionCell.setNeedDivider(hasNextInIsland);
+                } else {
+                    drawerActionCell.setNeedDivider(false);
+                }
                 break;
             }
             case 4: {
@@ -546,11 +554,16 @@ public class DrawerLayoutAdapter extends RecyclerListView.SelectionAdapter imple
         @Override
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
             boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-            setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), AndroidUtilities.dp(isM3 ? 17 : 8));
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            int h = isIosGlass ? 12 : (isM3 ? 17 : 8);
+            setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), AndroidUtilities.dp(h));
         }
 
         @Override
         protected void onDraw(Canvas canvas) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                return;
+            }
             boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
             int y = getMeasuredHeight() / 2;
             int inset = isM3 ? AndroidUtilities.dp(16) : 0;

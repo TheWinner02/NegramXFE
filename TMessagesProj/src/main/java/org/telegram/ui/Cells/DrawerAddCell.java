@@ -40,14 +40,19 @@ public class DrawerAddCell extends FrameLayout {
         textView.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
         textView.setCompoundDrawablePadding(AndroidUtilities.dp(29));
         boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-        int textLeft = isM3 ? 16 : 19;
+        boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        int textLeft = (isM3 || isIosGlass) ? 16 : 19;
         addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.CENTER_VERTICAL, textLeft, 0, 16, 0));
+
+        if (isM3 || isIosGlass) {
+            org.telegram.ui.Components.ScaleStateListAnimator.apply(this, 0.03f, 1.2f);
+        }
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-        int h = isM3 ? 56 : 48;
+        boolean isGrouped = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        int h = isGrouped ? 56 : 48;
         super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(h), MeasureSpec.EXACTLY));
         updateColors();
     }

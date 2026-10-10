@@ -61,21 +61,50 @@ public class DrawerActionCell extends FrameLayout {
         textView.setTypeface(AndroidUtilities.bold());
         textView.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
         boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-        int iconLeft = isM3 ? 16 : 19;
-        int textLeft = isM3 ? 56 : 72;
+        boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        int iconLeft = (isM3 || isIosGlass) ? 16 : 19;
+        int textLeft = (isM3 || isIosGlass) ? 56 : 72;
         addView(imageView, LayoutHelper.createFrame(24, 24, Gravity.LEFT | Gravity.CENTER_VERTICAL, iconLeft, 0, 0, 0));
         addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.CENTER_VERTICAL, textLeft, 0, 16, 0));
 
-        if (isM3) {
+        if (isM3 || isIosGlass) {
             ScaleStateListAnimator.apply(this, 0.03f, 1.2f);
         }
 
         setWillNotDraw(false);
     }
 
+    private boolean needDivider;
+
+    public void setNeedDivider(boolean needDivider) {
+        if (this.needDivider != needDivider) {
+            this.needDivider = needDivider;
+            invalidate();
+        }
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
+        if (needDivider) {
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            int leftPadding = org.telegram.messenger.LocaleController.isRTL ? 0 : AndroidUtilities.dp(56);
+            int rightPadding = org.telegram.messenger.LocaleController.isRTL ? AndroidUtilities.dp(56) : 0;
+            float y = getMeasuredHeight() - (isIosGlass ? AndroidUtilities.dpf2(0.5f) : 1);
+            if (isIosGlass) {
+                int origColor = Theme.dividerPaint.getColor();
+                float origStroke = Theme.dividerPaint.getStrokeWidth();
+                boolean isDark = Theme.isCurrentThemeDark();
+                Theme.dividerPaint.setColor(isDark ? 0x24FFFFFF : 0x24000000);
+                Theme.dividerPaint.setStrokeWidth(AndroidUtilities.dpf2(0.5f));
+                canvas.drawLine(leftPadding, y, getMeasuredWidth() - rightPadding, y, Theme.dividerPaint);
+                Theme.dividerPaint.setColor(origColor);
+                Theme.dividerPaint.setStrokeWidth(origStroke);
+            } else {
+                canvas.drawLine(leftPadding, y, getMeasuredWidth() - rightPadding, y, Theme.dividerPaint);
+            }
+        }
 
         boolean redError = currentError;
         boolean error = currentError;
@@ -85,7 +114,8 @@ public class DrawerActionCell extends FrameLayout {
         }
         if (error) {
             boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-            int countTop = AndroidUtilities.dp(isM3 ? 16.5f : 12.5f);
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            int countTop = AndroidUtilities.dp((isM3 || isIosGlass) ? 16.5f : 12.5f);
             int countWidth = AndroidUtilities.dp(9);
             int countLeft = getMeasuredWidth() - countWidth - AndroidUtilities.dp(25);
 
@@ -103,8 +133,8 @@ public class DrawerActionCell extends FrameLayout {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-        int h = isM3 ? 56 : 48;
+        boolean isGrouped = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        int h = isGrouped ? 56 : 48;
         super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(h), MeasureSpec.EXACTLY));
     }
 

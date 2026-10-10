@@ -1133,14 +1133,15 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         sideMenu.setItemAnimator(itemAnimator);
         sideMenu.setClipToPadding(false);
         boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-        if (isM3) {
+        boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        if (isM3 || isIosGlass) {
             sideMenu.setSections(
                 v -> v instanceof org.telegram.ui.Cells.DrawerActionCell ||
                      v instanceof org.telegram.ui.Cells.DrawerUserCell ||
                      v instanceof org.telegram.ui.Cells.DrawerAddCell ||
                      v instanceof org.telegram.ui.Cells.DrawerActionCheckCell,
                 type -> type == 3 || type == 4 || type == 5,
-                AndroidUtilities.dp(12),
+                isIosGlass ? AndroidUtilities.dp(16) : AndroidUtilities.dp(12),
                 (int) (xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() / AndroidUtilities.density),
                 sideMenu::drawBackgroundRect,
                 true
@@ -7784,11 +7785,13 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 checkNavigationBarColor = (boolean) args[1];
             }
             checkSystemBarColors(args.length > 2 && (boolean) args[2], true, checkNavigationBarColor && !isNavigationBarColorFrozen && !actionBarLayout.isTransitionAnimationInProgress());
+            boolean isDrawerGrouped = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            int drawerBg = Theme.getColor(isDrawerGrouped ? Theme.key_windowBackgroundGray : Theme.key_chats_menuBackground);
             if (sideMenu != null) {
-                sideMenu.setBackgroundColor(Theme.getColor(Theme.key_chats_menuBackground));
+                sideMenu.setBackgroundColor(drawerBg);
             }
             if (sideMenuContainer != null) {
-                sideMenuContainer.setBackgroundColor(Theme.getColor(Theme.key_chats_menuBackground));
+                sideMenuContainer.setBackgroundColor(drawerBg);
             }
         } else if (id == NotificationCenter.needSetDayNightTheme) {
             boolean instant = false;
