@@ -220,7 +220,8 @@ public class ItemOptions {
         this.resourcesProvider = fragment.getResourceProvider();
         this.context = fragment.getContext();
         this.scrimView = scrimView;
-        this.dimAlpha = AndroidUtilities.computePerceivedBrightness(Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider)) > .705 ? 0x66 : 0x33;
+        boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        this.dimAlpha = isIosGlass ? (Theme.isCurrentThemeDark() ? 0x4D : 0x33) : (AndroidUtilities.computePerceivedBrightness(Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider)) > .705 ? 0x66 : 0x33);
         this.swipeback = swipeback;
         this.useScrollView = useScrollView;
         this.shownFromBottom = shownFromBottom;
@@ -241,7 +242,8 @@ public class ItemOptions {
         this.resourcesProvider = resourcesProvider;
         this.context = container.getContext();
         this.scrimView = scrimView;
-        this.dimAlpha = AndroidUtilities.computePerceivedBrightness(Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider)) > .705 ? 0x66 : 0x33;
+        boolean isIosGlass2 = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        this.dimAlpha = isIosGlass2 ? (Theme.isCurrentThemeDark() ? 0x4D : 0x33) : (AndroidUtilities.computePerceivedBrightness(Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider)) > .705 ? 0x66 : 0x33);
         this.swipeback = swipeback;
         this.shownFromBottom = shownFromBottom;
         this.useScrollView = useScrollView;
@@ -277,8 +279,9 @@ public class ItemOptions {
                 dismiss();
             }
         });
-        this.blur = tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool();
-        this.blurForMenu = tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool();
+        boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        this.blur = tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || isIosGlass;
+        this.blurForMenu = tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || isIosGlass;
         layout = lastLayout;
     }
 
@@ -384,8 +387,9 @@ public class ItemOptions {
         }
 
         boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+        boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
         subItem = new ActionBarMenuSubItem(context, false, false, resourcesProvider);
-        subItem.setPadding(dp(isM3 ? 14 : 18), 0, dp(isM3 ? 14 : 18), 0);
+        subItem.setPadding(dp(isM3 ? 14 : (isIosGlass ? 16 : 18)), 0, dp(isM3 ? 14 : (isIosGlass ? 16 : 18)), 0);
         if (iconResId != 0 || iconDrawable != null) {
             subItem.setTextAndIcon(text, iconResId, iconDrawable);
         } else {
@@ -429,7 +433,8 @@ public class ItemOptions {
     public void add(ActionBarMenuSubItem subItem) {
         AndroidUtilities.removeFromParent(subItem);
         boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-        subItem.setPadding(dp(isM3 ? 14 : 18), 0, dp(isM3 ? 14 : 18), 0);
+        boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        subItem.setPadding(dp(isM3 ? 14 : (isIosGlass ? 16 : 18)), 0, dp(isM3 ? 14 : (isIosGlass ? 16 : 18)), 0);
 
         subItem.setColors(textColor != null ? textColor : getM3MenuColor(Theme.key_actionBarDefaultSubmenuItem, Theme.getColor(Theme.key_actionBarDefaultSubmenuItem, resourcesProvider)), iconColor != null ? iconColor : getM3MenuColor(Theme.key_actionBarDefaultSubmenuItemIcon, Theme.getColor(Theme.key_actionBarDefaultSubmenuItemIcon, resourcesProvider)));
         subItem.setSelectorColor(Theme.getColor(Theme.key_groupcreate_sectionText, resourcesProvider));
@@ -1145,11 +1150,13 @@ public class ItemOptions {
 
     public ItemOptions setBlurBackground(BlurredBackgroundDrawableViewFactory factory, BlurredBackgroundProvider colorProvider, boolean multiwindow) {
         if (layout instanceof ActionBarPopupWindow.ActionBarPopupWindowLayout) {
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            float cardRad = isIosGlass ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(12);
             layout.setBackground(factory.create(layout, multiwindow)
                 .setColorProvider(colorProvider)
                 .setPadding(dp(8))
                 .setHasPadding(true)
-                .setRadius(dp(12)));
+                .setRadius(cardRad));
         }
         return this;
     }
@@ -1223,7 +1230,8 @@ public class ItemOptions {
     public void setupSelectors() {
         if (layout == null) return;
         boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
-        int rad = isM3 ? 16 : 12;
+        boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        int rad = isM3 ? 16 : (isIosGlass ? (int) (xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() / AndroidUtilities.density) : 12);
 
         for (int j = 0; j < layout.getChildCount(); ++j) {
             View child = j == layout.getChildCount() - 1 ? lastLayout : layout.getChildAt(j);
@@ -1514,12 +1522,14 @@ public class ItemOptions {
 
         if (blurForMenu && scrimBlur3SourceBitmap != null) {
             setGapBackgroundColor(Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuItem, resourcesProvider), 0.06f));
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            float cardRad = isIosGlass ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(12);
             BlurredBackgroundDrawable bg = new BlurredBackgroundDrawableViewFactory(scrimBlur3SourceBitmap)
                 .create(layout, true)
                 .setColorProvider(BlurredBackgroundProviderImpl.scrimMenuBackground(resourcesProvider))
                 .setPadding(dp(8))
                 .setHasPadding(true)
-                .setRadius(dp(12));
+                .setRadius(cardRad);
 
             bg.setSourceOffset(X + this.translateX, Y + this.translateY);
             layout.setBackground(bg);

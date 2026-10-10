@@ -145,6 +145,7 @@ public class ActionBarPopupWindow extends PopupWindow {
         Rect rect;
         private final Path m3ClipPath = new Path();
         private final RectF m3ClipRect = new RectF();
+        private Paint glassStrokePaint;
 
         public Rect getPadding() {
             return bgPaddings;
@@ -578,6 +579,16 @@ public class ActionBarPopupWindow extends PopupWindow {
                         canvas.clipPath(m3ClipPath);
                         backgroundDrawable.draw(canvas);
                         canvas.restore();
+                        if (isIosGlass) {
+                            if (glassStrokePaint == null) {
+                                glassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                                glassStrokePaint.setStyle(Paint.Style.STROKE);
+                                glassStrokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.6f));
+                            }
+                            boolean isDark = Theme.isCurrentThemeDark();
+                            glassStrokePaint.setColor(isDark ? 0x24FFFFFF : 0x18000000);
+                            canvas.drawRoundRect(m3ClipRect, cardRad, cardRad, glassStrokePaint);
+                        }
                     } else {
                         backgroundDrawable.draw(canvas);
                     }
@@ -630,7 +641,12 @@ public class ActionBarPopupWindow extends PopupWindow {
                     childSave = canvas.saveLayerAlpha(0, 0, getMeasuredWidth(), getMeasuredHeight(), (int) (255 * reactionsEnterProgress), Canvas.ALL_SAVE_FLAG);
                 }
                 m3ClipPath.rewind();
-                m3ClipRect.set(AndroidUtilities.rectTmp2.left + bgPaddings.left, AndroidUtilities.rectTmp2.top + bgPaddings.top, AndroidUtilities.rectTmp2.right - bgPaddings.right, AndroidUtilities.rectTmp2.bottom - bgPaddings.bottom);
+                Rect bgBounds = backgroundDrawable != null ? backgroundDrawable.getBounds() : null;
+                if (bgBounds != null) {
+                    m3ClipRect.set(bgBounds.left + bgPaddings.left, bgBounds.top + bgPaddings.top, bgBounds.right - bgPaddings.right, bgBounds.bottom - bgPaddings.bottom);
+                } else {
+                    m3ClipRect.set(bgPaddings.left, bgPaddings.top, getMeasuredWidth() - bgPaddings.right, getMeasuredHeight() - bgPaddings.bottom);
+                }
                 float rad = xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius();
                 m3ClipPath.addRoundRect(m3ClipRect, rad, rad, Path.Direction.CW);
                 canvas.save();
@@ -938,7 +954,7 @@ public class ActionBarPopupWindow extends PopupWindow {
         try {
             super.showAsDropDown(anchor, xoff, yoff);
             registerListener(anchor);
-            if (Build.VERSION.SDK_INT >= 31 && tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool()) {
+            if (Build.VERSION.SDK_INT >= 31 && (tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
                 dimBehind(0.2f);
             }
         } catch (Exception e) {
@@ -1133,7 +1149,7 @@ public class ActionBarPopupWindow extends PopupWindow {
     public void showAtLocation(View parent, int gravity, int x, int y) {
         super.showAtLocation(parent, gravity, x, y);
         unregisterListener();
-        if (Build.VERSION.SDK_INT >= 31 && tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool()) {
+        if (Build.VERSION.SDK_INT >= 31 && (tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
             dimBehind(0.2f);
         }
     }

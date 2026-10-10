@@ -32402,6 +32402,26 @@ public class ChatActivity extends BaseFragment implements
         }
     }
 
+    private int getChatMenuBottomMargin(View contentView) {
+        int navBarH = AndroidUtilities.navigationBarHeight;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && contentView != null && contentView.getRootWindowInsets() != null) {
+            android.view.WindowInsets insets = contentView.getRootWindowInsets();
+            if (insets != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    navBarH = Math.max(navBarH, insets.getInsets(android.view.WindowInsets.Type.navigationBars()).bottom);
+                    navBarH = Math.max(navBarH, insets.getInsets(android.view.WindowInsets.Type.systemBars()).bottom);
+                } else {
+                    navBarH = Math.max(navBarH, insets.getStableInsetBottom());
+                    navBarH = Math.max(navBarH, insets.getSystemWindowInsetBottom());
+                }
+            }
+        }
+        if (navBarH <= 0) {
+            navBarH = AndroidUtilities.dp(24);
+        }
+        return navBarH + AndroidUtilities.dp(24);
+    }
+
     private boolean createMenu(View v, boolean single, boolean listView, float x, float y, boolean longpress) {
         return createMenu(v, single, listView, x, y, true, longpress);
     }
@@ -33985,11 +34005,14 @@ public class ChatActivity extends BaseFragment implements
                 popupLayout.addView(tapAndHoldView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
             }
 
+            final boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+
             ChatScrimPopupContainerLayout scrimPopupContainerLayout = new ChatScrimPopupContainerLayout(contentView.getContext()) {
                 @Override
                 public boolean dispatchKeyEvent(KeyEvent event) {
                     if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
                         closeMenu();
+                        return true;
                     }
                     return super.dispatchKeyEvent(event);
                 }
@@ -33997,35 +34020,36 @@ public class ChatActivity extends BaseFragment implements
                 @Override
                 public boolean dispatchTouchEvent(MotionEvent ev) {
                     boolean b = super.dispatchTouchEvent(ev);
-                    if (ev.getAction() == MotionEvent.ACTION_DOWN && !b) {
+                    if (!isIosGlass && ev.getAction() == MotionEvent.ACTION_DOWN && !b) {
                         closeMenu();
                     }
                     return b;
                 }
             };
-            scrimPopupContainerLayout.setOnTouchListener(new View.OnTouchListener() {
+            if (!isIosGlass) {
+                scrimPopupContainerLayout.setOnTouchListener(new View.OnTouchListener() {
 
-                private int[] pos = new int[2];
+                    private int[] pos = new int[2];
 
-                @Override
-                public boolean onTouch(View v, MotionEvent event) {
-                    if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                        if (scrimPopupWindow != null && scrimPopupWindow.isShowing()) {
-                            View contentView = scrimPopupWindow.getContentView();
-                            contentView.getLocationInWindow(pos);
-                            rect.set(pos[0], pos[1], pos[0] + contentView.getMeasuredWidth(), pos[1] + contentView.getMeasuredHeight());
-                            if (!rect.contains((int) event.getX(), (int) event.getY())) {
-                                closeMenu();
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event) {
+                        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                            if (scrimPopupWindow != null && scrimPopupWindow.isShowing()) {
+                                View contentView = scrimPopupWindow.getContentView();
+                                contentView.getLocationInWindow(pos);
+                                rect.set(pos[0], pos[1], pos[0] + contentView.getMeasuredWidth(), pos[1] + contentView.getMeasuredHeight());
+                                if (!rect.contains((int) event.getX(), (int) event.getY())) {
+                                    closeMenu();
+                                }
                             }
+                        } else if (event.getActionMasked() == MotionEvent.ACTION_OUTSIDE) {
+                            closeMenu();
                         }
-                    } else if (event.getActionMasked() == MotionEvent.ACTION_OUTSIDE) {
-                        closeMenu();
+                        return false;
                     }
-                    return false;
-                }
-            });
+                });
+            }
 
-            final boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
             ChatMessageCell msgCell = v instanceof ChatMessageCell ? (ChatMessageCell) v : null;
             MessageObject.GroupedMessages group = msgCell != null ? msgCell.getCurrentMessagesGroup() : null;
             int bubbleWindowLeft;
@@ -34297,7 +34321,238 @@ public class ChatActivity extends BaseFragment implements
             if (reactionsLayout != null) {
                 reactionsLayout.setParentLayout(scrimPopupContainerLayout);
             }
-            scrimPopupWindow = new ActionBarPopupWindow(scrimPopupContainerLayout, LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT) {
+
+            final float[] scrollBoundsHolder = new float[2];
+            final float[] baseShiftHolder = new float[1];
+            final int[] initialPopupPos = new int[2];
+
+            final FrameLayout scrimRootLayout;
+            if (isIosGlass) {
+                scrimRootLayout = new FrameLayout(contentView.getContext()) {
+                    private float touchDownX;
+                    private float touchDownY;
+                    private float lastTouchY;
+                    private float scrollY = 0f;
+                    private boolean isDragging = false;
+                    private android.view.VelocityTracker velocityTracker;
+                    private ValueAnimator scrollBackAnimator;
+                    private final Rect hitRectTmp = new Rect();
+                    private boolean touchStartedOnInteractive = false;
+
+                    @Override
+                    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                        int w = MeasureSpec.getSize(widthMeasureSpec);
+                        int h = MeasureSpec.getSize(heightMeasureSpec);
+                        setMeasuredDimension(w, h);
+                        scrimPopupContainerLayout.measure(
+                            MeasureSpec.makeMeasureSpec(w, MeasureSpec.AT_MOST),
+                            MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(5000), MeasureSpec.AT_MOST)
+                        );
+                    }
+
+                    @Override
+                    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+                        int childW = scrimPopupContainerLayout.getMeasuredWidth();
+                        int childH = scrimPopupContainerLayout.getMeasuredHeight();
+                        scrimPopupContainerLayout.layout(
+                            initialPopupPos[0],
+                            initialPopupPos[1],
+                            initialPopupPos[0] + childW,
+                            initialPopupPos[1] + childH
+                        );
+                        int listLocY = 0;
+                        if (chatListView != null) {
+                            int[] loc = new int[2];
+                            chatListView.getLocationInWindow(loc);
+                            listLocY = loc[1];
+                        }
+                        int bottomMargin = getChatMenuBottomMargin(contentView);
+                        int listBottom = listLocY + (chatListView != null ? chatListView.getMeasuredHeight() : AndroidUtilities.displaySize.y) - bottomMargin;
+                        int kbH = contentView != null ? contentView.measureKeyboardHeight() : 0;
+                        if (kbH > AndroidUtilities.dp(20) && contentView != null) {
+                            listBottom = Math.min(listBottom, contentView.getHeight() - kbH - AndroidUtilities.dp(16));
+                        }
+                        int bottomResting = initialPopupPos[1] + childH;
+                        float minScroll = Math.min(0, listBottom - bottomResting);
+                        float maxScroll = Math.max(0, -baseShiftHolder[0]);
+                        if (baseShiftHolder[0] > 0) {
+                            minScroll = Math.min(minScroll, -baseShiftHolder[0]);
+                        }
+                        scrollBoundsHolder[0] = minScroll;
+                        scrollBoundsHolder[1] = maxScroll;
+                    }
+
+                    @Override
+                    public boolean dispatchKeyEvent(KeyEvent event) {
+                        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
+                            closeMenu();
+                            return true;
+                        }
+                        return super.dispatchKeyEvent(event);
+                    }
+
+                    @Override
+                    public boolean dispatchTouchEvent(MotionEvent ev) {
+                        int action = ev.getActionMasked();
+                        float rawX = ev.getRawX();
+                        float rawY = ev.getRawY();
+
+                        if (action == MotionEvent.ACTION_DOWN) {
+                            if (scrollBackAnimator != null && scrollBackAnimator.isRunning()) {
+                                scrollBackAnimator.cancel();
+                            }
+                            isDragging = false;
+                            touchDownX = rawX;
+                            touchDownY = rawY;
+                            lastTouchY = rawY;
+                            if (velocityTracker == null) {
+                                velocityTracker = android.view.VelocityTracker.obtain();
+                            } else {
+                                velocityTracker.clear();
+                            }
+                            velocityTracker.addMovement(ev);
+
+                            float contX = ev.getX() - (scrimPopupContainerLayout.getLeft() + scrimPopupContainerLayout.getTranslationX());
+                            float contY = ev.getY() - (scrimPopupContainerLayout.getTop() + scrimPopupContainerLayout.getTranslationY());
+
+                            boolean onReactions = false;
+                            if (finalReactionsLayout1 != null && finalReactionsLayout1.getVisibility() == View.VISIBLE) {
+                                finalReactionsLayout1.getHitRect(hitRectTmp);
+                                onReactions = hitRectTmp.contains((int) contX, (int) contY);
+                            }
+                            boolean onMenu = false;
+                            if (popupLayout != null && popupLayout.getVisibility() == View.VISIBLE) {
+                                popupLayout.getHitRect(hitRectTmp);
+                                onMenu = hitRectTmp.contains((int) contX, (int) contY);
+                            }
+                            touchStartedOnInteractive = onReactions || onMenu;
+
+                            if (touchStartedOnInteractive) {
+                                super.dispatchTouchEvent(ev);
+                            }
+                            return true;
+                        } else if (action == MotionEvent.ACTION_MOVE) {
+                            if (velocityTracker != null) {
+                                velocityTracker.addMovement(ev);
+                            }
+                            float deltaX = rawX - touchDownX;
+                            float deltaY = rawY - touchDownY;
+
+                            if (!isDragging && Math.abs(deltaY) > AndroidUtilities.touchSlop) {
+                                if (!touchStartedOnInteractive || Math.abs(deltaY) > Math.abs(deltaX) * 0.8f) {
+                                    isDragging = true;
+                                    lastTouchY = rawY;
+                                    if (touchStartedOnInteractive) {
+                                        MotionEvent cancel = MotionEvent.obtain(ev);
+                                        cancel.setAction(MotionEvent.ACTION_CANCEL);
+                                        super.dispatchTouchEvent(cancel);
+                                        cancel.recycle();
+                                    }
+                                }
+                            }
+
+                            if (isDragging) {
+                                float dy = rawY - lastTouchY;
+                                lastTouchY = rawY;
+
+                                float minScroll = scrollBoundsHolder[0];
+                                float maxScroll = scrollBoundsHolder[1];
+
+                                scrollY += dy;
+                                float targetScroll = scrollY;
+                                if (targetScroll < minScroll) {
+                                    float over = targetScroll - minScroll;
+                                    targetScroll = minScroll + over * 0.35f;
+                                } else if (targetScroll > maxScroll) {
+                                    float over = targetScroll - maxScroll;
+                                    targetScroll = maxScroll + over * 0.35f;
+                                }
+
+                                scrimPopupContainerLayout.setTranslationY(targetScroll);
+                                scrimViewShiftY = baseShiftHolder[0] + targetScroll;
+                                if (scrimView != null) {
+                                    scrimView.invalidate();
+                                }
+                                if (chatListView != null) {
+                                    chatListView.invalidate();
+                                }
+                                contentView.invalidate();
+                                return true;
+                            }
+
+                            if (touchStartedOnInteractive) {
+                                super.dispatchTouchEvent(ev);
+                            }
+                            return true;
+                        } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                            if (velocityTracker != null) {
+                                velocityTracker.addMovement(ev);
+                            }
+                            if (isDragging) {
+                                isDragging = false;
+                                float minScroll = scrollBoundsHolder[0];
+                                float maxScroll = scrollBoundsHolder[1];
+                                float targetScroll = scrollY;
+                                if (velocityTracker != null) {
+                                    velocityTracker.computeCurrentVelocity(1000);
+                                    float vy = velocityTracker.getYVelocity();
+                                    targetScroll += vy * 0.15f;
+                                    velocityTracker.recycle();
+                                    velocityTracker = null;
+                                }
+                                float clamped = Utilities.clamp(targetScroll, maxScroll, minScroll);
+                                if (scrollBackAnimator != null && scrollBackAnimator.isRunning()) {
+                                    scrollBackAnimator.cancel();
+                                }
+                                float startVal = scrollY;
+                                scrollBackAnimator = ValueAnimator.ofFloat(startVal, clamped);
+                                scrollBackAnimator.setDuration(260);
+                                scrollBackAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                                scrollBackAnimator.addUpdateListener(a -> {
+                                    float val = (float) a.getAnimatedValue();
+                                    scrollY = val;
+                                    scrimPopupContainerLayout.setTranslationY(val);
+                                    scrimViewShiftY = baseShiftHolder[0] + val;
+                                    if (scrimView != null) {
+                                        scrimView.invalidate();
+                                    }
+                                    if (chatListView != null) {
+                                        chatListView.invalidate();
+                                    }
+                                    contentView.invalidate();
+                                });
+                                scrollBackAnimator.start();
+                                return true;
+                            }
+                            if (velocityTracker != null) {
+                                velocityTracker.recycle();
+                                velocityTracker = null;
+                            }
+                            if (action == MotionEvent.ACTION_UP) {
+                                if (touchStartedOnInteractive) {
+                                    super.dispatchTouchEvent(ev);
+                                } else {
+                                    closeMenu();
+                                }
+                            }
+                            return true;
+                        }
+                        return super.dispatchTouchEvent(ev);
+                    }
+                };
+                scrimRootLayout.setClipChildren(false);
+                scrimRootLayout.addView(scrimPopupContainerLayout);
+            } else {
+                scrimRootLayout = null;
+            }
+
+            View popupContentView = (isIosGlass && scrimRootLayout != null) ? scrimRootLayout : scrimPopupContainerLayout;
+            int popupW = (isIosGlass && scrimRootLayout != null) ? LayoutHelper.MATCH_PARENT : LayoutHelper.WRAP_CONTENT;
+            int popupH = (isIosGlass && scrimRootLayout != null) ? LayoutHelper.MATCH_PARENT : LayoutHelper.WRAP_CONTENT;
+
+            scrimPopupWindow = new ActionBarPopupWindow(popupContentView, popupW, popupH) {
+                private boolean isClosingAnimatedCustom;
+
                 @Override
                 public void dismiss() {
                     super.dismiss();
@@ -34324,16 +34579,41 @@ public class ChatActivity extends BaseFragment implements
 
                 @Override
                 public void dismiss(boolean animated) {
-                    super.dismiss(animated);
-                    if (finalReactionsLayout1 != null) {
-                        finalReactionsLayout1.dismissParent(animated);
+                    if (isIosGlass && animated) {
+                        if (isClosingAnimatedCustom) {
+                            return;
+                        }
+                        isClosingAnimatedCustom = true;
+                        setFocusable(false);
+                        scrimPopupContainerLayout.setPivotX(scrimPopupContainerLayout.getMeasuredWidth() * 0.5f);
+                        scrimPopupContainerLayout.setPivotY(0);
+                        scrimPopupContainerLayout.animate()
+                            .scaleX(0.85f)
+                            .scaleY(0.85f)
+                            .alpha(0f)
+                            .setDuration(220)
+                            .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT)
+                            .withEndAction(() -> {
+                                try {
+                                    super.dismiss(false);
+                                } catch (Exception ignore) {}
+                            })
+                            .start();
+                        if (finalReactionsLayout1 != null) {
+                            finalReactionsLayout1.dismissParent(animated);
+                        }
+                    } else {
+                        super.dismiss(animated);
+                        if (finalReactionsLayout1 != null) {
+                            finalReactionsLayout1.dismissParent(animated);
+                        }
                     }
                 }
             };
             scrimPopupWindow.setPauseNotifications(true);
             scrimPopupWindow.setDismissAnimationDuration(220);
-            scrimPopupWindow.setOutsideTouchable(true);
-            scrimPopupWindow.setClippingEnabled(true);
+            scrimPopupWindow.setOutsideTouchable(!isIosGlass);
+            scrimPopupWindow.setClippingEnabled(!isIosGlass);
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 scrimPopupWindow.setAnimationStyle(0);
             } else if (!isReactionsAvailable || reactionsLayout == null || !ReactionsContainerLayout.allowSmoothEnterTransition()) {
@@ -34342,7 +34622,7 @@ public class ChatActivity extends BaseFragment implements
                 scrimPopupWindow.setAnimationStyle(0);
             }
             scrimPopupWindow.setFocusable(true);
-            scrimPopupContainerLayout.measure(View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(1000), View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(1000), View.MeasureSpec.AT_MOST));
+            scrimPopupContainerLayout.measure(View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(1000), View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(5000), View.MeasureSpec.AT_MOST));
             scrimPopupWindow.setInputMethodMode(ActionBarPopupWindow.INPUT_METHOD_NOT_NEEDED);
             scrimPopupWindow.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
             scrimPopupWindow.getContentView().setFocusableInTouchMode(true);
@@ -34393,13 +34673,14 @@ public class ChatActivity extends BaseFragment implements
 
                 int[] listLoc = new int[2];
                 chatListView.getLocationInWindow(listLoc);
-                int listBottom = listLoc[1] + chatListView.getMeasuredHeight() - AndroidUtilities.dp(12);
+                int bottomMargin = getChatMenuBottomMargin(contentView);
+                int listBottom = listLoc[1] + (chatListView != null ? chatListView.getMeasuredHeight() : AndroidUtilities.displaySize.y) - bottomMargin;
                 if (keyboardHeight > AndroidUtilities.dp(20)) {
-                    listBottom = Math.min(listBottom, contentView.getHeight() - keyboardHeight - AndroidUtilities.dp(12));
+                    listBottom = Math.min(listBottom, contentView.getHeight() - keyboardHeight - AndroidUtilities.dp(16));
                 }
 
                 int maxYAllowed = listBottom - measuredH;
-                int minYAllowed = listLoc[1] + AndroidUtilities.dp(12);
+                int minYAllowed = Math.max(listLoc[1] + AndroidUtilities.dp(12), AndroidUtilities.statusBarHeight + AndroidUtilities.dp(12));
 
                 if (idealPopupY > maxYAllowed) {
                     popupY = Math.max(minYAllowed, maxYAllowed);
@@ -34444,13 +34725,40 @@ public class ChatActivity extends BaseFragment implements
             }
             final int finalPopupX = scrimPopupX = popupX;
             final int finalPopupY = scrimPopupY = popupY;
-            scrimPopupContainerLayout.setMaxHeight(maxY + height - popupY);
+            if (!isIosGlass) {
+                scrimPopupContainerLayout.setMaxHeight(maxY + height - popupY);
+            }
+            initialPopupPos[0] = finalPopupX;
+            initialPopupPos[1] = finalPopupY;
+            baseShiftHolder[0] = scrimViewShiftY;
+
+            int[] listLocBounds = new int[2];
+            chatListView.getLocationInWindow(listLocBounds);
+            int bottomMarginBounds = getChatMenuBottomMargin(contentView);
+            int listBottomBounds = listLocBounds[1] + (chatListView != null ? chatListView.getMeasuredHeight() : AndroidUtilities.displaySize.y) - bottomMarginBounds;
+            if (keyboardHeight > AndroidUtilities.dp(20)) {
+                listBottomBounds = Math.min(listBottomBounds, contentView.getHeight() - keyboardHeight - AndroidUtilities.dp(16));
+            }
+            int totalHBounds = scrimPopupContainerLayout.getMeasuredHeight();
+            int bottomRestingBounds = finalPopupY + totalHBounds;
+            float minScrollInitial = Math.min(0, listBottomBounds - bottomRestingBounds);
+            float maxScrollInitial = Math.max(0, -scrimViewShiftY);
+            if (scrimViewShiftY > 0) {
+                minScrollInitial = Math.min(minScrollInitial, -scrimViewShiftY);
+            }
+            scrollBoundsHolder[0] = minScrollInitial;
+            scrollBoundsHolder[1] = maxScrollInitial;
+
             ReactionsContainerLayout finalReactionsLayout = reactionsLayout;
             Runnable showMenu = () -> {
                 if (scrimPopupWindow == null || fragmentView == null || scrimPopupWindow.isShowing() || !AndroidUtilities.isActivityRunning(getParentActivity())) {
                     return;
                 }
-                scrimPopupWindow.showAtLocation(chatListView, Gravity.LEFT | Gravity.TOP, finalPopupX, finalPopupY);
+                if (isIosGlass && scrimRootLayout != null) {
+                    scrimPopupWindow.showAtLocation(chatListView, Gravity.LEFT | Gravity.TOP, 0, 0);
+                } else {
+                    scrimPopupWindow.showAtLocation(chatListView, Gravity.LEFT | Gravity.TOP, finalPopupX, finalPopupY);
+                }
                 if (isReactionsAvailableFinal && finalReactionsLayout != null) {
                     if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                         popupLayout.setReactionsTransitionProgress(0f);
@@ -45132,7 +45440,9 @@ public class ChatActivity extends BaseFragment implements
             }
             if (scrimPopupWindow != null) {
                 final View contentView = scrimPopupWindow.getContentView();
-                contentView.setBackgroundColor(getThemedColor(Theme.key_actionBarDefaultSubmenuBackground));
+                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    contentView.setBackgroundColor(getThemedColor(Theme.key_actionBarDefaultSubmenuBackground));
+                }
                 contentView.invalidate();
             }
             if (pinnedLineView != null) {
