@@ -10,9 +10,11 @@ package org.telegram.ui.Components;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.os.Build;
 import android.os.SystemClock;
 import android.text.Layout;
@@ -88,6 +90,36 @@ public class VideoPlayerSeekBar {
     private AnimatedFloat animateThumbLoopBackProgress;
     private float loopBackWasThumbX;
 
+    private float iosLensProgress = 0f;
+    private android.animation.ValueAnimator iosLensAnimator;
+    private static Paint glassPaint;
+
+    private void animateIosLens(boolean active) {
+        if (iosLensAnimator != null) {
+            iosLensAnimator.cancel();
+        }
+        iosLensAnimator = android.animation.ValueAnimator.ofFloat(iosLensProgress, active ? 1f : 0f);
+        iosLensAnimator.setDuration(active ? 150 : 200);
+        iosLensAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT);
+        iosLensAnimator.addUpdateListener(animation -> {
+            iosLensProgress = (float) animation.getAnimatedValue();
+            if (parentView != null) {
+                parentView.invalidate();
+            }
+        });
+        iosLensAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                iosLensProgress = active ? 1f : 0f;
+                iosLensAnimator = null;
+                if (parentView != null) {
+                    parentView.invalidate();
+                }
+            }
+        });
+        iosLensAnimator.start();
+    }
+
     public VideoPlayerSeekBar(View parent) {
         if (paint == null) {
             paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -95,6 +127,9 @@ public class VideoPlayerSeekBar {
             strokePaint.setStyle(Paint.Style.STROKE);
             strokePaint.setColor(Color.BLACK);
             strokePaint.setStrokeWidth(1);
+        }
+        if (glassPaint == null) {
+            glassPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         }
         parentView = parent;
         thumbWidth = AndroidUtilities.dp(24);
@@ -125,9 +160,15 @@ public class VideoPlayerSeekBar {
                 pressed = pressedDelayed = true;
                 draggingThumbX = thumbX;
                 thumbDX = (int) (x - thumbX);
+                if (UIStyleEngine.isIosLiquidGlass()) {
+                    animateIosLens(true);
+                }
                 return true;
             }
         } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            if (UIStyleEngine.isIosLiquidGlass()) {
+                animateIosLens(false);
+            }
             if (pressed) {
                 animatedThumbX = thumbX = draggingThumbX;
                 if (action == MotionEvent.ACTION_UP && delegate != null) {
@@ -352,8 +393,8 @@ public class VideoPlayerSeekBar {
     }
 
     public void draw(Canvas canvas, View view) {
-        int effectiveLineHeight = UIStyleEngine.isMaterial3Expressive() ? Math.max(lineHeight, AndroidUtilities.dp(6)) : lineHeight;
-        int effectiveSmallLineHeight = UIStyleEngine.isMaterial3Expressive() ? Math.max(smallLineHeight, AndroidUtilities.dp(3)) : smallLineHeight;
+        int effectiveLineHeight = UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dp(5) : (UIStyleEngine.isMaterial3Expressive() ? Math.max(lineHeight, AndroidUtilities.dp(6)) : lineHeight);
+        int effectiveSmallLineHeight = UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dp(2.5f) : (UIStyleEngine.isMaterial3Expressive() ? Math.max(smallLineHeight, AndroidUtilities.dp(3)) : smallLineHeight);
         float yShift = UIStyleEngine.isMaterial3Expressive() ? AndroidUtilities.dp(8) : 0;
         rect.left = horizontalPadding + AndroidUtilities.lerp(thumbWidth / 2f, 0, transitionProgress);
         rect.top = AndroidUtilities.lerp((height - effectiveLineHeight) / 2f - yShift, height - AndroidUtilities.dp(3) - effectiveSmallLineHeight, transitionProgress);
@@ -463,6 +504,8 @@ public class VideoPlayerSeekBar {
             canvas.drawCircle(wasRight, rect.centerY(), circleRadius * loopBack, paint);
         }
 
+        boolean isIosGlass = UIStyleEngine.isIosLiquidGlass();
+
         // progress
         rect.right = horizontalPadding + AndroidUtilities.lerp(thumbWidth / 2f + (pressed ? draggingThumbX : currentThumbX), (parentView.getWidth() - horizontalPadding * 2f) * getProgress(), transitionProgress);
         if (transitionProgress > 0f && rect.width() > 0) {
@@ -473,9 +516,85 @@ public class VideoPlayerSeekBar {
         setPaintColor(ColorUtils.blendARGB(progressColor, smallLineColor, transitionProgress), 1f);
         drawProgressBar(canvas, rect, paint, playing);
 
-        // circle
-        setPaintColor(ColorUtils.blendARGB(circleColor, getProgress() == 0 ? Color.TRANSPARENT : smallLineColor, transitionProgress), 1f - transitionProgress);
-        canvas.drawCircle(rect.right, rect.centerY(), circleRadius * (1f - loopBack), paint);
+        // circle / thumb
+        if (isIosGlass && transitionProgress < 1f) {
+            float cx = rect.right;
+            float cy = rect.centerY();
+            float fadeProgress = 1f - transitionProgress;
+
+            float restW = AndroidUtilities.dpf2(28f);
+            float restH = AndroidUtilities.dpf2(18f);
+            float lensW = AndroidUtilities.dpf2(46f);
+            float lensH = AndroidUtilities.dpf2(30f);
+
+            float curW = AndroidUtilities.lerp(restW, lensW, iosLensProgress);
+            float curH = AndroidUtilities.lerp(restH, lensH, iosLensProgress);
+            float curRad = curH / 2f;
+
+            // --- A. SOLID WHITE REST CAPSULE LAYER (fades out as lens blooms) ---
+            if (iosLensProgress < 1.0f) {
+                float whiteAlpha = (1.0f - iosLensProgress) * fadeProgress;
+
+                // Soft ambient drop shadows
+                glassPaint.setColor(ColorUtils.setAlphaComponent(0x000000, (int) (0x35 * whiteAlpha)));
+                RectF r = AndroidUtilities.rectTmp;
+                r.set(cx - curW / 2f, cy - curH / 2f + AndroidUtilities.dpf2(1.5f), cx + curW / 2f, cy + curH / 2f + AndroidUtilities.dpf2(1.5f));
+                canvas.drawRoundRect(r, curRad, curRad, glassPaint);
+
+                glassPaint.setColor(ColorUtils.setAlphaComponent(0x000000, (int) (0x15 * whiteAlpha)));
+                r.set(cx - curW / 2f, cy - curH / 2f + AndroidUtilities.dpf2(2.5f), cx + curW / 2f, cy + curH / 2f + AndroidUtilities.dpf2(2.5f));
+                canvas.drawRoundRect(r, curRad, curRad, glassPaint);
+
+                // Pristine solid white capsule body
+                glassPaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, (int) (0xFF * whiteAlpha)));
+                r.set(cx - curW / 2f, cy - curH / 2f, cx + curW / 2f, cy + curH / 2f);
+                canvas.drawRoundRect(r, curRad, curRad, glassPaint);
+            }
+
+            // --- B. TRANSLUCENT LIQUID GLASS LENS LAYER (blooms when user touches / drags) ---
+            if (iosLensProgress > 0.0f) {
+                float lensAlpha = iosLensProgress * fadeProgress;
+                RectF r = AndroidUtilities.rectTmp;
+
+                // Expanded soft shadow
+                glassPaint.setColor(ColorUtils.setAlphaComponent(0x000000, (int) (0x45 * lensAlpha)));
+                r.set(cx - curW / 2f, cy - curH / 2f + AndroidUtilities.dpf2(2.5f), cx + curW / 2f, cy + curH / 2f + AndroidUtilities.dpf2(2.5f));
+                canvas.drawRoundRect(r, curRad, curRad, glassPaint);
+
+                // Translucent glass body (tinted white/frosted, reveals video progress underneath)
+                int glassTint = ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x60 * lensAlpha));
+                glassPaint.setColor(glassTint);
+                r.set(cx - curW / 2f, cy - curH / 2f, cx + curW / 2f, cy + curH / 2f);
+                canvas.drawRoundRect(r, curRad, curRad, glassPaint);
+
+                // Glass dome specular reflection on upper half
+                glassPaint.setShader(new LinearGradient(
+                        cx, cy - curH / 2f, cx, cy,
+                        ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x55 * lensAlpha)), 0x00FFFFFF, Shader.TileMode.CLAMP
+                ));
+                r.set(cx - curW / 2f + AndroidUtilities.dpf2(1f), cy - curH / 2f + AndroidUtilities.dpf2(0.8f), cx + curW / 2f - AndroidUtilities.dpf2(1f), cy);
+                canvas.drawRoundRect(r, curRad, curRad, glassPaint);
+                glassPaint.setShader(null);
+
+                // Refractive specular rim
+                r.set(cx - curW / 2f, cy - curH / 2f, cx + curW / 2f, cy + curH / 2f);
+                glassPaint.setStyle(Paint.Style.STROKE);
+                glassPaint.setStrokeWidth(AndroidUtilities.dpf2(1.2f));
+                LinearGradient rimGrad = new LinearGradient(
+                        cx - curW / 2f, cy, cx + curW / 2f, cy,
+                        ColorUtils.setAlphaComponent(Color.WHITE, (int) (0xCC * lensAlpha)),
+                        ColorUtils.setAlphaComponent(0xFFFFFF, (int) (0x40 * lensAlpha)),
+                        Shader.TileMode.CLAMP
+                );
+                glassPaint.setShader(rimGrad);
+                canvas.drawRoundRect(r, curRad, curRad, glassPaint);
+                glassPaint.setShader(null);
+                glassPaint.setStyle(Paint.Style.FILL);
+            }
+        } else {
+            setPaintColor(ColorUtils.blendARGB(circleColor, getProgress() == 0 ? Color.TRANSPARENT : smallLineColor, transitionProgress), 1f - transitionProgress);
+            canvas.drawCircle(rect.right, rect.centerY(), circleRadius * (1f - loopBack), paint);
+        }
 
         drawTimestampLabel(canvas);
     }
@@ -487,7 +606,7 @@ public class VideoPlayerSeekBar {
     private static Path tmpPath;
 
     private void drawProgressBar(Canvas canvas, RectF rect, Paint paint, boolean wavy) {
-        float radius = AndroidUtilities.dp(AndroidUtilities.lerp(2, 1, transitionProgress));
+        float radius = UIStyleEngine.isIosLiquidGlass() ? (rect.height() / 2f) : AndroidUtilities.dp(AndroidUtilities.lerp(2, 1, transitionProgress));
         if (timestamps == null || timestamps.isEmpty()) {
             if (wavy && UIStyleEngine.isMaterial3Expressive()) {
                 M3WavyProgress.drawLinear(

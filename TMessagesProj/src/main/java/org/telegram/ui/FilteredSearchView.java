@@ -400,8 +400,8 @@ public class FilteredSearchView extends FrameLayout implements NotificationCente
                         || view instanceof ProfileSearchCell;
                 },
                 vt -> recyclerListView.getAdapter() != sharedPhotoVideoAdapter && vt != 1 && vt != 2,
-                AndroidUtilities.dp(12),
-                AndroidUtilities.dp(16),
+                xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dp(16) : AndroidUtilities.dp(12),
+                xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
                 recyclerListView::drawBackgroundRect,
                 false
             );
@@ -1111,6 +1111,9 @@ public class FilteredSearchView extends FrameLayout implements NotificationCente
             } else if (holder.getItemViewType() == 3) {
                 DialogCell cell = (DialogCell) holder.itemView;
                 cell.useSeparator = (position != getItemCount() - 1);
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    cell.fullSeparator = false;
+                }
                 MessageObject messageObject = messages.get(position);
                 boolean animated = cell.getMessage() != null && cell.getMessage().getId() == messageObject.getId();
                 cell.useFromUserAsAvatar = useFromUserAsAvatar;
@@ -1728,6 +1731,9 @@ public class FilteredSearchView extends FrameLayout implements NotificationCente
                 cell.useFromUserAsAvatar = useFromUserAsAvatar;
                 cell.setDialog(messageObject.getDialogId(), messageObject, messageObject.messageOwner.date, false, false);
                 cell.useSeparator = position != getItemCount() - 1;
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    cell.fullSeparator = false;
+                }
                 boolean animated = cell.getMessage() != null && cell.getMessage().getId() == messageObject.getId();
                 cell.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
                     @Override

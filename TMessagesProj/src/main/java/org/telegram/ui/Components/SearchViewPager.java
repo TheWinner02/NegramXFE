@@ -318,7 +318,7 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         searchListView.setVerticalScrollbarPosition(LocaleController.isRTL ? RecyclerListView.SCROLLBAR_POSITION_LEFT : RecyclerListView.SCROLLBAR_POSITION_RIGHT);
         searchListView.setLayoutManager(searchLayoutManager = new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         searchListView.setAnimateEmptyView(true, RecyclerListView.EMPTY_VIEW_ANIMATION_TYPE_ALPHA);
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             searchListView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
             searchListView.setSections(
                 view -> {
@@ -337,8 +337,8 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
                     && vt != DialogsSearchAdapter.VIEW_TYPE_LOADING
                     && vt != DialogsSearchAdapter.VIEW_TYPE_CATEGORY_LIST
                     && vt != DialogsSearchAdapter.VIEW_TYPE_EMPTY_RESULT,
-                AndroidUtilities.dp(12),
-                AndroidUtilities.dp(16),
+                xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dp(16) : AndroidUtilities.dp(12),
+                xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
                 searchListView::drawBackgroundRect,
                 false
             );
@@ -429,6 +429,24 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         channelsSearchListView.setLayoutManager(channelsSearchLayoutManager = new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         channelsSearchListView.setAnimateEmptyView(true, RecyclerListView.EMPTY_VIEW_ANIMATION_TYPE_ALPHA);
         channelsSearchListView.setClipToPadding(false);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            channelsSearchListView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+            channelsSearchListView.setSections(
+                view -> {
+                    if (view == null || view.getParent() != channelsSearchListView) {
+                        return false;
+                    }
+                    RecyclerView.ViewHolder holder = channelsSearchListView.getChildViewHolder(view);
+                    if (holder == null) return false;
+                    return holder.getItemViewType() != 1;
+                },
+                vt -> vt != 1,
+                xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dp(16) : AndroidUtilities.dp(12),
+                xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
+                channelsSearchListView::drawBackgroundRect,
+                false
+            );
+        }
 
         loadingView = new FlickerLoadingView(context);
         loadingView.setViewType(1);
@@ -509,7 +527,7 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         botsSearchListView.setVerticalScrollbarPosition(LocaleController.isRTL ? RecyclerListView.SCROLLBAR_POSITION_LEFT : RecyclerListView.SCROLLBAR_POSITION_RIGHT);
         botsSearchListView.setLayoutManager(botsSearchLayoutManager = new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         botsSearchListView.setAnimateEmptyView(true, RecyclerListView.EMPTY_VIEW_ANIMATION_TYPE_ALPHA);
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             botsSearchListView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
             botsSearchListView.setSections(
                 view -> {
@@ -521,8 +539,8 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
                     return holder.getItemViewType() != 1;
                 },
                 vt -> vt != 1,
-                AndroidUtilities.dp(12),
-                AndroidUtilities.dp(16),
+                xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dp(16) : AndroidUtilities.dp(12),
+                xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
                 botsSearchListView::drawBackgroundRect,
                 false
             );
@@ -600,6 +618,24 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         hashtagSearchListView.setLayoutManager(hashtagSearchLayoutManager = new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         hashtagSearchListView.setAnimateEmptyView(true, RecyclerListView.EMPTY_VIEW_ANIMATION_TYPE_ALPHA);
         hashtagSearchListView.setClipToPadding(false);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            hashtagSearchListView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+            hashtagSearchListView.setSections(
+                view -> {
+                    if (view == null || view.getParent() != hashtagSearchListView) {
+                        return false;
+                    }
+                    RecyclerView.ViewHolder holder = hashtagSearchListView.getChildViewHolder(view);
+                    if (holder == null) return false;
+                    return holder.getItemViewType() != 1;
+                },
+                vt -> vt != 1,
+                xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dp(16) : AndroidUtilities.dp(12),
+                xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
+                hashtagSearchListView::drawBackgroundRect,
+                false
+            );
+        }
 
         loadingView = new FlickerLoadingView(context);
         loadingView.setViewType(1);
@@ -656,6 +692,14 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         postsAreNew = false; // MessagesController.getGlobalMainSettings().getInt("searchpostsnew", 0) < 3;
         postsSearchContainer = new PostsSearchContainer(context, fragment);
         postsSearchContainer.listView.setClipToPadding(false);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            postsSearchContainer.listView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+            postsSearchContainer.listView.setSections(
+                xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dp(16) : AndroidUtilities.dp(12),
+                xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
+                false
+            );
+        }
         postsSearchContainer.listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
