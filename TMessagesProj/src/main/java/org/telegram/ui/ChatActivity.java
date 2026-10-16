@@ -11071,6 +11071,9 @@ public class ChatActivity extends BaseFragment implements
         selectedMessagesCountTextView.getDrawable().setOverrideFullWidth(dp(300));
         actionMode.addView(selectedMessagesCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : 85, 0, 5, 0));
         actionMode.setOnLayoutListener(actionBar::invalidate);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            selectedMessagesCountTextView.setOnWidthUpdatedListener(actionBar::invalidate);
+        }
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getParentActivity().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);

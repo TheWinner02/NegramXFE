@@ -371,6 +371,8 @@ public class ThemeDescription {
                     ((SimpleTextView) viewToInvalidate).setTextColor(color);
                 } else if (viewToInvalidate instanceof ChatBigEmptyView) {
                     ((ChatBigEmptyView) viewToInvalidate).setTextColor(color);
+                } else if (viewToInvalidate instanceof org.telegram.ui.Components.AnimatedTextView) {
+                    ((org.telegram.ui.Components.AnimatedTextView) viewToInvalidate).setTextColor(color);
                 }
             }
         }

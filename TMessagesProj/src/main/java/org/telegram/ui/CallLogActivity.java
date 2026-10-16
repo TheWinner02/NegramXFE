@@ -72,6 +72,7 @@ import org.telegram.ui.Cells.LoadingCell;
 import org.telegram.ui.Cells.ProfileSearchCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
+import org.telegram.ui.Components.AnimatedTextView;
 import org.telegram.ui.Components.AvatarsImageView;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
@@ -143,7 +144,7 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 	private boolean hasMainTabs;
 
 	private @Nullable ImageView actionModeCloseView;
-	private NumberTextView selectedDialogsCountTextView;
+	private AnimatedTextView selectedDialogsCountTextView;
 	private final ArrayList<View> actionModeViews = new ArrayList<>();
 
 	private ActionBarMenuItem otherItem;
@@ -1248,7 +1249,7 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 		}
 		final ActionBarMenu actionMode = actionBar.createActionMode();
 
-		if (hasMainTabs) {
+		if (hasMainTabs && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
 			actionModeCloseView = new ImageView(getContext());
 			actionModeCloseView.setScaleType(ImageView.ScaleType.CENTER);
 			actionModeCloseView.setImageDrawable(new BackDrawable(true));
@@ -1259,12 +1260,19 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 			actionModeViews.add(actionModeCloseView);
 		}
 
-		selectedDialogsCountTextView = new NumberTextView(actionMode.getContext());
-		selectedDialogsCountTextView.setTextSize(18);
+		selectedDialogsCountTextView = new AnimatedTextView(actionMode.getContext(), true, true, true);
+		selectedDialogsCountTextView.setTextSize(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dp(15) : AndroidUtilities.dp(18));
 		selectedDialogsCountTextView.setTypeface(AndroidUtilities.bold());
 		selectedDialogsCountTextView.setTextColor(Theme.getColor(Theme.key_actionBarActionModeDefaultIcon));
-		actionMode.addView(selectedDialogsCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, hasMainTabs ? 18 : 72, 0, 0, 0));
 		selectedDialogsCountTextView.setOnTouchListener((v, event) -> true);
+		selectedDialogsCountTextView.setEllipsizeByGradient(true);
+		selectedDialogsCountTextView.setRightPadding(AndroidUtilities.dp(8));
+		selectedDialogsCountTextView.getDrawable().setOverrideFullWidth(AndroidUtilities.dp(300));
+		actionMode.addView(selectedDialogsCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, (hasMainTabs && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? 18 : 72, 0, 5, 0));
+		if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+			selectedDialogsCountTextView.setOnWidthUpdatedListener(actionBar::invalidate);
+			actionMode.setOnLayoutListener(actionBar::invalidate);
+		}
 
 		actionModeViews.add(actionMode.addItemWithWidth(delete, R.drawable.msg_delete, AndroidUtilities.dp(54), getString(R.string.Delete)));
 	}
@@ -1317,7 +1325,12 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 			animatorSet.setDuration(200);
 			animatorSet.start();
 		}
-		selectedDialogsCountTextView.setNumber(selectedIds.size(), updateAnimated);
+		int count = selectedIds.size();
+		if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+			selectedDialogsCountTextView.setText(LocaleController.formatPluralString("MessagesSelected", count), updateAnimated);
+		} else {
+			selectedDialogsCountTextView.setText(Integer.toString(count), updateAnimated);
+		}
 	}
 
 	private void getCalls(int max_id, final int count) {

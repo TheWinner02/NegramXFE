@@ -96,6 +96,7 @@ import org.telegram.ui.Cells.TopicSearchCell;
 import org.telegram.ui.Cells.UserCell;
 import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.AnimatedEmojiDrawable;
+import org.telegram.ui.Components.AnimatedTextView;
 import org.telegram.ui.Components.BlurredRecyclerView;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
@@ -235,7 +236,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
     HashSet<Integer> selectedTopics = new HashSet<>();
     private boolean reordering;
     private boolean ignoreDiffUtil;
-    private NumberTextView selectedDialogsCountTextView;
+    private AnimatedTextView selectedDialogsCountTextView;
     private ActionBarMenuItem pinItem;
     private ActionBarMenuItem unpinItem;
     private ActionBarMenuItem muteItem;
@@ -2370,7 +2371,12 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
                 actionBar.hideActionMode();
                 return;
             }
-            selectedDialogsCountTextView.setNumber(selectedTopics.size(), true);
+            int count = selectedTopics.size();
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                selectedDialogsCountTextView.setText(LocaleController.formatPluralString("MessagesSelected", count), true);
+            } else {
+                selectedDialogsCountTextView.setText(Integer.toString(count), true);
+            }
 
             int canPin = 0;
             int canDeleteCount = 0;
@@ -2451,12 +2457,19 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
             actionMode.setBackgroundColor(Color.TRANSPARENT);
             actionMode.drawBlur = false;
         }
-        selectedDialogsCountTextView = new NumberTextView(actionMode.getContext());
-        selectedDialogsCountTextView.setTextSize(18);
+        selectedDialogsCountTextView = new AnimatedTextView(actionMode.getContext(), true, true, true);
+        selectedDialogsCountTextView.setTextSize(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(15) : dp(18));
         selectedDialogsCountTextView.setTypeface(AndroidUtilities.bold());
         selectedDialogsCountTextView.setTextColor(getThemedColor(Theme.key_actionBarActionModeDefaultIcon));
-        actionMode.addView(selectedDialogsCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, 72, 0, 0, 0));
         selectedDialogsCountTextView.setOnTouchListener((v, event) -> true);
+        selectedDialogsCountTextView.setEllipsizeByGradient(true);
+        selectedDialogsCountTextView.setRightPadding(dp(8));
+        selectedDialogsCountTextView.getDrawable().setOverrideFullWidth(dp(300));
+        actionMode.addView(selectedDialogsCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : 72, 0, 5, 0));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            selectedDialogsCountTextView.setOnWidthUpdatedListener(actionBar::invalidate);
+            actionMode.setOnLayoutListener(actionBar::invalidate);
+        }
 
         pinItem = actionMode.addItemWithWidth(pin_id, R.drawable.msg_pin, AndroidUtilities.dp(54));
         unpinItem = actionMode.addItemWithWidth(unpin_id, R.drawable.msg_unpin, AndroidUtilities.dp(54));

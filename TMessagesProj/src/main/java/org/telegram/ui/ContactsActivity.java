@@ -94,6 +94,7 @@ import org.telegram.ui.Cells.ProfileSearchCell;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.UserCell;
 import org.telegram.ui.Components.AlertsCreator;
+import org.telegram.ui.Components.AnimatedTextView;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.ContactsEmptyView;
@@ -185,7 +186,7 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
     private final LongSparseArray<TLRPC.User> selectedContacts = new LongSparseArray<>();
 
     private @Nullable ImageView actionModeCloseView;
-    private NumberTextView selectedContactsCountTextView;
+    private AnimatedTextView selectedContactsCountTextView;
 
     private ActionBarMenuItem searchItem;
 
@@ -312,7 +313,7 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
         final ActionBarMenu actionMode = actionBar.createActionMode(false, null);
         actionMode.setBackgroundColor(0);
 
-        if (hasMainTabs) {
+        if (hasMainTabs && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             actionModeCloseView = new ImageView(context);
             actionModeCloseView.setScaleType(ImageView.ScaleType.CENTER);
             actionModeCloseView.setImageDrawable(new BackDrawable(true));
@@ -322,12 +323,19 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
             actionMode.addView(actionModeCloseView, LayoutHelper.createLinear(54, 54, Gravity.CENTER_VERTICAL));
         }
 
-        selectedContactsCountTextView = new NumberTextView(actionMode.getContext());
-        selectedContactsCountTextView.setTextSize(18);
+        selectedContactsCountTextView = new AnimatedTextView(actionMode.getContext(), true, true, true);
+        selectedContactsCountTextView.setTextSize(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(15) : dp(18));
         selectedContactsCountTextView.setTypeface(AndroidUtilities.bold());
         selectedContactsCountTextView.setTextColor(getThemedColor(Theme.key_actionBarActionModeDefaultIcon));
-        actionMode.addView(selectedContactsCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, hasMainTabs ? 18 : 72, 0, 0, 0));
         selectedContactsCountTextView.setOnTouchListener((v, event) -> true);
+        selectedContactsCountTextView.setEllipsizeByGradient(true);
+        selectedContactsCountTextView.setRightPadding(dp(8));
+        selectedContactsCountTextView.getDrawable().setOverrideFullWidth(dp(300));
+        actionMode.addView(selectedContactsCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, (hasMainTabs && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? 18 : 72, 0, 5, 0));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            selectedContactsCountTextView.setOnWidthUpdatedListener(actionBar::invalidate);
+            actionMode.setOnLayoutListener(actionBar::invalidate);
+        }
 
         actionMode.addItemWithWidth(delete, R.drawable.msg_delete, dp(54), getString(R.string.Delete));
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
@@ -1069,7 +1077,12 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
             backDrawable.setRotation(1, true);
         }
 
-        selectedContactsCountTextView.setNumber(selectedContacts.size(), updateAnimated);
+        int count = selectedContacts.size();
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            selectedContactsCountTextView.setText(LocaleController.formatPluralString("MessagesSelected", count), updateAnimated);
+        } else {
+            selectedContactsCountTextView.setText(Integer.toString(count), updateAnimated);
+        }
     }
 
     private void hideActionMode() {

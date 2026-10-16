@@ -118,7 +118,7 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
     public HashtagsSearchAdapter hashtagSearchAdapter;
 
     private @Nullable ImageView actionModeCloseView;
-    private NumberTextView selectedMessagesCountTextView;
+    private AnimatedTextView selectedMessagesCountTextView;
     private boolean isActionModeShowed;
     private HashMap<FilteredSearchView.MessageHashId, MessageObject> selectedFiles = new HashMap<>();
 
@@ -947,7 +947,7 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
             // actionMode.setBackgroundColor(Color.TRANSPARENT);
             // actionMode.drawBlur = false;
 
-            if (parent.hasMainTabs) {
+            if (parent.hasMainTabs && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 actionModeCloseView = new ImageView(getContext());
                 actionModeCloseView.setScaleType(ImageView.ScaleType.CENTER);
                 actionModeCloseView.setImageDrawable(new BackDrawable(true));
@@ -957,12 +957,19 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
                 actionMode.addView(actionModeCloseView, LayoutHelper.createLinear(54, 54, 0f, Gravity.CENTER_VERTICAL));
             }
 
-            selectedMessagesCountTextView = new NumberTextView(actionMode.getContext());
-            selectedMessagesCountTextView.setTextSize(18);
+            selectedMessagesCountTextView = new AnimatedTextView(actionMode.getContext(), true, true, true);
+            selectedMessagesCountTextView.setTextSize(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? AndroidUtilities.dp(15) : AndroidUtilities.dp(18));
             selectedMessagesCountTextView.setTypeface(AndroidUtilities.bold());
             selectedMessagesCountTextView.setTextColor(Theme.getColor(Theme.key_actionBarActionModeDefaultIcon));
-            actionMode.addView(selectedMessagesCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, parent.hasMainTabs ? 18 : 72, 0, 0, 0));
             selectedMessagesCountTextView.setOnTouchListener((v, event) -> true);
+            selectedMessagesCountTextView.setEllipsizeByGradient(true);
+            selectedMessagesCountTextView.setRightPadding(AndroidUtilities.dp(8));
+            selectedMessagesCountTextView.getDrawable().setOverrideFullWidth(AndroidUtilities.dp(300));
+            actionMode.addView(selectedMessagesCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, (parent.hasMainTabs && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? 18 : 72, 0, 5, 0));
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && parent.getActionBar() != null) {
+                selectedMessagesCountTextView.setOnWidthUpdatedListener(parent.getActionBar()::invalidate);
+                actionMode.setOnLayoutListener(parent.getActionBar()::invalidate);
+            }
 
             speedItem = actionMode.addItemWithWidth(speedItemId, R.drawable.avd_speed, AndroidUtilities.dp(54), getString(R.string.AccDescrPremiumSpeed));
             speedItem.getIconView().setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_actionBarActionModeDefaultIcon), PorterDuff.Mode.SRC_IN));
@@ -972,7 +979,7 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         }
         if (selectedMessagesCountTextView != null) {
             boolean isForumSearch = dialogsSearchAdapter != null && dialogsSearchAdapter.delegate != null && dialogsSearchAdapter.delegate.getSearchForumDialogId() != 0;
-            ((MarginLayoutParams) selectedMessagesCountTextView.getLayoutParams()).leftMargin = AndroidUtilities.dp((parent.hasMainTabs ? 18 : 72) + (isForumSearch ? 56 : 0));
+            ((MarginLayoutParams) selectedMessagesCountTextView.getLayoutParams()).leftMargin = AndroidUtilities.dp(((parent.hasMainTabs && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? 18 : 72) + (isForumSearch ? 56 : 0));
             selectedMessagesCountTextView.setLayoutParams(selectedMessagesCountTextView.getLayoutParams());
         }
         if (parent.getActionBar().getBackButton() != null && parent.getActionBar().getBackButton().getDrawable() instanceof MenuDrawable) {
@@ -984,7 +991,12 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         if (show) {
             AndroidUtilities.hideKeyboard(parent.getParentActivity().getCurrentFocus());
             parent.getActionBar().showActionMode();
-            selectedMessagesCountTextView.setNumber(selectedFiles.size(), false);
+            int count = selectedFiles.size();
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                selectedMessagesCountTextView.setText(LocaleController.formatPluralString("MessagesSelected", count), false);
+            } else {
+                selectedMessagesCountTextView.setText(Integer.toString(count), false);
+            }
             speedItem.setVisibility(/*isSpeedItemVisible() ? View.VISIBLE : */View.GONE);
             gotoItem.setVisibility(View.VISIBLE);
             forwardItem.setVisibility(View.VISIBLE);
@@ -1169,7 +1181,12 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         if (selectedFiles.size() == 0) {
             showActionMode(false);
         } else {
-            selectedMessagesCountTextView.setNumber(selectedFiles.size(), true);
+            int count = selectedFiles.size();
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                selectedMessagesCountTextView.setText(LocaleController.formatPluralString("MessagesSelected", count), true);
+            } else {
+                selectedMessagesCountTextView.setText(Integer.toString(count), true);
+            }
             if (gotoItem != null) {
                 gotoItem.setVisibility(selectedFiles.size() == 1 ? View.VISIBLE : View.GONE);
             }
@@ -1482,7 +1499,12 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
                 for (int a = 0, N = toRemove.size(); a < N; a++) {
                     selectedFiles.remove(toRemove.get(a));
                 }
-                selectedMessagesCountTextView.setNumber(selectedFiles.size(), true);
+                int count = selectedFiles.size();
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    selectedMessagesCountTextView.setText(LocaleController.formatPluralString("MessagesSelected", count), true);
+                } else {
+                    selectedMessagesCountTextView.setText(Integer.toString(count), true);
+                }
                 if (gotoItem != null) {
                     gotoItem.setVisibility(selectedFiles.size() == 1 ? View.VISIBLE : View.GONE);
                 }

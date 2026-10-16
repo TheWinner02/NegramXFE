@@ -2722,7 +2722,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 if (actionModeFactor > 0 && actionMode != null) {
                     for (int i = 0; i < actionMode.getChildCount(); i++) {
                         View child = actionMode.getChildAt(i);
-                        if (!(child instanceof ActionBarMenuItem) && child.getClass() != View.class && child.getVisibility() != GONE) {
+                        if (!(child instanceof ActionBarMenuItem) && !(child instanceof ImageView) && child.getClass() != View.class && child.getVisibility() != GONE) {
                             amTitleView = child;
                             break;
                         }
@@ -2810,7 +2810,13 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                     if (amTitleView != null) {
                         int amTextW = 0;
                         if (amTitleView instanceof org.telegram.ui.Components.AnimatedTextView) {
-                            amTextW = ((org.telegram.ui.Components.AnimatedTextView) amTitleView).width();
+                            org.telegram.ui.Components.AnimatedTextView atv = (org.telegram.ui.Components.AnimatedTextView) amTitleView;
+                            amTextW = (int) Math.ceil(atv.getDrawable().getCurrentWidth());
+                            if (amTextW <= 0) {
+                                amTextW = atv.width();
+                            }
+                        } else if (amTitleView instanceof org.telegram.ui.Components.NumberTextView) {
+                            amTextW = (int) Math.ceil(((org.telegram.ui.Components.NumberTextView) amTitleView).getTextWidth());
                         } else if (amTitleView instanceof SimpleTextView) {
                             amTextW = ((SimpleTextView) amTitleView).getTextWidth();
                         } else if (amTitleView instanceof android.widget.TextView) {
@@ -2820,7 +2826,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                         }
 
                         final int maxCenterWidthAM = Math.max(0, maxRight - minLeft);
-                        final int desiredWidthAM = Math.max(dp(70), amTextW + p * 2 + dp(18));
+                        final int desiredWidthAM = Math.max(dp(54), amTextW + p * 2 + dp(18));
                         final int widthAM = Math.min(maxCenterWidthAM, desiredWidthAM);
                         leftAM = (minLeft + maxRight - widthAM) / 2;
                         rightAM = leftAM + widthAM;
