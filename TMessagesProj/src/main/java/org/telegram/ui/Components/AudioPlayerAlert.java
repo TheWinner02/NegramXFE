@@ -3928,6 +3928,10 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             return textViews[activeIndex];
         }
 
+        public CharSequence getText() {
+            return textViews[activeIndex] != null ? textViews[activeIndex].getText() : null;
+        }
+
         public TextView getNextTextView() {
             return textViews[activeIndex == 0 ? 1 : 0];
         }

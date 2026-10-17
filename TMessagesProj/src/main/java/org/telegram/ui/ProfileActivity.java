@@ -426,6 +426,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 //    private ProfileMetaballView metaball;
     private FrameLayout avatarContainer;
     private FrameLayout avatarContainer2;
+    private ChatAvatarContainer topAvatarContainer;
     private ProfileActionsView actionsView;
     private MessagesController.SavedMusicList savedMusicList;
     private ProfileMusicView musicView;
@@ -2135,7 +2136,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             //iBlur3SourceGlassFrosted = new BlurredBackgroundSourceRenderNode(null);
             iBlur3SourceGlass = new BlurredBackgroundSourceRenderNode(null);
             iBlur3FactoryLiquidGlass = new BlurredBackgroundDrawableViewFactory(iBlur3SourceGlass);
-            iBlur3FactoryLiquidGlass.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS));
+            iBlur3FactoryLiquidGlass.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass());
         } else {
             scrollableViewNoiseSuppressor = null;
             //iBlur3SourceGlassFrosted = null;
@@ -2422,6 +2423,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        if (topAvatarContainer != null) {
+            topAvatarContainer.onDestroy();
+        }
         if (sharedMediaLayout != null) {
             sharedMediaLayout.onDestroy();
         }
@@ -5766,6 +5770,34 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         avatarContainer2.addView(avatarsViewPagerIndicatorView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         frameLayout.addView(actionBar);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            actionBar.setupGlass(iBlur3FactoryLiquidGlass, BlurredBackgroundProviderImpl.topPanelChatActivity(resourcesProvider != null ? resourcesProvider : resourceProvider));
+            topAvatarContainer = new ChatAvatarContainer(context, this, false, resourcesProvider != null ? resourcesProvider : resourceProvider) {
+                @Override
+                protected boolean isCentered() {
+                    return false;
+                }
+            };
+            topAvatarContainer.setGlassMode();
+            topAvatarContainer.allowShorterStatus = true;
+            topAvatarContainer.premiumIconHiddable = true;
+            topAvatarContainer.setAlpha(0.0f);
+            topAvatarContainer.setVisibility(View.INVISIBLE);
+            topAvatarContainer.setClipChildren(false);
+            topAvatarContainer.setOccupyStatusBar(actionBar.getOccupyStatusBar());
+            topAvatarContainer.setOnClickListener(v -> {
+                if (listView != null) {
+                    listView.smoothScrollToPosition(0);
+                }
+            });
+            actionBar.addView(topAvatarContainer, 0, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT, 52, 0, 52, 0));
+            actionBar.setChatAvatarContainer(topAvatarContainer);
+            topAvatarContainer.setActionBar(actionBar);
+            actionBar.setClipContent(false);
+            if (actionBar.getBackButton() != null) {
+                actionBar.getBackButton().setTranslationX(0);
+            }
+        }
 
         float rightMargin = (54 + ((callItemVisible && userId != 0) ? 54 : 0));
         boolean hasTitleExpanded = false;
@@ -8241,6 +8273,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         headerAnimatorSet.setDuration(150);
         headerAnimatorSet.start();
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.needCheckSystemBarColors, true);
+        if (topAvatarContainer != null) {
+            if (mediaHeaderVisible && mediaCounterTextView != null && mediaCounterTextView.getText() != null) {
+                topAvatarContainer.setSubtitle(mediaCounterTextView.getText());
+            } else if (onlineTextView != null && onlineTextView[1] != null && onlineTextView[1].getText() != null) {
+                topAvatarContainer.setSubtitle(onlineTextView[1].getText());
+            }
+        }
     }
 
     private void openAddMember() {
@@ -8352,6 +8391,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 allowProfileAnimation = extraHeight > getActionsExtraHeight();
             }
             needLayout(true);
+            if (actionBar != null && xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                actionBar.invalidate();
+            }
         }
     }
 
@@ -8439,6 +8481,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             } else {
                 mediaCounterTextView.setText(LocaleController.formatPluralStringComma("ProfilePollsCount", mediaCount[MediaDataController.MEDIA_POLL]));
             }
+        }
+        if (topAvatarContainer != null && mediaHeaderVisible) {
+            topAvatarContainer.setSubtitle(mediaCounterTextView.getText());
         }
     }
     private boolean isStarRatingVisible1;
@@ -8678,6 +8723,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private void needLayout(boolean animated) {
         final int newTop = (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight();
         final float diff = calculateHeaderExtraDiff();
+        updateLiquidGlassTopBar(diff);
         boolean textMeasured = false;
 
         FrameLayout.LayoutParams layoutParams;
@@ -9313,11 +9359,84 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (fragmentView != null) {
                     checkListViewScroll();
                     needLayout(true);
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && actionBar != null) {
+                        actionBar.checkMenuItemsWidth();
+                        actionBar.invalidate();
+                    }
                     fragmentView.getViewTreeObserver().removeOnPreDrawListener(this);
                 }
                 return true;
             }
         });
+    }
+
+    private void updateTopAvatarContainer() {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || topAvatarContainer == null) {
+            return;
+        }
+        CharSequence title = null;
+        if (nameTextView != null && nameTextView[1] != null && nameTextView[1].getText() != null) {
+            title = nameTextView[1].getText();
+        }
+        if (userId != 0) {
+            TLRPC.User user = getMessagesController().getUser(userId);
+            if (user != null) {
+                topAvatarContainer.setUserAvatar(user, true);
+                topAvatarContainer.setTitle(title != null ? title : UserObject.getUserName(user), user.scam, user.fake, user.verified, getMessagesController().isPremiumUser(user), user.emoji_status, false);
+            }
+        } else if (chatId != 0) {
+            TLRPC.Chat chat = getMessagesController().getChat(chatId);
+            if (chat != null) {
+                topAvatarContainer.setChatAvatar(chat);
+                topAvatarContainer.setTitle(title != null ? title : chat.title, chat.scam, chat.fake, chat.verified, false, chat.emoji_status, false);
+            }
+        }
+        CharSequence status = null;
+        if (mediaHeaderVisible && mediaCounterTextView != null && mediaCounterTextView.getText() != null) {
+            status = mediaCounterTextView.getText();
+        } else if (onlineTextView != null && onlineTextView[1] != null && onlineTextView[1].getText() != null) {
+            status = onlineTextView[1].getText();
+        }
+        if (status != null) {
+            topAvatarContainer.setSubtitle(status);
+        }
+        if (actionBar != null) {
+            actionBar.checkAvatarContainerWidth(false);
+        }
+    }
+
+    private void updateLiquidGlassTopBar(float diff) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || topAvatarContainer == null) {
+            return;
+        }
+        float pillProgress = 1.0f - Utilities.clamp01(diff / 0.7f);
+        topAvatarContainer.setAlpha(pillProgress);
+        topAvatarContainer.setVisibility(pillProgress > 0.01f ? View.VISIBLE : View.INVISIBLE);
+        float scale = AndroidUtilities.lerp(0.85f, 1.0f, pillProgress);
+        topAvatarContainer.setScaleX(scale);
+        topAvatarContainer.setScaleY(scale);
+
+        float headerTextAlpha = 1.0f - pillProgress;
+        if (nameTextView != null && nameTextView[1] != null) {
+            nameTextView[1].setAlpha(headerTextAlpha);
+        }
+        if (onlineTextView != null && onlineTextView[1] != null) {
+            onlineTextView[1].setAlpha(headerTextAlpha);
+        }
+        if (mediaCounterTextView != null) {
+            mediaCounterTextView.setAlpha(0f);
+            mediaCounterTextView.setVisibility(View.GONE);
+        }
+        if (avatarContainer != null) {
+            avatarContainer.setAlpha(headerTextAlpha);
+            avatarContainer.setVisibility(headerTextAlpha > 0.01f ? View.VISIBLE : View.INVISIBLE);
+        }
+        if (avatarGooey != null) {
+            avatarGooey.setVisibility(headerTextAlpha > 0.01f ? View.VISIBLE : View.GONE);
+        }
+        if (actionBar != null) {
+            actionBar.invalidate();
+        }
     }
 
     @Override
@@ -12319,6 +12438,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             avatarImage.getImageReceiver().setVisible(!PhotoViewer.isShowingImage(photoBig) && (getLastStoryViewer() == null || getLastStoryViewer().transitionViewHolder.view != avatarImage), storyView != null);
         }
 
+        updateTopAvatarContainer();
         needLayout(true);
     }
 

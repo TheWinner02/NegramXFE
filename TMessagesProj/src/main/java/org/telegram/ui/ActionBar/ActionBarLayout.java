@@ -367,7 +367,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         private void applyLiquidGlassPadding(View view, int actionBarHeight) {
             if (view == null) return;
             BaseFragment fragment = getLastFragment();
-            if (fragment instanceof ChatActivity || fragment instanceof SettingsActivity) {
+            if (fragment instanceof ChatActivity || fragment instanceof SettingsActivity || fragment instanceof org.telegram.ui.DialogsActivity || fragment instanceof org.telegram.ui.ProfileActivity) {
                 return;
             }
             setupSubSettingsGlass(view);
@@ -519,7 +519,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             if (fragment == null || fragment.getActionBar() == null) {
                 return;
             }
-            if (fragment instanceof ChatActivity || fragment instanceof SettingsActivity || fragment instanceof org.telegram.ui.DialogsActivity) {
+            if (fragment instanceof ChatActivity || fragment instanceof SettingsActivity || fragment instanceof org.telegram.ui.DialogsActivity || fragment instanceof org.telegram.ui.ProfileActivity) {
                 return;
             }
             if (fragment.getGlassSource() != null && !(fragment.getGlassSource().getFallbackSource() instanceof SubSettingsFallbackColor)) {

@@ -266,7 +266,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             .setPadding(dp(6));
 
         if (menu != null) {
-            menu.setTranslationX(-dp(10));
+            menu.setTranslationX(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : -dp(10));
             menu.setGlassMode(true);
         }
         if (actionMode != null) {
@@ -277,6 +277,9 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 backButtonImageView.setTranslationX(0);
                 backButtonImageView.setPadding(0, 0, 0, 0);
+                if (backButtonImageView.getLayoutParams() != null) {
+                    backButtonImageView.getLayoutParams().width = dp(58);
+                }
                 updateBackButtonBackground();
             } else {
                 backButtonImageView.setTranslationX(dp(2));
@@ -837,7 +840,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         }
         menu = new ActionBarMenu(getContext(), this);
         if (glassMode) {
-            menu.setTranslationX(-dp(10));
+            menu.setTranslationX(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : -dp(10));
             menu.setGlassMode(true);
             menu.updateItemsColor();
             menu.updateItemsBackgroundColor();
@@ -1809,13 +1812,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 final int s    = dp(46);
                 boolean hasBack = backButtonImageView != null && backButtonImageView.getVisibility() != GONE;
                 int minL = hasBack ? (edge + s + p * 2 + gap) : edge;
-                int effectiveMenuW = 0;
-                if (menu != null && menu.getVisibility() != GONE) {
-                    effectiveMenuW = (int) menu.getItemsWidth();
-                    if (effectiveMenuW <= 0) {
-                        effectiveMenuW = menu.getMeasuredWidth();
-                    }
-                }
+                int effectiveMenuW = getEffectiveRightWidth();
                 int menuPillWidth = (effectiveMenuW > 0 && !doNotDrawGlassMenu) ? Math.max(s, effectiveMenuW) + p * 2 : 0;
                 int maxR = (menuPillWidth > 0) ? (width - edge - menuPillWidth - gap) : (width - edge);
                 int maxCenterWidth = Math.max(dp(110), maxR - minL);
@@ -1974,7 +1971,15 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                     childLeft = (getMeasuredWidth() - width) / 2 + lp.leftMargin - lp.rightMargin;
                     break;
                 case Gravity.RIGHT:
-                    childLeft = getMeasuredWidth() - width - lp.rightMargin;
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) {
+                        final int edge = dp(6);
+                        final int s = dp(46);
+                        final int p = dp(6);
+                        int anchorCenter = getMeasuredWidth() - edge - p - s / 2;
+                        childLeft = anchorCenter - width / 2;
+                    } else {
+                        childLeft = getMeasuredWidth() - width - lp.rightMargin;
+                    }
                     break;
                 case Gravity.LEFT:
                 default:
@@ -1986,7 +1991,11 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                     childTop = (bottom - top - height) / 2 + lp.topMargin - lp.bottomMargin;
                     break;
                 case Gravity.BOTTOM:
-                    childTop = (bottom - top) - height - lp.bottomMargin;
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) {
+                        childTop = additionalTop + (getCurrentActionBarHeight() - height) / 2;
+                    } else {
+                        childTop = (bottom - top) - height - lp.bottomMargin;
+                    }
                     break;
                 default:
                     childTop = lp.topMargin;
@@ -2253,7 +2262,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 }
 
                 boolean contains = false;
-                contains |= glassDrawable != null && glassDrawable.getBounds().contains(x, y);
+                contains |= glassDrawable != null && (chatAvatarContainer == null || chatAvatarContainer.getAlpha() > 0.05f) && glassDrawable.getBounds().contains(x, y);
                 if (child != null && child != chatAvatarContainer) {
                     contains |= glassDrawableBack != null && glassDrawableBack.getBounds().contains(x, y);
                     contains |= glassDrawableMenu != null && glassDrawableMenu.getBounds().contains(x, y);
@@ -2641,6 +2650,50 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         }
     }
 
+    public int getEffectiveRightWidth() {
+        float w = 0;
+        int lastVisibleIndex = -1;
+        if (menu != null && menu.getVisibility() != GONE) {
+            final int count = menu.getChildCount();
+            for (int a = count - 1; a >= 0; a--) {
+                View item = menu.getChildAt(a);
+                if (item.getVisibility() == VISIBLE) {
+                    lastVisibleIndex = a;
+                    break;
+                }
+            }
+            if (lastVisibleIndex != -1) {
+                for (int a = 0; a <= lastVisibleIndex; a++) {
+                    View item = menu.getChildAt(a);
+                    if (item.getVisibility() == VISIBLE) {
+                        int itemW = item.getMeasuredWidth() > 0 ? item.getMeasuredWidth() : dp(48);
+                        if (a == lastVisibleIndex) {
+                            w += itemW;
+                        } else {
+                            float alpha = Math.max(0f, Math.min(1f, item.getAlpha()));
+                            w += itemW * alpha;
+                        }
+                    }
+                }
+            }
+        }
+        if (w <= 0) {
+            for (int i = 0, count = getChildCount(); i < count; i++) {
+                View child = getChildAt(i);
+                if (child.getVisibility() == VISIBLE && child.getAlpha() > 0.05f && child != chatAvatarContainer && child != backButtonImageView && child != menu && child != actionMode) {
+                    ViewGroup.LayoutParams vlp = child.getLayoutParams();
+                    if (vlp instanceof LayoutParams) {
+                        LayoutParams lp = (LayoutParams) vlp;
+                        if ((lp.gravity & Gravity.HORIZONTAL_GRAVITY_MASK) == Gravity.RIGHT) {
+                            w = Math.max(w, child.getMeasuredWidth() > 0 ? child.getMeasuredWidth() : dp(48));
+                        }
+                    }
+                }
+            }
+        }
+        return Math.round(w);
+    }
+
     public boolean doNotDrawGlassMenu;
     private Paint iosDividerPaint;
 
@@ -2681,9 +2734,9 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             }
 
             // Right island: menu pill
-            int effectiveMenuWidth = menuWidth;
-            if (effectiveMenuWidth <= 0 && menu != null && menu.getVisibility() != GONE) {
-                effectiveMenuWidth = (int) menu.getItemsWidth();
+            int effectiveMenuWidth = getEffectiveRightWidth();
+            if (effectiveMenuWidth <= 0) {
+                effectiveMenuWidth = menuWidth;
             }
             if (glassDrawableMenu != null && effectiveMenuWidth > 0 && !glassOnlyBack && !doNotDrawGlassMenu) {
                 int menuRight = getWidth() - edge;
@@ -2705,7 +2758,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             if (glassDrawable != null && !glassOnlyBack) {
                 float titleAlpha = 1.0f;
                 if (chatAvatarContainer != null) {
-                    titleAlpha = chatAvatarContainer.getAlpha();
+                    titleAlpha = chatAvatarContainer.getVisibility() == VISIBLE ? chatAvatarContainer.getAlpha() : 0f;
                 } else {
                     if (titlesContainer != null) {
                         titleAlpha *= titlesContainer.getAlpha();
@@ -2745,7 +2798,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                         final int visualW = chatAvatarContainer.getVisualWidth();
                         final int desiredWidth = Math.max(dp(110), visualW + p * 2 + dp(10));
                         final int width = Math.min(maxCenterWidth, desiredWidth);
-                        int left = (minLeft + maxRight - width) / 2;
+                        int left = (getWidth() - width) / 2;
                         int right = left + width;
 
                         if (left < minLeft) {
@@ -2828,7 +2881,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                         final int maxCenterWidthAM = Math.max(0, maxRight - minLeft);
                         final int desiredWidthAM = Math.max(dp(54), amTextW + p * 2 + dp(18));
                         final int widthAM = Math.min(maxCenterWidthAM, desiredWidthAM);
-                        leftAM = (minLeft + maxRight - widthAM) / 2;
+                        leftAM = (getWidth() - widthAM) / 2;
                         rightAM = leftAM + widthAM;
 
                         if (leftAM < minLeft) {
