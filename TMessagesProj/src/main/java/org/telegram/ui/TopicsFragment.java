@@ -317,13 +317,15 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
         canShowProgress = !getUserConfig().getPreferences().getBoolean("topics_end_reached_" + chatId, false);
 
         iBlur3SourceColor = new BlurredBackgroundSourceColor();
-        iBlur3SourceColor.setColor(getThemedColor(Theme.key_windowBackgroundWhite));
+        iBlur3SourceColor.setColor(getThemedColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.key_windowBackgroundGray : Theme.key_windowBackgroundWhite));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             scrollableViewNoiseSuppressor = new DownscaleScrollableNoiseSuppressor();
             iBlur3SourceGlassFrosted = new BlurredBackgroundSourceRenderNode(null);
+            iBlur3SourceGlassFrosted.setUnderSource(iBlur3SourceColor);
             iBlur3SourceGlass = new BlurredBackgroundSourceRenderNode(null);
+            iBlur3SourceGlass.setUnderSource(iBlur3SourceColor);
             iBlur3FactoryLiquidGlass = new BlurredBackgroundDrawableViewFactory(iBlur3SourceGlass);
-            iBlur3FactoryLiquidGlass.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS));
+            iBlur3FactoryLiquidGlass.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass());
         } else {
             scrollableViewNoiseSuppressor = null;
             iBlur3SourceGlassFrosted = null;
@@ -470,7 +472,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
                 for (int i = 0; i < getChildCount(); i++) {
                     View child = getChildAt(i);
                     if (!(child instanceof ActionBar)) {
-                        if (child.getFitsSystemWindows()) {
+                        if (child.getFitsSystemWindows() || (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && child == recyclerListView)) {
                             measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, 0);
                         } else {
                             measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, actionBarHeight);
@@ -546,7 +548,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
                             case Gravity.TOP:
                             default:
                                 childTop = parentTop + lp.topMargin;
-                                if (!(child instanceof ActionBar) && !isInPreviewMode()) {
+                                if (!(child instanceof ActionBar) && !isInPreviewMode() && (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || child != recyclerListView)) {
                                     childTop += actionBar.getTop() + actionBar.getMeasuredHeight();
                                 }
                         }
@@ -592,6 +594,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
                     if (iBlur3SourceGlass != null && !iBlur3SourceGlass.inRecording()) {
                         if (iBlur3SourceGlass.needUpdateDisplayList(width, height) || iBlur3Invalidated) {
                             final Canvas c = iBlur3SourceGlass.beginRecording(width, height);
+                            c.drawColor(getThemedColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.key_windowBackgroundGray : Theme.key_windowBackgroundWhite));
                             scrollableViewNoiseSuppressor.draw(c, DownscaleScrollableNoiseSuppressor.DRAW_GLASS);
                             iBlur3SourceGlass.endRecording();
                         }
@@ -630,7 +633,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
             }
         };
 
-        contentView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+        contentView.setBackgroundColor(getThemedColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.key_windowBackgroundGray : Theme.key_windowBackgroundWhite));
         actionBar.setAddToContainer(false);
         actionBar.setCastShadows(false);
         actionBar.setClipContent(true);
@@ -887,6 +890,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
         avatarContainer.allowDrawStories = getDialogId() < 0;
         avatarContainer.setClipChildren(false);
         actionBar.addView(avatarContainer, 0, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT, 56, 0, 86, 0));
+        actionBar.setOnActionModeFactorChangeListener(this::checkUi_avatarContainerVisibility);
 
         if (!openedForSelect) {
             avatarContainer.getAvatarImageView().setOnClickListener(new View.OnClickListener() {
@@ -915,8 +919,9 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
             }
         };
 
-        iBlur3FactoryLiquidGlass.setSourceRootView(new ViewPositionWatcher(contentView), contentView);
-        iBlur3Capture = new ViewGroupPartRenderer(recyclerListView, parentDialogsActivity != null ? (ViewGroup) parentDialogsActivity.getFragmentView() : contentView, recyclerListView::drawChild);
+        ViewGroup sourceRoot = parentDialogsActivity != null ? (ViewGroup) parentDialogsActivity.getFragmentView() : contentView;
+        iBlur3FactoryLiquidGlass.setSourceRootView(new ViewPositionWatcher(sourceRoot), sourceRoot);
+        iBlur3Capture = new ViewGroupPartRenderer(recyclerListView, sourceRoot, recyclerListView::drawChild);
         recyclerListView.addEdgeEffectListener(() -> recyclerListView.postOnAnimation(this::blur3_InvalidateBlur));
 
         SpannableString generalIcon = new SpannableString("#");
@@ -1339,7 +1344,9 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
         itemTouchHelper.attachToRecyclerView(recyclerListView);
 
         contentView.addView(recyclerListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-        ((ViewGroup.MarginLayoutParams) recyclerListView.getLayoutParams()).topMargin = -AndroidUtilities.dp(100);
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            ((ViewGroup.MarginLayoutParams) recyclerListView.getLayoutParams()).topMargin = -AndroidUtilities.dp(100);
+        }
         floatingButton = new FragmentFloatingButton(getContext(), resourceProvider);
         contentView.addView(floatingButton, FragmentFloatingButton.createDefaultLayoutParams());
         floatingButton.setOnClickListener(v -> presentFragment(TopicCreateFragment.create(chatId, 0)));
@@ -1464,7 +1471,14 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
 
         searchContainer.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
 
-        actionBar.setDrawBlurBackground(contentView);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            actionBar.setupGlass(iBlur3FactoryLiquidGlass, BlurredBackgroundProviderImpl.topPanelChatActivity(resourceProvider), true);
+            actionBar.applyIosLiquidGlassTopBar();
+            actionBar.setChatAvatarContainer(avatarContainer);
+            avatarContainer.setActionBar(actionBar);
+        } else {
+            actionBar.setDrawBlurBackground(contentView);
+        }
 
         getMessagesStorage().loadChatInfo(chatId, true, null, true, false, 0);
 
@@ -1496,7 +1510,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
             topPanelLayout.addView(fragmentContextViewWrapper);
             topPanelLayout.setPriority(fragmentContextViewWrapper, 4);
             topPanelLayout.setDebugName(fragmentContextViewWrapper, "fragment context");
-            topPanelLayout.setViewVisible(fragmentContextViewWrapper, true, false);
+            topPanelLayout.setViewVisible(fragmentContextViewWrapper, false, false);
 
             fragmentContextView = new FragmentContextView(context, this, false, themeDelegate) {
                 @Override
@@ -1594,9 +1608,24 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
         bottomOverlayProgress.setProgressColor(getThemedColor(Theme.key_chat_fieldOverlayText));
         floatingButton.updateColors();
         bottomOverlayContainer.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
-        actionBar.setActionModeColor(getThemedColor(Theme.key_windowBackgroundWhite));
-        if (!inPreviewMode) {
-            actionBar.setBackgroundColor(getThemedColor(Theme.key_actionBarDefault));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            actionBar.setActionModeColor(0);
+            actionBar.setBackgroundColor(Color.TRANSPARENT);
+            actionBar.applyIosLiquidGlassTopBar();
+        } else {
+            actionBar.setActionModeColor(getThemedColor(Theme.key_windowBackgroundWhite));
+            if (!inPreviewMode) {
+                actionBar.setBackgroundColor(getThemedColor(Theme.key_actionBarDefault));
+            }
+        }
+        if (contentView != null) {
+            contentView.setBackgroundColor(getThemedColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.key_windowBackgroundGray : Theme.key_windowBackgroundWhite));
+        }
+        if (recyclerListView != null && (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
+            recyclerListView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+        }
+        if (iBlur3SourceColor != null) {
+            iBlur3SourceColor.setColor(getThemedColor(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? Theme.key_windowBackgroundGray : Theme.key_windowBackgroundWhite));
         }
         searchContainer.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
     }
@@ -1652,11 +1681,22 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
                 top += topPanelLayout.getAnimatedHeightWithPadding(dp(14));
             }
         }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && parentDialogsActivity == null && !inPreviewMode) {
+            top += actionBar != null && actionBar.getMeasuredHeight() > 0 ? actionBar.getMeasuredHeight() : (AndroidUtilities.statusBarHeight + AndroidUtilities.dp(56));
+        }
 
         final int bottom = navigationBarHeight + additionNavigationBarHeight
             + (bottomPannelVisible ? AndroidUtilities.dp(51) : 0);
 
         recyclerListView.setPadding(0, (int) (top), 0, bottom);
+    }
+
+    private void checkUi_avatarContainerVisibility() {
+        if (avatarContainer != null) {
+            final float factor = 1f - actionBar.getActionModeFactor();
+            avatarContainer.setAlpha(factor);
+            avatarContainer.setVisibility(factor > 0 ? View.VISIBLE : View.GONE);
+        }
     }
 
     float transitionPadding;
@@ -2237,7 +2277,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
         int color2 = getThemedColor(Theme.key_actionBarActionModeDefaultSelector);
         actionBar.setItemsBackgroundColor(ColorUtils.blendARGB(color1, color2, searchAnimationProgress), false);
 
-        if (!inPreviewMode) {
+        if (!inPreviewMode && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             actionBar.setBackgroundColor(ColorUtils.blendARGB(getThemedColor(Theme.key_actionBarDefault), getThemedColor(Theme.key_windowBackgroundWhite), searchAnimationProgress));
         }
         avatarContainer.getTitleTextView().setAlpha(1f - value);
@@ -2467,20 +2507,23 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
         selectedDialogsCountTextView.getDrawable().setOverrideFullWidth(dp(300));
         actionMode.addView(selectedDialogsCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : 72, 0, 5, 0));
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            selectedDialogsCountTextView.setText(LocaleController.formatPluralString("MessagesSelected", Math.max(1, selectedTopics.size())), false);
             selectedDialogsCountTextView.setOnWidthUpdatedListener(actionBar::invalidate);
             actionMode.setOnLayoutListener(actionBar::invalidate);
+            actionBar.applyIosLiquidGlassTopBar();
         }
 
-        pinItem = actionMode.addItemWithWidth(pin_id, R.drawable.msg_pin, AndroidUtilities.dp(54));
-        unpinItem = actionMode.addItemWithWidth(unpin_id, R.drawable.msg_unpin, AndroidUtilities.dp(54));
-        muteItem = actionMode.addItemWithWidth(mute_id, R.drawable.msg_mute, AndroidUtilities.dp(54));
-        deleteItem = actionMode.addItemWithWidth(delete_id, R.drawable.msg_delete, AndroidUtilities.dp(54), getString(R.string.Delete));
-        hideItem = actionMode.addItemWithWidth(hide_id, R.drawable.msg_archive_hide, AndroidUtilities.dp(54), getString(R.string.Hide));
+        final int itemWidth = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(42) : AndroidUtilities.dp(54);
+        pinItem = actionMode.addItemWithWidth(pin_id, R.drawable.msg_pin, itemWidth);
+        unpinItem = actionMode.addItemWithWidth(unpin_id, R.drawable.msg_unpin, itemWidth);
+        muteItem = actionMode.addItemWithWidth(mute_id, R.drawable.msg_mute, itemWidth);
+        deleteItem = actionMode.addItemWithWidth(delete_id, R.drawable.msg_delete, itemWidth, getString(R.string.Delete));
+        hideItem = actionMode.addItemWithWidth(hide_id, R.drawable.msg_archive_hide, itemWidth, getString(R.string.Hide));
         hideItem.setVisibility(View.GONE);
-        showItem = actionMode.addItemWithWidth(show_id, R.drawable.msg_archive_show, AndroidUtilities.dp(54), getString(R.string.Show));
+        showItem = actionMode.addItemWithWidth(show_id, R.drawable.msg_archive_show, itemWidth, getString(R.string.Show));
         showItem.setVisibility(View.GONE);
 
-        otherItem = actionMode.addItemWithWidth(0, R.drawable.ic_ab_other, AndroidUtilities.dp(54), getString(R.string.AccDescrMoreOptions));
+        otherItem = actionMode.addItemWithWidth(0, R.drawable.ic_ab_other, itemWidth, getString(R.string.AccDescrMoreOptions));
         readItem = otherItem.addSubItem(read_id, R.drawable.msg_markread, getString(R.string.MarkAsRead));
         closeTopic = otherItem.addSubItem(close_topic_id, R.drawable.msg_topic_close, getString(R.string.CloseTopic));
         restartTopic = otherItem.addSubItem(restart_topic_id, R.drawable.msg_topic_restart, getString(R.string.RestartTopic));

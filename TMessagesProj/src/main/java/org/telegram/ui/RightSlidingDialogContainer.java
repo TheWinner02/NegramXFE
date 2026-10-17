@@ -496,8 +496,10 @@ public abstract class RightSlidingDialogContainer extends FrameLayout {
 
     @Override
     protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
-        if (child == currentActionBarView && currentActionBarView.getActionMode() != null && currentActionBarView.getActionMode().getAlpha() == 1f) {
-            return true;
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (child == currentActionBarView && currentActionBarView.getActionMode() != null && currentActionBarView.getActionMode().getAlpha() == 1f) {
+                return true;
+            }
         }
         return super.drawChild(canvas, child, drawingTime);
     }
@@ -509,40 +511,42 @@ public abstract class RightSlidingDialogContainer extends FrameLayout {
             invalidate();
         }
         super.dispatchDraw(canvas);
-        float alpha = openedProgress * Math.max(currentActionBarView == null || currentActionBarView.getActionMode() == null ? 0 : currentActionBarView.getActionMode().getAlpha(), currentActionBarView == null ? 0 : currentActionBarView.searchFieldVisibleAlpha);
-        if (currentFragment != null && currentActionBarView != null && alpha > 0) {
-            if (actionModePaint == null) {
-                actionModePaint = new Paint();
-            }
-            actionModePaint.setColor(Theme.getColor(Theme.key_actionBarActionModeDefault));
-            if (alpha == 1) {
-                canvas.save();
-            } else {
-                canvas.saveLayerAlpha(0, 0, getMeasuredWidth(), currentTop, (int) (255 * alpha), Canvas.ALL_SAVE_FLAG);
-            }
-            canvas.drawRect(0, 0, getMeasuredWidth(), currentTop, actionModePaint);
-
-            canvas.translate(currentActionBarView.getX(), currentActionBarView.getY());
-
-            canvas.save();
-            canvas.translate(currentActionBarView.getBackButton().getX(),  currentActionBarView.getBackButton().getY());
-            currentActionBarView.getBackButton().draw(canvas);
-            canvas.restore();
-
-            if (currentActionBarView.getActionMode() != null) {
-                if (alpha != openedProgress * currentActionBarView.getActionMode().getAlpha()) {
-                    currentActionBarView.draw(canvas);
-                    canvas.saveLayerAlpha(0, 0, getMeasuredWidth(), currentTop, (int) (255 * currentActionBarView.getActionMode().getAlpha()), Canvas.ALL_SAVE_FLAG);
-                    currentActionBarView.getActionMode().draw(canvas);
-                    canvas.restore();
-                } else {
-                    currentActionBarView.getActionMode().draw(canvas);
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            float alpha = openedProgress * Math.max(currentActionBarView == null || currentActionBarView.getActionMode() == null ? 0 : currentActionBarView.getActionMode().getAlpha(), currentActionBarView == null ? 0 : currentActionBarView.searchFieldVisibleAlpha);
+            if (currentFragment != null && currentActionBarView != null && alpha > 0) {
+                if (actionModePaint == null) {
+                    actionModePaint = new Paint();
                 }
-            } else {
-                currentActionBarView.draw(canvas);
+                actionModePaint.setColor(Theme.getColor(Theme.key_actionBarActionModeDefault));
+                if (alpha == 1) {
+                    canvas.save();
+                } else {
+                    canvas.saveLayerAlpha(0, 0, getMeasuredWidth(), currentTop, (int) (255 * alpha), Canvas.ALL_SAVE_FLAG);
+                }
+                canvas.drawRect(0, 0, getMeasuredWidth(), currentTop, actionModePaint);
+
+                canvas.translate(currentActionBarView.getX(), currentActionBarView.getY());
+
+                canvas.save();
+                canvas.translate(currentActionBarView.getBackButton().getX(),  currentActionBarView.getBackButton().getY());
+                currentActionBarView.getBackButton().draw(canvas);
+                canvas.restore();
+
+                if (currentActionBarView.getActionMode() != null) {
+                    if (alpha != openedProgress * currentActionBarView.getActionMode().getAlpha()) {
+                        currentActionBarView.draw(canvas);
+                        canvas.saveLayerAlpha(0, 0, getMeasuredWidth(), currentTop, (int) (255 * currentActionBarView.getActionMode().getAlpha()), Canvas.ALL_SAVE_FLAG);
+                        currentActionBarView.getActionMode().draw(canvas);
+                        canvas.restore();
+                    } else {
+                        currentActionBarView.getActionMode().draw(canvas);
+                    }
+                } else {
+                    currentActionBarView.draw(canvas);
+                }
+                canvas.restore();
+                invalidate();
             }
-            canvas.restore();
-            invalidate();
         }
     }
 

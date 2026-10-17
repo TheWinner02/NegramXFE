@@ -899,14 +899,16 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             @Override
             public void setBackgroundColor(int color) {
                 actionModeColor = color;
-                if (!blurredBackground) {
+                if (!blurredBackground && !glassMode && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     super.setBackgroundColor(actionModeColor);
+                } else if (glassMode || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    super.setBackground(null);
                 }
             }
 
             @Override
             protected void dispatchDraw(Canvas canvas) {
-                if (blurredBackground && drawBlur && actionModeColor != 0) {
+                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && !glassMode && blurredBackground && drawBlur && actionModeColor != 0) {
                     rectTmp.set(0, 0, getMeasuredWidth(), getMeasuredHeight());
                     blurScrimPaint.setColor(actionModeColor);
                     contentView.drawBlurRect(canvas, 0, rectTmp, blurScrimPaint, true);
@@ -939,12 +941,14 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 }
             }
         };
-        actionMode.setTranslationX(glassMode && !xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? -dp(10) : 0);
+        actionMode.setTranslationX(glassMode && !xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? -dp(10) : 0);
         actionMode.setGlassMode(glassMode);
         actionMode.isActionMode = true;
         actionMode.setClickable(true);
-        if (!glassMode) {
+        if (!glassMode && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             actionMode.setBackgroundColor(getThemedColor(Theme.key_actionBarActionModeDefault));
+        } else {
+            actionMode.setBackgroundColor(Color.TRANSPARENT);
         }
         addView(actionMode, indexOfChild(backButtonImageView));
         final int rightPad = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) ? dp(12) : 0;

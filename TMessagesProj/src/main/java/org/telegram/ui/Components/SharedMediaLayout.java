@@ -710,7 +710,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     private int searchItemState;
     private Drawable pinnedHeaderShadowDrawable;
     private boolean ignoreSearchCollapse;
-    private NumberTextView selectedMessagesCountTextView;
+    private AnimatedTextView selectedMessagesCountTextView;
     private LinearLayout actionModeLayout;
     private ImageView closeButton;
     private BackDrawable backDrawable;
@@ -2283,7 +2283,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         closeButton.setImageDrawable(backDrawable = new BackDrawable(true));
         backDrawable.setColor(getThemedColor(Theme.key_actionBarActionModeDefaultIcon));
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
-            closeButton.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(23), 0, Theme.getColor(Theme.key_listSelector, resourcesProvider)));
+            closeButton.setBackground(Theme.createSimpleSelectorRoundRectDrawable((int) xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(), 0, Theme.getColor(Theme.key_listSelector, resourcesProvider)));
         } else {
             closeButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 1));
         }
@@ -2302,32 +2302,24 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             closeActionMode();
         });
 
-        selectedMessagesCountTextView = new NumberTextView(context) {
-            @Override
-            protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                    int w = (int) Math.ceil(getTextWidth()) + getPaddingLeft() + getPaddingRight();
-                    int h = MeasureSpec.getSize(heightMeasureSpec);
-                    if (h <= 0) h = dp(38);
-                    setMeasuredDimension(Math.max(AndroidUtilities.dp(38), w), h);
-                } else {
-                    super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-                }
-            }
-
-            @Override
-            public void setNumber(int number, boolean animated) {
-                super.setNumber(number, animated);
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && actionModeLayout != null) {
-                    actionModeLayout.requestLayout();
-                }
-            }
-        };
-        selectedMessagesCountTextView.setTextSize(18);
+        selectedMessagesCountTextView = new AnimatedTextView(context, true, true, true);
+        selectedMessagesCountTextView.setTextSize(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(15) : dp(18));
         selectedMessagesCountTextView.setTypeface(AndroidUtilities.bold());
         selectedMessagesCountTextView.setTextColor(getThemedColor(Theme.key_actionBarActionModeDefaultIcon));
+        selectedMessagesCountTextView.setEllipsizeByGradient(true);
+        selectedMessagesCountTextView.getDrawable().setOverrideFullWidth(dp(300));
         if (isM3 || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
-            selectedMessagesCountTextView.setCenterAlign(true);
+            selectedMessagesCountTextView.setGravity(Gravity.CENTER);
+        } else {
+            selectedMessagesCountTextView.setGravity(Gravity.CENTER_VERTICAL);
+        }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            selectedMessagesCountTextView.setOnWidthUpdatedListener(() -> {
+                if (actionModeLayout != null) {
+                    actionModeLayout.requestLayout();
+                    actionModeLayout.invalidate();
+                }
+            });
         }
         LinearLayout.LayoutParams counterLp = isM3
                 ? LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 38, Gravity.CENTER_VERTICAL, 4, 0, 4, 0)
@@ -2592,7 +2584,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                             if (forwardNoQuoteItem != null) {
                                 forwardNoQuoteItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS ? View.VISIBLE : View.GONE);
                             }
-                            selectedMessagesCountTextView.setNumber(selectedFiles[0].size() + selectedFiles[1].size(), false);
+                            setSelectedMessagesCount(selectedFiles[0].size() + selectedFiles[1].size(), false);
                             AnimatorSet animatorSet = new AnimatorSet();
                             ArrayList<Animator> animators = new ArrayList<>();
                             for (int i = 0; i < actionModeViews.size(); i++) {
@@ -2606,7 +2598,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                             scrolling = false;
                             showActionMode(true);
                         } else {
-                            selectedMessagesCountTextView.setNumber(selectedFiles[0].size() + selectedFiles[1].size(), true);
+                            setSelectedMessagesCount(selectedFiles[0].size() + selectedFiles[1].size(), true);
                         }
                         updateSelection(true);
                         return true;
@@ -2659,7 +2651,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                                 }
                             }, 20);
                         } else {
-                            selectedMessagesCountTextView.setNumber(selectedFiles[0].size() + selectedFiles[1].size(), true);
+                            setSelectedMessagesCount(selectedFiles[0].size() + selectedFiles[1].size(), true);
                         }
                         updateSelection(true);
                         return true;
@@ -4126,7 +4118,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
 
         if (selectedMessagesCountTextView != null) {
-            selectedMessagesCountTextView.setCenterAlign(true);
+            selectedMessagesCountTextView.setGravity(Gravity.CENTER);
             M3ExpressiveButtonDrawable countDrawable = new M3ExpressiveButtonDrawable(btnBg, btnBg, dp(16), dp(16), dp(4));
             countDrawable.setStroke(btnStroke, dp(1));
             selectedMessagesCountTextView.setBackground(countDrawable);
@@ -4304,6 +4296,10 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         final int closeRight = closeLeft + closePillWidth;
 
         if (closeButton != null && closeButton.getVisibility() != GONE) {
+            closeButton.measure(
+                View.MeasureSpec.makeMeasureSpec(closePillWidth, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY)
+            );
             closeButton.layout(closeLeft, 0, closeRight, h);
         }
         if (glassDrawableClose != null) {
@@ -4328,6 +4324,10 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             int curX = menuLeft + p;
             for (int i = 0; i < visibleMenuItems.size(); i++) {
                 View item = visibleMenuItems.get(i);
+                item.measure(
+                    View.MeasureSpec.makeMeasureSpec(itemW, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY)
+                );
                 item.layout(curX, 0, curX + itemW, h);
                 curX += itemW;
             }
@@ -4342,9 +4342,14 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         final int maxRight = (visibleMenuItems.isEmpty() ? (w - edge) : menuLeft) - gap;
 
         if (selectedMessagesCountTextView != null && selectedMessagesCountTextView.getVisibility() != GONE) {
-            selectedMessagesCountTextView.setCenterAlign(true);
-            int textW = (int) Math.ceil(selectedMessagesCountTextView.getTextWidth());
-            int desiredCountW = Math.max(dp(54), textW + p * 2 + dp(24));
+            selectedMessagesCountTextView.setGravity(Gravity.CENTER);
+            selectedMessagesCountTextView.setPadding(0, 0, 0, 0);
+            selectedMessagesCountTextView.setRightPadding(0);
+            int textW = (int) Math.ceil(selectedMessagesCountTextView.getDrawable().getCurrentWidth());
+            if (textW <= 0) {
+                textW = (int) Math.ceil(selectedMessagesCountTextView.width());
+            }
+            int desiredCountW = Math.max(dp(72), textW + p * 2 + dp(28));
             int maxAvailableW = Math.max(0, maxRight - minLeft);
             int countW = Math.min(maxAvailableW, desiredCountW);
 
@@ -4358,11 +4363,28 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             }
             int countRight = countLeft + countW;
 
+            selectedMessagesCountTextView.measure(
+                View.MeasureSpec.makeMeasureSpec(countW, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY)
+            );
             selectedMessagesCountTextView.layout(countLeft, 0, countRight, h);
             if (glassDrawableCount != null) {
                 glassDrawableCount.setRadius(rad);
                 glassDrawableCount.setBounds(countLeft, 0, countRight, h);
             }
+        }
+    }
+
+    private void setSelectedMessagesCount(int count, boolean animated) {
+        if (selectedMessagesCountTextView == null) return;
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            selectedMessagesCountTextView.setText(LocaleController.formatPluralString("MessagesSelected", count), animated);
+        } else {
+            selectedMessagesCountTextView.setText(Integer.toString(count), animated);
+        }
+        if (actionModeLayout != null) {
+            actionModeLayout.requestLayout();
+            actionModeLayout.invalidate();
         }
     }
 
@@ -8254,7 +8276,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         if (forwardNoQuoteItem != null) {
             forwardNoQuoteItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS ? View.VISIBLE : View.GONE);
         }
-        selectedMessagesCountTextView.setNumber(1, false);
+        setSelectedMessagesCount(1, false);
         AnimatorSet animatorSet = new AnimatorSet();
         ArrayList<Animator> animators = new ArrayList<>();
         for (int i = 0; i < actionModeViews.size(); i++) {
@@ -8317,7 +8339,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             if (selectedFiles[0].size() == 0 && selectedFiles[1].size() == 0) {
                 showActionMode(false);
             } else {
-                selectedMessagesCountTextView.setNumber(selectedFiles[0].size() + selectedFiles[1].size(), true);
+                setSelectedMessagesCount(selectedFiles[0].size() + selectedFiles[1].size(), true);
                 deleteItem.setVisibility(cantDeleteMessagesCount == 0 ? View.VISIBLE : View.GONE);
                 if (gotoItem != null) {
                     gotoItem.setVisibility(getClosestTab() != TAB_STORIES && getClosestTab() != TAB_BOT_PREVIEWS && getClosestTab() != TAB_GIFTS && selectedFiles[0].size() == 1 ? View.VISIBLE : View.GONE);
@@ -8474,10 +8496,14 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         WindowManager manager = (WindowManager) ApplicationLoader.applicationContext.getSystemService(Activity.WINDOW_SERVICE);
         int rotation = manager.getDefaultDisplay().getRotation();
         if (num == 0) {
-            if (!AndroidUtilities.isTablet() && ApplicationLoader.applicationContext.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                selectedMessagesCountTextView.setTextSize(18);
-            } else {
-                selectedMessagesCountTextView.setTextSize(20);
+            if (selectedMessagesCountTextView != null) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    selectedMessagesCountTextView.setTextSize(dp(15));
+                } else if (!AndroidUtilities.isTablet() && ApplicationLoader.applicationContext.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                    selectedMessagesCountTextView.setTextSize(dp(18));
+                } else {
+                    selectedMessagesCountTextView.setTextSize(dp(20));
+                }
             }
         }
         if (num == 0) {
@@ -10371,7 +10397,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     }
                 }
             }
-            selectedMessagesCountTextView.setNumber(selectedDialogs.size(), true);
+            setSelectedMessagesCount(selectedDialogs.size(), true);
             boolean allSelectedPinned = selectedDialogs.size() > 0;
             for (long did : selectedDialogs) {
                 for (int i = 0; i < dialogs.size(); ++i) {

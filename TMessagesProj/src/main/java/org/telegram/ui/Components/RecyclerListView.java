@@ -3392,7 +3392,7 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         boolean m3Expressive = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
         boolean iosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
         m3ExpressivePressedSelector = m3Expressive || iosGlass;
-        m3ExpressiveSections = m3Expressive;
+        m3ExpressiveSections = m3Expressive || iosGlass;
         if (m3Expressive) {
             padding = Math.max(padding, dp(12));
             roundRadius = Math.max(roundRadius, xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius());
@@ -3896,13 +3896,14 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         boolean isIsolated = !hasAbove && !hasBelow;
         float isolatedP = state.isolatedProgress.set(isIsolated ? 1f : 0f);
 
-        float innerRadius = getM3ExpressiveInnerRadius();
+        boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        float innerRadius = isIosGlass ? 0 : getM3ExpressiveInnerRadius();
         float topRadius = AndroidUtilities.lerp(sectionRadius, innerRadius, topP);
         float bottomRadius = AndroidUtilities.lerp(sectionRadius, innerRadius, bottomP);
-        float gap = AndroidUtilities.lerp(getM3ExpressiveSegmentGap(), dp(2), isolatedP);
-        float extraPad = AndroidUtilities.lerp(0, dp(1), isolatedP);
-        float topGap = AndroidUtilities.lerp(0, gap, topP);
-        float bottomGap = AndroidUtilities.lerp(0, gap, bottomP);
+        float gap = isIosGlass ? 0 : AndroidUtilities.lerp(getM3ExpressiveSegmentGap(), dp(2), isolatedP);
+        float extraPad = isIosGlass ? 0 : AndroidUtilities.lerp(0, dp(1), isolatedP);
+        float topGap = isIosGlass ? 0 : AndroidUtilities.lerp(0, gap, topP);
+        float bottomGap = isIosGlass ? 0 : AndroidUtilities.lerp(0, gap, bottomP);
 
         AndroidUtilities.rectTmp.set(
             getPaddingLeft() + sectionsItemDecoration.padding,
@@ -4017,8 +4018,9 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
             float topP = state.topProgress.getValue();
             float bottomP = state.bottomProgress.getValue();
             float isolatedP = state.isolatedProgress.getValue();
-            float gap = AndroidUtilities.lerp(getM3ExpressiveSegmentGap(), dp(2), isolatedP);
-            float extraPad = AndroidUtilities.lerp(0, dp(1), isolatedP);
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            float gap = isIosGlass ? 0 : AndroidUtilities.lerp(getM3ExpressiveSegmentGap(), dp(2), isolatedP);
+            float extraPad = isIosGlass ? 0 : AndroidUtilities.lerp(0, dp(1), isolatedP);
             topInset = AndroidUtilities.lerp(0, gap, topP) + extraPad;
             bottomInset = AndroidUtilities.lerp(0, gap, bottomP) + extraPad;
         }
@@ -4035,7 +4037,8 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         }
         if (m3Expressive) {
             M3ItemCornerState state = getM3CornerState(child);
-            float innerRadius = getM3ExpressiveInnerRadius();
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            float innerRadius = isIosGlass ? 0 : getM3ExpressiveInnerRadius();
             float topRadius = AndroidUtilities.lerp(sectionRadius, innerRadius, state.topProgress.get());
             float bottomRadius = AndroidUtilities.lerp(sectionRadius, innerRadius, state.bottomProgress.get());
             clipPath.rewind();
@@ -4098,7 +4101,7 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         }
 
         final RectF rect = new RectF();
-        float segmentGap = m3Expressive ? getM3ExpressiveSegmentGap() : 0;
+        float segmentGap = (m3Expressive && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? getM3ExpressiveSegmentGap() : 0;
         rect.set(
             child.getX(),
             Math.max(applyPaddingToSections ? getPaddingTop() : 0, top(child) + (m3Expressive && prev ? segmentGap : 0)),
@@ -4112,8 +4115,10 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         }
         final Path clipPath = new Path();
         if (m3Expressive && !forceRound) {
-            float topRadius = prev ? getM3ExpressiveInnerRadius() : sectionRadius;
-            float bottomRadius = next ? getM3ExpressiveInnerRadius() : sectionRadius;
+            boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            float innerRadius = isIosGlass ? 0 : getM3ExpressiveInnerRadius();
+            float topRadius = prev ? innerRadius : sectionRadius;
+            float bottomRadius = next ? innerRadius : sectionRadius;
             radii[0] = radii[1] = radii[2] = radii[3] = topRadius;
             radii[4] = radii[5] = radii[6] = radii[7] = bottomRadius;
             clipPath.rewind();

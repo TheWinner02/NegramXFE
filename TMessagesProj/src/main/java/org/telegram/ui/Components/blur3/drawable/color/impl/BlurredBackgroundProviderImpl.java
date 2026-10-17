@@ -177,6 +177,7 @@ public class BlurredBackgroundProviderImpl {
     }
 
     public static BlurredBackgroundProvider topPanelChatActivity(Theme.ResourcesProvider resourcesProvider) {
+        final boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
                     if (!checkBlurEnabled(resourcesProvider)) {
@@ -188,10 +189,10 @@ public class BlurredBackgroundProviderImpl {
                     final int colorBg = Theme.getColor(Theme.key_chat_topPanelBackground, r);
                     return Theme.multAlpha(colorBg, alpha);
                 })
-                .setStrokeColorTop(0xFFFFFFFF, 0x20FFFFFF)
-                .setStrokeColorBottom(0xFFFFFFFF, 0x14FFFFFF)
-                .setShadowColor(0x20000000, 0)
-                //.setShadowLayer(dpf2(10 / 3f), 0, dpf2(2 / 3f))
+                .setStrokeColorTop(0xFFFFFFFF, isIosGlass ? 0x28FFFFFF : 0x20FFFFFF)
+                .setStrokeColorBottom(0xFFFFFFFF, isIosGlass ? 0x18FFFFFF : 0x14FFFFFF)
+                .setShadowColor(0x20000000, isIosGlass ? 0x30000000 : 0)
+                .setShadowLayer(dpf2(isIosGlass ? 4f : 3.333f), 0, dpf2(isIosGlass ? 1f : 0.667f))
                 .setStrokeWidth(dpf2(0.55f), dpf2(0.55f))
                 .build();
     }
@@ -374,7 +375,8 @@ public class BlurredBackgroundProviderImpl {
     }
 
     public static boolean checkBlurEnabled(int currentAccount, Theme.ResourcesProvider resourcesProvider) {
-        return tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool()
+        return xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+            || tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool()
             || tw.nekomimi.nekogram.NekoConfig.forceMainTabsBlur.Bool()
             || tw.nekomimi.nekogram.NekoConfig.forceActionBarBlur.Bool();
     }
