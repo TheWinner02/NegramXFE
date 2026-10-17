@@ -95,7 +95,7 @@ public class SectionsScrollView extends ScrollView {
         int bottomPadding = isM3Expressive() ? 16 : 12;
         contentView.setPadding(dp(horizontalPadding), dp(topPadding), dp(horizontalPadding), dp(bottomPadding));
 
-        if (isM3Expressive()) {
+        if (isM3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             sectionRadius = xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius();
         }
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
@@ -215,7 +215,8 @@ public class SectionsScrollView extends ScrollView {
         for (int i = 0; i < layout.getChildCount(); ++i) {
             final View child = layout.getChildAt(i);
             if (child.getVisibility() != View.VISIBLE) continue;
-            boolean canFlatten = child instanceof LinearLayout &&
+            boolean canFlatten = !Objects.equals(child.getTag(), RecyclerListView.TAG_NOT_SECTION) &&
+                child instanceof LinearLayout &&
                 ((LinearLayout) child).getOrientation() == LinearLayout.VERTICAL &&
                 x + child.getX() <= contentView.getPaddingLeft() &&
                 x + child.getX() + child.getWidth() >= contentView.getWidth() - contentView.getPaddingRight();
@@ -230,11 +231,11 @@ public class SectionsScrollView extends ScrollView {
         }
     }
     private float getChildX(View child) {
-        if (child == contentView || !(child.getParent() instanceof View)) return child.getX();
+        if (child == null || child == contentView || !(child.getParent() instanceof View)) return 0;
         return getChildX((View) child.getParent()) + child.getX();
     }
     private float getChildY(View child) {
-        if (child == contentView || !(child.getParent() instanceof View)) return child.getY();
+        if (child == null || child == contentView || !(child.getParent() instanceof View)) return 0;
         return getChildY((View) child.getParent()) + child.getY();
     }
 
@@ -315,13 +316,17 @@ public class SectionsScrollView extends ScrollView {
             fromTopMargin = ((MarginLayoutParams) fromLp).topMargin;
         }
         if (to.getParent() != contentView && toLp instanceof MarginLayoutParams) {
-            toBottomMargin = ((MarginLayoutParams) toLp).topMargin;
+            toBottomMargin = ((MarginLayoutParams) toLp).bottomMargin;
         }
 
+        View fromContainer = (from.getParent() instanceof View && from.getParent() != contentView) ? (View) from.getParent() : from;
+        float left = contentView.getX() + getChildX(fromContainer);
+        float right = left + fromContainer.getWidth();
+
         AndroidUtilities.rectTmp.set(
-            contentView.getX() + getChildX(from),
+            left,
             Math.max(getScrollY() - dp(16), contentView.getY() + getChildY(from) - fromTopMargin),
-            contentView.getX() + getChildX(from) + from.getWidth(),
+            right,
             Math.min(getHeight() + dp(16) + getScrollY(), contentView.getY() + getChildY(to) + to.getHeight() + toBottomMargin)
         );
         if (AndroidUtilities.rectTmp.bottom < AndroidUtilities.rectTmp.top) return;
@@ -440,7 +445,7 @@ public class SectionsScrollView extends ScrollView {
         @Override
         public void setBackgroundColor(int color) {
             SectionsScrollView scrollView = findSectionsScrollView();
-            if (isM3Expressive() && scrollView != null) {
+            if ((isM3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) && scrollView != null) {
                 super.setBackgroundColor(Color.TRANSPARENT);
                 scrollView.invalidate();
                 return;
@@ -451,7 +456,7 @@ public class SectionsScrollView extends ScrollView {
         @Override
         public void setBackground(Drawable background) {
             SectionsScrollView scrollView = findSectionsScrollView();
-            if (isM3Expressive() && scrollView != null && background != null) {
+            if ((isM3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) && scrollView != null && background != null) {
                 super.setBackground(null);
                 scrollView.invalidate();
                 return;
@@ -469,7 +474,7 @@ public class SectionsScrollView extends ScrollView {
                     scrollView.invalidate();
                 }
             }
-            if (scrollView != null && (isM3Expressive() || getParent() instanceof SectionsScrollView)) {
+            if (scrollView != null && (isM3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || getParent() instanceof SectionsScrollView)) {
                 canvas.save();
                 scrollView.clipChild(canvas, child, this);
                 boolean r = super.drawChild(canvas, child, drawingTime);

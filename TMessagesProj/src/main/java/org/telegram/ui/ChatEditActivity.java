@@ -308,7 +308,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 if (cameraDrawable == null) {
                     cameraDrawable = new RLottieDrawable(R.raw.camera_outline, "" + R.raw.camera_outline, dp(50), dp(50), false, null);
                 }
-                setAvatarCell.imageView.setTranslationX(-dp(8));
+                setAvatarCell.imageView.setTranslationX(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : -dp(8));
                 setAvatarCell.imageView.setAnimation(cameraDrawable);
             }));
 
@@ -528,6 +528,31 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         return checkDiscard(invoked);
     }
 
+    private void updateAvatarContainerBackground() {
+        if (avatarContainer == null) {
+            return;
+        }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            avatarContainer.setBackgroundColor(Color.TRANSPARENT);
+            return;
+        }
+        final boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        final boolean isDark = Theme.isCurrentThemeDark();
+        int backgroundColor = Theme.getColor(Theme.key_windowBackgroundWhite, resourceProvider);
+        if (isIosGlass && isDark) {
+            backgroundColor = androidx.core.graphics.ColorUtils.blendARGB(backgroundColor, 0xFFFFFFFF, 0.07f);
+        }
+        android.graphics.drawable.GradientDrawable drawable = new android.graphics.drawable.GradientDrawable();
+        drawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        drawable.setCornerRadius(isIosGlass ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : AndroidUtilities.dp(16));
+        drawable.setColor(backgroundColor);
+        if (isIosGlass) {
+            drawable.setStroke(AndroidUtilities.dp(0.5f), isDark ? 0x14FFFFFF : 0x06000000);
+        }
+        avatarContainer.setBackground(drawable);
+        avatarContainer.setClipToOutline(true);
+    }
+
     @Override
     public View createView(Context context) {
         if (nameTextView != null) {
@@ -694,8 +719,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
         avatarContainer = new LinearLayout(context);
         avatarContainer.setOrientation(LinearLayout.VERTICAL);
-        avatarContainer.setBackgroundColor(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? Color.TRANSPARENT : Theme.getColor(Theme.key_windowBackgroundWhite));
-        linearLayout1.addView(avatarContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        avatarContainer.setTag(org.telegram.ui.Components.RecyclerListView.TAG_NOT_SECTION);
+        updateAvatarContainerBackground();
+        linearLayout1.addView(avatarContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 12));
 
         FrameLayout frameLayout = new FrameLayout(context);
         avatarContainer.addView(frameLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
@@ -816,7 +842,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
         settingsContainer = new SectionsScrollView.SectionsLinearLayout(context);
         settingsContainer.setOrientation(LinearLayout.VERTICAL);
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             settingsContainer.setBackgroundColor(Color.TRANSPARENT);
         }
         linearLayout1.addView(settingsContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
@@ -833,14 +859,15 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             setAvatarCell.setOnClickListener(v -> {
                 openSetPhotoAlert();
             });
-            settingsContainer.addView(setAvatarCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            int setAvatarTopMargin = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 8 : 0;
+            settingsContainer.addView(setAvatarCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, setAvatarTopMargin, 0, 0));
         }
 
         descriptionTextView = new EditTextBoldCursor(context);
         descriptionTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         descriptionTextView.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
         descriptionTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        descriptionTextView.setPadding(0, 0, 0, dp(6));
+        descriptionTextView.setPadding(0, AndroidUtilities.dp(2), 0, dp(6));
         descriptionTextView.setBackgroundDrawable(null);
         descriptionTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
         descriptionTextView.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_AUTO_CORRECT);
@@ -854,11 +881,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         descriptionTextView.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         descriptionTextView.setCursorSize(dp(20));
         descriptionTextView.setCursorWidth(1.5f);
-        if (descriptionTextView.isEnabled()) {
-            settingsContainer.addView(descriptionTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 23, 15, 23, 9));
-        } else {
-            settingsContainer.addView(descriptionTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 23, 12, 23, 6));
-        }
+        int descTopMargin = (setAvatarCell == null || setAvatarCell.getVisibility() != View.VISIBLE) ? 22 : (descriptionTextView.isEnabled() ? 15 : 12);
+        int descBottomMargin = descriptionTextView.isEnabled() ? 12 : 8;
+        settingsContainer.addView(descriptionTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 21, descTopMargin, 21, descBottomMargin));
         descriptionTextView.setOnEditorActionListener((textView, i, keyEvent) -> {
             if (i == EditorInfo.IME_ACTION_DONE && doneButton != null) {
                 doneButton.performClick();
@@ -888,15 +913,17 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
         typeEditContainer = new SectionsScrollView.SectionsLinearLayout(context);
         typeEditContainer.setOrientation(LinearLayout.VERTICAL);
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             typeEditContainer.setBackgroundColor(Color.TRANSPARENT);
         }
         linearLayout1.addView(typeEditContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
+        final boolean transparentSelector = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+
         if (currentChat != null) {
             if (currentChat.megagroup && (info == null || info.can_set_location)) {
                 locationCell = new TextCell(context);
-                locationCell.setBackgroundDrawable(Theme.getSelectorDrawable(true));
+                locationCell.setBackgroundDrawable(Theme.getSelectorDrawable(!transparentSelector));
                 typeEditContainer.addView(locationCell, LayoutHelper.createLinear(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 locationCell.setOnClickListener(v -> {
                     if (!AndroidUtilities.isMapsInstalled(ChatEditActivity.this)) {
@@ -923,7 +950,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
             if (currentChat.creator && (info == null || info.can_set_username)) {
                 typeCell = new TextCell(context);
-                typeCell.setBackgroundDrawable(Theme.getSelectorDrawable(true));
+                typeCell.setBackgroundDrawable(Theme.getSelectorDrawable(!transparentSelector));
                 typeEditContainer.addView(typeCell, LayoutHelper.createLinear(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 typeCell.setOnClickListener(v -> {
                     ChatEditTypeActivity fragment = new ChatEditTypeActivity(chatId, locationCell != null && locationCell.getVisibility() == View.VISIBLE);
@@ -934,7 +961,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
             if (ChatObject.isChannel(currentChat) && (isChannel && ChatObject.canUserDoAdminAction(currentChat, ChatObject.ACTION_CHANGE_INFO) || !isChannel && ChatObject.canUserDoAdminAction(currentChat, ChatObject.ACTION_PIN))) {
                 linkedCell = new TextCell(context);
-                linkedCell.setBackgroundDrawable(Theme.getSelectorDrawable(true));
+                linkedCell.setBackgroundDrawable(Theme.getSelectorDrawable(!transparentSelector));
                 typeEditContainer.addView(linkedCell, LayoutHelper.createLinear(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 linkedCell.setOnClickListener(v -> {
                     ChatLinkActivity fragment = new ChatLinkActivity(chatId);
@@ -945,7 +972,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
             if (ChatObject.isChannelAndNotMegaGroup(currentChat) && (isChannel && ChatObject.canUserDoAdminAction(currentChat, ChatObject.ACTION_CHANGE_INFO))) {
                 suggestedCell = new TextCell(context);
-                suggestedCell.setBackground(Theme.getSelectorDrawable(true));
+                suggestedCell.setBackground(Theme.getSelectorDrawable(!transparentSelector));
                 suggestedCell.setTextAndValueAndIcon(
                         (LocaleController.getString(R.string.PostSuggestions)),
                         "",
@@ -960,7 +987,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
             if (ChatObject.isChannelAndNotMegaGroup(currentChat) && ChatObject.canChangeChatInfo(currentChat)) {
                 colorCell = new PeerColorActivity.ChangeNameColorCell(currentAccount, -currentChat.id, context, getResourceProvider());
-                colorCell.setBackground(Theme.getSelectorDrawable(true));
+                colorCell.setBackground(Theme.getSelectorDrawable(!transparentSelector));
                 typeEditContainer.addView(colorCell, LayoutHelper.createLinear(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 colorCell.setOnClickListener(v -> {
                     presentFragment(new ChannelColorActivity(-currentChat.id).setOnApplied(this));
@@ -974,7 +1001,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             if (ChatObject.isChannelAndNotMegaGroup(currentChat) && !ChatObject.isCommunity(currentChat)) {
                 final long dialogId = -currentChat.id;
                 autoTranslationCell = new TextCell(context, 23, false, true, resourceProvider);
-                autoTranslationCell.setBackground(Theme.getSelectorDrawable(true));
+                autoTranslationCell.setBackground(Theme.getSelectorDrawable(!transparentSelector));
                 if (ChatObject.isChannelAndNotMegaGroup(currentChat) && (!ChatObject.hasAdminRights(currentChat))) {
                     autoTranslationCell.setVisibility(View.GONE);
                 }
@@ -1048,7 +1075,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
             if (!isChannel && ChatObject.canBlockUsers(currentChat) && (ChatObject.isChannel(currentChat) || currentChat.creator)) {
                 historyCell = new TextCell(context);
-                historyCell.setBackgroundDrawable(Theme.getSelectorDrawable(true));
+                historyCell.setBackgroundDrawable(Theme.getSelectorDrawable(!transparentSelector));
                 typeEditContainer.addView(historyCell, LayoutHelper.createLinear(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 historyCell.setOnClickListener(v -> {
                     BottomSheet.Builder builder = new BottomSheet.Builder(context);
@@ -1100,7 +1127,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             if (ChatObject.isMegagroup(currentChat) && ChatObject.hasAdminRights(currentChat) && !ChatObject.isCommunity(currentChat)) {
                 MessagesController.getInstance(currentAccount).getBoostsController().getBoostsStats(-currentChat.id, boostsStatus -> this.boostsStatus = boostsStatus);
                 colorCell = new PeerColorActivity.ChangeNameColorCell(currentAccount, -currentChat.id, context, getResourceProvider());
-                colorCell.setBackground(Theme.getSelectorDrawable(true));
+                colorCell.setBackground(Theme.getSelectorDrawable(!transparentSelector));
                 typeEditContainer.addView(colorCell, LayoutHelper.createLinear(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 colorCell.setOnClickListener(v -> {
                     GroupColorActivity activity = new GroupColorActivity(-currentChat.id);
@@ -1121,7 +1148,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 //                });
             } else if (currentChat.creator) {
                 forumsCell = new TextCell(context, 23, false, true, null);
-                forumsCell.setBackground(Theme.getSelectorDrawable(true));
+                forumsCell.setBackground(Theme.getSelectorDrawable(!transparentSelector));
                 forumsCell.setTextAndCheckAndIcon((getString(R.string.ChannelTopics)), forum, R.drawable.msg_topics, false);
                 forumsCell.getCheckBox().setIcon(canForum ? 0 : R.drawable.permission_locked);
                 typeEditContainer.addView(forumsCell, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
@@ -1220,7 +1247,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
         infoContainer = new SectionsScrollView.SectionsLinearLayout(context);
         infoContainer.setOrientation(LinearLayout.VERTICAL);
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             infoContainer.setBackgroundColor(Color.TRANSPARENT);
         }
         linearLayout1.addView(infoContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
@@ -1477,7 +1504,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
                 balanceContainer = new SectionsScrollView.SectionsLinearLayout(context);
                 balanceContainer.setOrientation(LinearLayout.VERTICAL);
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     balanceContainer.setBackgroundColor(Color.TRANSPARENT);
                 }
                 linearLayout1.addView(balanceContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
@@ -1724,7 +1751,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                     if (cameraDrawable == null) {
                         cameraDrawable = new RLottieDrawable(R.raw.camera_outline, "" + R.raw.camera_outline, dp(50), dp(50), false, null);
                     }
-                    setAvatarCell.imageView.setTranslationX(-dp(8));
+                    setAvatarCell.imageView.setTranslationX(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : -dp(8));
                     setAvatarCell.imageView.setAnimation(cameraDrawable);
                 }));
             }
@@ -1825,7 +1852,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             if (cameraDrawable == null) {
                 cameraDrawable = new RLottieDrawable(R.raw.camera_outline, "" + R.raw.camera_outline, dp(50), dp(50), false, null);
             }
-            setAvatarCell.imageView.setTranslationX(-dp(8));
+            setAvatarCell.imageView.setTranslationX(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : -dp(8));
             setAvatarCell.imageView.setAnimation(cameraDrawable);
         }
         if (PhotoViewer.hasInstance() && PhotoViewer.getInstance().isVisible()) {
@@ -2039,7 +2066,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 if (cameraDrawable == null) {
                     cameraDrawable = new RLottieDrawable(R.raw.camera_outline, "" + R.raw.camera_outline, dp(50), dp(50), false, null);
                 }
-                setAvatarCell.imageView.setTranslationX(-dp(8));
+                setAvatarCell.imageView.setTranslationX(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 0 : -dp(8));
                 setAvatarCell.imageView.setAnimation(cameraDrawable);
                 showAvatarProgress(true, false);
             }
@@ -2780,12 +2807,14 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         themeDescriptions.add(new ThemeDescription(descriptionTextView, ThemeDescription.FLAG_TEXTCOLOR, null, null, null, null, Theme.key_windowBackgroundWhiteBlackText));
         themeDescriptions.add(new ThemeDescription(descriptionTextView, ThemeDescription.FLAG_HINTTEXTCOLOR, null, null, null, null, Theme.key_windowBackgroundWhiteHintText));
 
-        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             themeDescriptions.add(new ThemeDescription(avatarContainer, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
             themeDescriptions.add(new ThemeDescription(settingsContainer, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
             themeDescriptions.add(new ThemeDescription(typeEditContainer, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
             themeDescriptions.add(new ThemeDescription(deleteContainer, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
             themeDescriptions.add(new ThemeDescription(infoContainer, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
+        } else {
+            themeDescriptions.add(new ThemeDescription(null, 0, null, null, null, this::updateAvatarContainerBackground, Theme.key_windowBackgroundWhite));
         }
         themeDescriptions.add(new ThemeDescription(stickersContainer, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
 
