@@ -2642,8 +2642,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     private boolean isAnimationsAllowed;
 
     public void checkMenuItemsWidth() {
-        final int defaultMenuWidth = Math.max(0, menu != null ? (int) menu.getItemsWidth() - dp(1) - dp(1) : 0);
-        final int actionMenuWidth = Math.max(0, actionMode != null ? actionMode.getItemsWidth() - dp(1) - dp(1) : 0);
+        final int defaultMenuWidth = Math.max(0, menu != null ? getMenuEffectiveWidth(menu) - dp(1) - dp(1) : 0);
+        final int actionMenuWidth = Math.max(0, actionMode != null ? getMenuEffectiveWidth(actionMode) - dp(1) - dp(1) : 0);
         final int searchMenuWidth = dp(46);
         final int width = /*isSearchFieldVisible ? searchMenuWidth :*/ (actionModeVisible ? actionMenuWidth : defaultMenuWidth);
 
@@ -2657,29 +2657,76 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         }
     }
 
+    public int getMenuEffectiveWidth(ActionBarMenu targetMenu) {
+        if (targetMenu == null || targetMenu.getVisibility() == GONE) {
+            return 0;
+        }
+        float menuAlpha = Math.max(0f, Math.min(1f, targetMenu.getAlpha()));
+        if (menuAlpha <= 0.01f) {
+            return 0;
+        }
+        float minLeft = Float.POSITIVE_INFINITY;
+        float maxRight = Float.NEGATIVE_INFINITY;
+        float baseMinLeft = Float.POSITIVE_INFINITY;
+        float animMinLeft = Float.POSITIVE_INFINITY;
+        float animAlpha = 0f;
+        int visibleCount = 0;
+
+        for (int a = 0, count = targetMenu.getChildCount(); a < count; a++) {
+            View item = targetMenu.getChildAt(a);
+            if (item instanceof ActionBarMenuItem && item.getVisibility() == VISIBLE) {
+                float itemAlpha = Math.max(0f, Math.min(1f, item.getAlpha()));
+                if (itemAlpha <= 0.02f) {
+                    continue;
+                }
+                visibleCount++;
+                int itemW = item.getWidth() > 0 ? item.getWidth() : (item.getMeasuredWidth() > 0 ? item.getMeasuredWidth() : dp(48));
+                float left = item.getX();
+                float right = left + itemW;
+
+                if (itemAlpha >= 0.98f) {
+                    baseMinLeft = Math.min(baseMinLeft, left);
+                    minLeft = Math.min(minLeft, left);
+                    maxRight = Math.max(maxRight, right);
+                } else {
+                    animMinLeft = Math.min(animMinLeft, left);
+                    animAlpha = Math.max(animAlpha, itemAlpha);
+                    maxRight = Math.max(maxRight, right);
+                }
+            }
+        }
+
+        if (visibleCount > 0 && maxRight > Float.NEGATIVE_INFINITY) {
+            float effectiveLeft;
+            if (animMinLeft < Float.POSITIVE_INFINITY && baseMinLeft < Float.POSITIVE_INFINITY) {
+                effectiveLeft = AndroidUtilities.lerp(baseMinLeft, Math.min(baseMinLeft, animMinLeft), animAlpha);
+            } else if (minLeft < Float.POSITIVE_INFINITY) {
+                effectiveLeft = minLeft;
+            } else if (animMinLeft < Float.POSITIVE_INFINITY) {
+                effectiveLeft = animMinLeft;
+            } else {
+                effectiveLeft = 0;
+            }
+            float span = maxRight - effectiveLeft;
+            if (span > 0) {
+                return Math.round(span * menuAlpha);
+            }
+        }
+
+        if (visibleCount > 0) {
+            return Math.round((dp(48) + Math.max(0, visibleCount - 1) * dp(38)) * menuAlpha);
+        }
+
+        return 0;
+    }
+
     public int getEffectiveRightWidth() {
-        float w = 0;
-        int lastVisibleIndex = -1;
-        if (menu != null && menu.getVisibility() != GONE) {
-            final int count = menu.getChildCount();
-            for (int a = count - 1; a >= 0; a--) {
-                View item = menu.getChildAt(a);
-                if (item.getVisibility() == VISIBLE) {
-                    lastVisibleIndex = a;
-                    break;
-                }
-            }
-            if (lastVisibleIndex != -1) {
-                float menuAlpha = menu != null ? menu.getAlpha() : 1f;
-                for (int a = 0; a <= lastVisibleIndex; a++) {
-                    View item = menu.getChildAt(a);
-                    if (item.getVisibility() == VISIBLE) {
-                        int itemW = item.getMeasuredWidth() > 0 ? item.getMeasuredWidth() : dp(48);
-                        float itemAlpha = Math.max(0f, Math.min(1f, item.getAlpha()));
-                        w += itemW * (a == lastVisibleIndex ? menuAlpha : (itemAlpha * menuAlpha));
-                    }
-                }
-            }
+        int w = 0;
+        if (actionModeVisible && actionMode != null && actionMode.getVisibility() != GONE) {
+            w = getMenuEffectiveWidth(actionMode);
+        }
+        if (w <= 0 && menu != null && menu.getVisibility() != GONE) {
+            w = getMenuEffectiveWidth(menu);
         }
         if (w <= 0) {
             for (int i = 0, count = getChildCount(); i < count; i++) {
@@ -2695,7 +2742,12 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 }
             }
         }
-        return Math.round(w);
+        if (hasForcedMenuWidth) {
+            w = Math.max(w, forcedMenuWidth);
+        } else if (hasForcedMenuMinWidth) {
+            w = Math.max(w, (int) (forcedMenuMinWidth * (1f - searchFactor)));
+        }
+        return w;
     }
 
     public boolean doNotDrawGlassMenu;
@@ -2738,7 +2790,17 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             }
 
             // Right island: menu pill
-            int effectiveMenuWidth = (actionModeFactor > 0 && actionMode != null) ? menuWidth : getEffectiveRightWidth();
+            int effectiveMenuWidth;
+            if (actionModeFactor > 0 && actionMode != null) {
+                int normalW = getMenuEffectiveWidth(menu);
+                int actionW = getMenuEffectiveWidth(actionMode);
+                if (actionW <= 0) {
+                    actionW = actionMode.getItemsWidth();
+                }
+                effectiveMenuWidth = Math.round(AndroidUtilities.lerp(normalW, actionW, actionModeFactor));
+            } else {
+                effectiveMenuWidth = getEffectiveRightWidth();
+            }
             if (effectiveMenuWidth <= 0) {
                 effectiveMenuWidth = menuWidth;
             }
