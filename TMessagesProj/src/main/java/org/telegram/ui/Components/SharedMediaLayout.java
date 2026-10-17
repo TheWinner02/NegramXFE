@@ -1573,6 +1573,9 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     private VelocityTracker velocityTracker;
 
     protected boolean isActionModeShowed;
+    private org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable glassDrawableClose;
+    private org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable glassDrawableCount;
+    private org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable glassDrawableMenu;
     private static boolean skipPhotos = false;
 
     final Delegate delegate;
@@ -2217,9 +2220,60 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         if (profileActivity != null && profileActivity.getFragmentView() instanceof SizeNotifierFrameLayout) {
             sizeNotifierFrameLayout = (SizeNotifierFrameLayout) profileActivity.getFragmentView();
         }
-        actionModeLayout = new BlurredLinearLayout(context, sizeNotifierFrameLayout);
-//        actionModeLayout.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
-        actionModeLayout.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+        actionModeLayout = new BlurredLinearLayout(context, sizeNotifierFrameLayout) {
+            @Override
+            protected void dispatchDraw(Canvas canvas) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    drawLiquidGlassIslands(canvas);
+                }
+                super.dispatchDraw(canvas);
+            }
+
+            @Override
+            protected boolean verifyDrawable(@NonNull Drawable who) {
+                return (glassDrawableClose != null && who == glassDrawableClose)
+                    || (glassDrawableCount != null && who == glassDrawableCount)
+                    || (glassDrawableMenu != null && who == glassDrawableMenu)
+                    || super.verifyDrawable(who);
+            }
+
+            @Override
+            protected void onLayout(boolean changed, int l, int t, int r, int b) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    layoutLiquidGlassIslands(r - l, b - t);
+                } else {
+                    super.onLayout(changed, l, t, r, b);
+                }
+            }
+
+            @Override
+            public void setBackgroundColor(int color) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    super.setBackgroundColor(Color.TRANSPARENT);
+                    this.backgroundColor = Color.TRANSPARENT;
+                    this.drawBlur = false;
+                } else {
+                    super.setBackgroundColor(color);
+                }
+            }
+
+            @Override
+            public void setBackground(Drawable background) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    super.setBackground(null);
+                } else {
+                    super.setBackground(background);
+                }
+            }
+        };
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            actionModeLayout.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+        } else {
+            actionModeLayout.setBackgroundColor(Color.TRANSPARENT);
+            if (actionModeLayout instanceof BlurredLinearLayout) {
+                ((BlurredLinearLayout) actionModeLayout).drawBlur = false;
+            }
+        }
         actionModeLayout.setAlpha(0.0f);
         actionModeLayout.setClickable(true);
         actionModeLayout.setVisibility(INVISIBLE);
@@ -2228,24 +2282,63 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         closeButton.setScaleType(ImageView.ScaleType.CENTER);
         closeButton.setImageDrawable(backDrawable = new BackDrawable(true));
         backDrawable.setColor(getThemedColor(Theme.key_actionBarActionModeDefaultIcon));
-        closeButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 1));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            closeButton.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(23), 0, Theme.getColor(Theme.key_listSelector, resourcesProvider)));
+        } else {
+            closeButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 1));
+        }
         closeButton.setContentDescription(getString("Close", R.string.Close));
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             ScaleStateListAnimator.apply(closeButton);
         }
-        actionModeLayout.addView(closeButton, new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
+        boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+        LinearLayout.LayoutParams closeLp = isM3
+                ? LayoutHelper.createLinear(42, 42, Gravity.CENTER_VERTICAL, 6, 0, 4, 0)
+                : new LinearLayout.LayoutParams(dp(54), ViewGroup.LayoutParams.MATCH_PARENT);
+        actionModeLayout.addView(closeButton, closeLp);
         actionModeViews.add(closeButton);
         closeButton.setOnClickListener(v -> {
             com.exteragram.messenger.utils.system.VibratorUtils.vibrateClick(v);
             closeActionMode();
         });
 
-        selectedMessagesCountTextView = new NumberTextView(context);
+        selectedMessagesCountTextView = new NumberTextView(context) {
+            @Override
+            protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                    int w = (int) Math.ceil(getTextWidth()) + getPaddingLeft() + getPaddingRight();
+                    int h = MeasureSpec.getSize(heightMeasureSpec);
+                    if (h <= 0) h = dp(38);
+                    setMeasuredDimension(Math.max(AndroidUtilities.dp(38), w), h);
+                } else {
+                    super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+                }
+            }
+
+            @Override
+            public void setNumber(int number, boolean animated) {
+                super.setNumber(number, animated);
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && actionModeLayout != null) {
+                    actionModeLayout.requestLayout();
+                }
+            }
+        };
         selectedMessagesCountTextView.setTextSize(18);
         selectedMessagesCountTextView.setTypeface(AndroidUtilities.bold());
         selectedMessagesCountTextView.setTextColor(getThemedColor(Theme.key_actionBarActionModeDefaultIcon));
-        actionModeLayout.addView(selectedMessagesCountTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, 18, 0, 0, 0));
+        if (isM3 || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            selectedMessagesCountTextView.setCenterAlign(true);
+        }
+        LinearLayout.LayoutParams counterLp = isM3
+                ? LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 38, Gravity.CENTER_VERTICAL, 4, 0, 4, 0)
+                : LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, 18, 0, 0, 0);
+        actionModeLayout.addView(selectedMessagesCountTextView, counterLp);
         actionModeViews.add(selectedMessagesCountTextView);
+
+        if (isM3) {
+            View actionModeSpacer = new View(context);
+            actionModeLayout.addView(actionModeSpacer, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f));
+        }
 
         if (!DialogObject.isEncryptedDialog(dialog_id)) {
             if (!isStoriesView()) {
@@ -3827,7 +3920,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             });
 
             BlurredBackgroundDrawable filterTabsViewBackground = iBlur3FactoryLiquidGlass.create(scrollSlidingTextTabStrip, BlurredBackgroundProviderImpl.topPanel(resourcesProvider));
-            filterTabsViewBackground.setRadius(dp(18));
+            filterTabsViewBackground.setRadius(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(18));
             filterTabsViewBackground.setPadding(dp(6.666f));
             scrollSlidingTextTabStrip.setPadding(0, dp(7), 0, dp(7));
             scrollSlidingTextTabStrip.setClipToPadding(false);
@@ -3880,7 +3973,21 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             searchTagsList.setBlurredFactory(iBlur3FactoryLiquidGlass, BlurredBackgroundProviderImpl.topPanel(resourcesProvider));
             searchTagsList.setShown(0f);
             addView(searchTagsList, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.LEFT | Gravity.TOP, 0, 4, 0, 0));
-            addView(actionModeLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.TOP));
+            if (iBlur3FactoryLiquidGlass != null && xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                glassDrawableClose = iBlur3FactoryLiquidGlass.create(actionModeLayout, BlurredBackgroundProviderImpl.topPanel(resourcesProvider));
+                glassDrawableClose.setPadding(AndroidUtilities.dp(6.666f));
+                glassDrawableClose.setCallback(actionModeLayout);
+
+                glassDrawableCount = iBlur3FactoryLiquidGlass.create(actionModeLayout, BlurredBackgroundProviderImpl.topPanel(resourcesProvider));
+                glassDrawableCount.setPadding(AndroidUtilities.dp(6.666f));
+                glassDrawableCount.setCallback(actionModeLayout);
+
+                glassDrawableMenu = iBlur3FactoryLiquidGlass.create(actionModeLayout, BlurredBackgroundProviderImpl.topPanel(resourcesProvider));
+                glassDrawableMenu.setPadding(AndroidUtilities.dp(6.666f));
+                glassDrawableMenu.setCallback(actionModeLayout);
+            }
+            boolean isGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+            addView(actionModeLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, isGlass ? 50 : 48, Gravity.LEFT | Gravity.TOP));
         }
 
         updateTabs(false);
@@ -3986,11 +4093,20 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         boolean noforwards = profileActivity.getMessagesController().isPeerNoForwards(dialog_id) || hasNoforwardsMessage();
         forwardItem.setAlpha(noforwards ? 0.5f : 1f);
         forwardNoQuoteItem.setAlpha(noforwards ? 0.5f : 1f);
-        if (noforwards) {
-            if (forwardItem.getBackground() != null) forwardItem.setBackground(null);
-            if (forwardNoQuoteItem.getBackground() != null) forwardNoQuoteItem.setBackground(null);
-        } else {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             updateActionModeChildShapes();
+        } else {
+            if (noforwards) {
+                if (forwardItem.getBackground() != null) forwardItem.setBackground(null);
+                if (forwardNoQuoteItem.getBackground() != null) forwardNoQuoteItem.setBackground(null);
+            } else {
+                if (forwardItem.getBackground() == null) {
+                    forwardItem.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 5));
+                }
+                if (forwardNoQuoteItem.getBackground() == null) {
+                    forwardNoQuoteItem.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 5));
+                }
+            }
         }
     }
 
@@ -4007,6 +4123,14 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             closeDrawable.setStroke(btnStroke, dp(1));
             closeButton.setBackground(closeDrawable);
             ScaleStateListAnimator.apply(closeButton);
+        }
+
+        if (selectedMessagesCountTextView != null) {
+            selectedMessagesCountTextView.setCenterAlign(true);
+            M3ExpressiveButtonDrawable countDrawable = new M3ExpressiveButtonDrawable(btnBg, btnBg, dp(16), dp(16), dp(4));
+            countDrawable.setStroke(btnStroke, dp(1));
+            selectedMessagesCountTextView.setBackground(countDrawable);
+            selectedMessagesCountTextView.setPadding(dp(12), 0, dp(12), 0);
         }
 
         ArrayList<View> visibleItems = new ArrayList<>();
@@ -4143,6 +4267,103 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             curX += childW + spacing;
         }
         actionModeLayout.invalidate();
+    }
+
+    private boolean hasVisibleMenuItems() {
+        return (forwardNoQuoteItem != null && forwardNoQuoteItem.getVisibility() != GONE)
+            || (gotoItem != null && gotoItem.getVisibility() != GONE)
+            || (forwardItem != null && forwardItem.getVisibility() != GONE)
+            || (pinItem != null && pinItem.getVisibility() != GONE)
+            || (unpinItem != null && unpinItem.getVisibility() != GONE)
+            || (deleteItem != null && deleteItem.getVisibility() != GONE);
+    }
+
+    private void drawLiquidGlassIslands(Canvas canvas) {
+        if (glassDrawableClose != null && closeButton != null && closeButton.getVisibility() != GONE) {
+            glassDrawableClose.draw(canvas);
+        }
+        if (glassDrawableCount != null && selectedMessagesCountTextView != null && selectedMessagesCountTextView.getVisibility() != GONE) {
+            glassDrawableCount.draw(canvas);
+        }
+        if (glassDrawableMenu != null && hasVisibleMenuItems()) {
+            glassDrawableMenu.draw(canvas);
+        }
+    }
+
+    private void layoutLiquidGlassIslands(int w, int h) {
+        if (w <= 0 || h <= 0) return;
+
+        final int edge = dp(6);
+        final int gap = dp(8);
+        final int p = dp(6);
+        final float rad = xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius();
+
+        // 1. Left Island: Close Button
+        final int closePillWidth = dp(58);
+        final int closeLeft = edge;
+        final int closeRight = closeLeft + closePillWidth;
+
+        if (closeButton != null && closeButton.getVisibility() != GONE) {
+            closeButton.layout(closeLeft, 0, closeRight, h);
+        }
+        if (glassDrawableClose != null) {
+            glassDrawableClose.setRadius(rad);
+            glassDrawableClose.setBounds(closeLeft, 0, closeRight, h);
+        }
+
+        // 2. Right Island: Action Menu Items
+        ArrayList<View> visibleMenuItems = new ArrayList<>();
+        if (forwardNoQuoteItem != null && forwardNoQuoteItem.getVisibility() != GONE) visibleMenuItems.add(forwardNoQuoteItem);
+        if (gotoItem != null && gotoItem.getVisibility() != GONE) visibleMenuItems.add(gotoItem);
+        if (forwardItem != null && forwardItem.getVisibility() != GONE) visibleMenuItems.add(forwardItem);
+        if (pinItem != null && pinItem.getVisibility() != GONE) visibleMenuItems.add(pinItem);
+        if (unpinItem != null && unpinItem.getVisibility() != GONE) visibleMenuItems.add(unpinItem);
+        if (deleteItem != null && deleteItem.getVisibility() != GONE) visibleMenuItems.add(deleteItem);
+
+        final int itemW = dp(46);
+        final int menuRight = w - edge;
+        final int menuLeft = visibleMenuItems.isEmpty() ? menuRight : (menuRight - visibleMenuItems.size() * itemW - p * 2);
+
+        if (!visibleMenuItems.isEmpty()) {
+            int curX = menuLeft + p;
+            for (int i = 0; i < visibleMenuItems.size(); i++) {
+                View item = visibleMenuItems.get(i);
+                item.layout(curX, 0, curX + itemW, h);
+                curX += itemW;
+            }
+        }
+        if (glassDrawableMenu != null && !visibleMenuItems.isEmpty()) {
+            glassDrawableMenu.setRadius(rad);
+            glassDrawableMenu.setBounds(menuLeft, 0, menuRight, h);
+        }
+
+        // 3. Center Island: Selection Counter
+        final int minLeft = closeRight + gap;
+        final int maxRight = (visibleMenuItems.isEmpty() ? (w - edge) : menuLeft) - gap;
+
+        if (selectedMessagesCountTextView != null && selectedMessagesCountTextView.getVisibility() != GONE) {
+            selectedMessagesCountTextView.setCenterAlign(true);
+            int textW = (int) Math.ceil(selectedMessagesCountTextView.getTextWidth());
+            int desiredCountW = Math.max(dp(54), textW + p * 2 + dp(24));
+            int maxAvailableW = Math.max(0, maxRight - minLeft);
+            int countW = Math.min(maxAvailableW, desiredCountW);
+
+            int screenCenterLeft = (w - countW) / 2;
+            int countLeft;
+            if (screenCenterLeft >= minLeft && screenCenterLeft + countW <= maxRight) {
+                countLeft = screenCenterLeft;
+            } else {
+                int avail = maxRight - minLeft;
+                countLeft = minLeft + Math.max(0, (avail - countW) / 2);
+            }
+            int countRight = countLeft + countW;
+
+            selectedMessagesCountTextView.layout(countLeft, 0, countRight, h);
+            if (glassDrawableCount != null) {
+                glassDrawableCount.setRadius(rad);
+                glassDrawableCount.setBounds(countLeft, 0, countRight, h);
+            }
+        }
     }
 
     private static class M3ActionModeGroupState {
@@ -6317,10 +6538,19 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
         if (show) {
             actionModeLayout.setVisibility(VISIBLE);
+            actionModeLayout.requestLayout();
+            if (scrollSlidingTextTabStrip != null) {
+                scrollSlidingTextTabStrip.setVisibility(VISIBLE);
+            }
             updateActionModeChildShapes();
         }
         actionModeAnimation = new AnimatorSet();
-        actionModeAnimation.playTogether(ObjectAnimator.ofFloat(actionModeLayout, View.ALPHA, show ? 1.0f : 0.0f));
+        ArrayList<Animator> animators = new ArrayList<>();
+        animators.add(ObjectAnimator.ofFloat(actionModeLayout, View.ALPHA, show ? 1.0f : 0.0f));
+        if (scrollSlidingTextTabStrip != null && xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            animators.add(ObjectAnimator.ofFloat(scrollSlidingTextTabStrip, View.ALPHA, show ? 0.0f : 1.0f));
+        }
+        actionModeAnimation.playTogether(animators);
         actionModeAnimation.setDuration(180);
         actionModeAnimation.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -6336,6 +6566,14 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 actionModeAnimation = null;
                 if (!show) {
                     actionModeLayout.setVisibility(INVISIBLE);
+                    if (scrollSlidingTextTabStrip != null) {
+                        scrollSlidingTextTabStrip.setVisibility(VISIBLE);
+                        scrollSlidingTextTabStrip.setAlpha(1.0f);
+                    }
+                } else {
+                    if (scrollSlidingTextTabStrip != null && xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        scrollSlidingTextTabStrip.setVisibility(INVISIBLE);
+                    }
                 }
             }
         });

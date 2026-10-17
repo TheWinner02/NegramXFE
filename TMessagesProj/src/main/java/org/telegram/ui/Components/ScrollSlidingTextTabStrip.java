@@ -467,7 +467,7 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
             AndroidUtilities.lerp(prevRect, rect, rectT, rect);
         }
 
-        final float r = rect.height() / 2;
+        final float r = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : (rect.height() / 2);
         clipPath.rewind();
         clipPath.addRoundRect(rect, r, r, Path.Direction.CW);
 

@@ -947,7 +947,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             actionMode.setBackgroundColor(getThemedColor(Theme.key_actionBarActionModeDefault));
         }
         addView(actionMode, indexOfChild(backButtonImageView));
-        actionMode.setPadding(0, occupyStatusBar ? AndroidUtilities.statusBarHeight : 0, 0, 0);
+        final int rightPad = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) ? dp(12) : 0;
+        actionMode.setPadding(0, occupyStatusBar ? AndroidUtilities.statusBarHeight : 0, rightPad, 0);
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) actionMode.getLayoutParams();
         layoutParams.height = LayoutHelper.MATCH_PARENT;
         layoutParams.width = LayoutHelper.MATCH_PARENT;
@@ -1678,7 +1679,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             layoutParams.height = AndroidUtilities.statusBarHeight;
         }
         if (actionMode != null) {
-            actionMode.setPadding(0, occupyStatusBar ? AndroidUtilities.statusBarHeight : 0, 0, 0);
+            final int rightPad = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) ? dp(12) : 0;
+            actionMode.setPadding(0, occupyStatusBar ? AndroidUtilities.statusBarHeight : 0, rightPad, 0);
         }
         ignoreLayoutRequest = false;
 
@@ -1971,7 +1973,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                     childLeft = (getMeasuredWidth() - width) / 2 + lp.leftMargin - lp.rightMargin;
                     break;
                 case Gravity.RIGHT:
-                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) {
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode && child != actionMode) {
                         final int edge = dp(6);
                         final int s = dp(46);
                         final int p = dp(6);
@@ -1991,7 +1993,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                     childTop = (bottom - top - height) / 2 + lp.topMargin - lp.bottomMargin;
                     break;
                 case Gravity.BOTTOM:
-                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) {
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode && child != actionMode) {
                         childTop = additionalTop + (getCurrentActionBarHeight() - height) / 2;
                     } else {
                         childTop = (bottom - top) - height - lp.bottomMargin;
@@ -2154,7 +2156,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     public void setOccupyStatusBar(boolean value) {
         occupyStatusBar = value;
         if (actionMode != null) {
-            actionMode.setPadding(0, occupyStatusBar ? AndroidUtilities.statusBarHeight : 0, 0, 0);
+            final int rightPad = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) ? dp(12) : 0;
+            actionMode.setPadding(0, occupyStatusBar ? AndroidUtilities.statusBarHeight : 0, rightPad, 0);
         }
     }
 
@@ -2663,16 +2666,13 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 }
             }
             if (lastVisibleIndex != -1) {
+                float menuAlpha = menu != null ? menu.getAlpha() : 1f;
                 for (int a = 0; a <= lastVisibleIndex; a++) {
                     View item = menu.getChildAt(a);
                     if (item.getVisibility() == VISIBLE) {
                         int itemW = item.getMeasuredWidth() > 0 ? item.getMeasuredWidth() : dp(48);
-                        if (a == lastVisibleIndex) {
-                            w += itemW;
-                        } else {
-                            float alpha = Math.max(0f, Math.min(1f, item.getAlpha()));
-                            w += itemW * alpha;
-                        }
+                        float itemAlpha = Math.max(0f, Math.min(1f, item.getAlpha()));
+                        w += itemW * (a == lastVisibleIndex ? menuAlpha : (itemAlpha * menuAlpha));
                     }
                 }
             }
@@ -2734,7 +2734,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             }
 
             // Right island: menu pill
-            int effectiveMenuWidth = getEffectiveRightWidth();
+            int effectiveMenuWidth = (actionModeFactor > 0 && actionMode != null) ? menuWidth : getEffectiveRightWidth();
             if (effectiveMenuWidth <= 0) {
                 effectiveMenuWidth = menuWidth;
             }
@@ -3366,6 +3366,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         if (actionMode != null) {
             actionMode.setTranslationX(0);
             actionMode.setGlassMode(true);
+            final int rightPad = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(12) : 0;
+            actionMode.setPadding(0, occupyStatusBar ? AndroidUtilities.statusBarHeight : 0, rightPad, 0);
             actionMode.updateItemsColor();
             actionMode.updateItemsBackgroundColor();
         }
