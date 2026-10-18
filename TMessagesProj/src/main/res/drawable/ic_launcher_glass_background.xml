@@ -1,0 +1,74 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <!-- 1. Deep Obsidian / Sapphire Glass Linear Gradient -->
+    <path
+        android:pathData="M0,0h512v512h-512z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="60"
+                android:startY="40"
+                android:endX="450"
+                android:endY="480"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FF102032" />
+                <item android:offset="0.5" android:color="#FF0B1522" />
+                <item android:offset="1.0" android:color="#FF060C16" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 2. Primary Caustic Ambient Glow (Luminous Liquid Cyan) -->
+    <path
+        android:pathData="M0,0h512v512h-512z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="256"
+                android:centerY="220"
+                android:gradientRadius="260"
+                android:type="radial">
+                <item android:offset="0.0" android:color="#4800BEFF" />
+                <item android:offset="0.4" android:color="#250090EA" />
+                <item android:offset="0.8" android:color="#0A004080" />
+                <item android:offset="1.0" android:color="#00000000" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 3. Secondary Optical Dispersion Glow (Subtle Deep Indigo) -->
+    <path
+        android:pathData="M0,0h512v512h-512z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="380"
+                android:centerY="400"
+                android:gradientRadius="220"
+                android:type="radial">
+                <item android:offset="0.0" android:color="#353264F0" />
+                <item android:offset="0.6" android:color="#12182880" />
+                <item android:offset="1.0" android:color="#00000000" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 4. Subtle angled background reflection sheen -->
+    <path
+        android:pathData="M-50,150 L200,-50 L350,-50 L-50,350 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="50"
+                android:startY="50"
+                android:endX="250"
+                android:endY="250"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#00FFFFFF" />
+                <item android:offset="0.5" android:color="#14FFFFFF" />
+                <item android:offset="1.0" android:color="#00FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

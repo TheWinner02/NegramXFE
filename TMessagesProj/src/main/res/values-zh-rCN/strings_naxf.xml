@@ -277,4 +277,5 @@
     <string name="TranslatorModeInline">替换 (Inline)</string>
     <string name="AppIconMonetTelegram">莫奈 (Telegram)</string>
     <string name="AppIconMonetNegram">莫奈 (Negram)</string>
+    <string name="AppIconGlass">Glass</string>
 </resources>

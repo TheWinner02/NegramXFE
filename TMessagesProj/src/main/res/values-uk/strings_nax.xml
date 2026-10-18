@@ -527,4 +527,7 @@
     <string name="UiStyleClassic">Класичний Telegram</string>
     <string name="UiStyleMaterial3Expressive">Expressive</string>
     <string name="UiStyleIosLiquidGlass">Glass</string>
+    <string name="AppIconMonetTelegram">Моне (Telegram)</string>
+    <string name="AppIconMonetNegram">Моне (Negram)</string>
+    <string name="AppIconGlass">Glass</string>
 </resources>

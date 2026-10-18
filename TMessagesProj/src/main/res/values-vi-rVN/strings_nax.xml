@@ -313,4 +313,7 @@
     <string name="UiStyleClassic">Telegram cổ điển</string>
     <string name="UiStyleMaterial3Expressive">Expressive</string>
     <string name="UiStyleIosLiquidGlass">Glass</string>
+    <string name="AppIconMonetTelegram">Monet (Telegram)</string>
+    <string name="AppIconMonetNegram">Monet (Negram)</string>
+    <string name="AppIconGlass">Glass</string>
 </resources>

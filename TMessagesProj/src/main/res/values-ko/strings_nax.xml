@@ -537,4 +537,7 @@
     <string name="UiStyleClassic">클래식 Telegram</string>
     <string name="UiStyleMaterial3Expressive">Expressive</string>
     <string name="UiStyleIosLiquidGlass">Glass</string>
+    <string name="AppIconMonetTelegram">모네 (Telegram)</string>
+    <string name="AppIconMonetNegram">모네 (Negram)</string>
+    <string name="AppIconGlass">Glass</string>
 </resources>

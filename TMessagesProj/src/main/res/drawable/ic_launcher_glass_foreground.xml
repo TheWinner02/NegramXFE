@@ -1,0 +1,172 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <!-- 1. Squircle Glass Capsule Fill (Translucent Frosted Glass) -->
+    <path
+        android:pathData="M 144,64 L 368,64 A 80 80 0 0 1 448,144 L 448,368 A 80 80 0 0 1 368,448 L 144,448 A 80 80 0 0 1 64,368 L 64,144 A 80 80 0 0 1 144,64 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="64"
+                android:startY="64"
+                android:endX="448"
+                android:endY="448"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#28FFFFFF" />
+                <item android:offset="0.5" android:color="#1AFFFFFF" />
+                <item android:offset="1.0" android:color="#10FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 2. Squircle Outer Cut-Glass Rim Light (Refractive Border) -->
+    <path
+        android:strokeWidth="3"
+        android:pathData="M 144,64 L 368,64 A 80 80 0 0 1 448,144 L 448,368 A 80 80 0 0 1 368,448 L 144,448 A 80 80 0 0 1 64,368 L 64,144 A 80 80 0 0 1 144,64 Z">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="64"
+                android:startY="64"
+                android:endX="448"
+                android:endY="448"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#95FFFFFF" />
+                <item android:offset="0.4" android:color="#45FFFFFF" />
+                <item android:offset="1.0" android:color="#20FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 3. Squircle Top Specular Gloss Highlight -->
+    <path
+        android:pathData="M 144,64 L 368,64 A 80 80 0 0 1 448,144 L 448,180 C 400,210 112,210 64,180 L 64,144 A 80 80 0 0 1 144,64 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="256"
+                android:startY="64"
+                android:endX="256"
+                android:endY="200"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#36FFFFFF" />
+                <item android:offset="0.7" android:color="#12FFFFFF" />
+                <item android:offset="1.0" android:color="#00FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 4. Ambient Drop Shadow of the N Logo -->
+    <group
+        android:scaleX="0.6405882"
+        android:scaleY="0.6405882"
+        android:translateX="92.009415"
+        android:translateY="104.009415">
+        <path
+            android:fillColor="#90030A16"
+            android:pathData="M159.35,375.49C140.31,376.95 124.46,364.96 120.65,348.77C118.82,341.01 119.38,333.24 122.12,325.73C141.83,271.65 161.52,217.57 181.31,163.52C186.95,148.1 199.83,138.48 214.5,138.33C239.19,138.09 257.15,162.07 248.99,185.37C237.1,219.36 224.51,253.1 212.19,286.94C204.82,307.21 197.07,327.36 190.12,347.77C184.99,362.84 175.43,372.28 159.35,375.49z" />
+        <path
+            android:fillColor="#90030A16"
+            android:pathData="M328.21,156.29C336.47,143.3 348.28,136.8 362.97,138.68C378.58,140.68 389.48,149.93 393.42,165.67C395.34,173.34 394.44,181.12 391.68,188.68C372.1,242.29 352.61,295.93 333.07,349.55C327.14,365.85 314.35,375.63 298.99,375.67C274.9,375.73 256.99,351.84 264.82,329.06C274.05,302.23 284.18,275.71 293.88,249.04C304.31,220.34 314.68,191.61 325.12,162.92C325.91,160.75 327.06,158.71 328.21,156.29z" />
+        <path
+            android:fillColor="#90030A16"
+            android:pathData="M263.5,203.64C264.15,202.11 264.65,200.91 265.5,198.84C270.36,208.75 274.94,217.91 279.3,227.17C279.83,228.3 279.55,230.09 279.09,231.38C268.96,259.44 258.75,287.47 248.19,316.53C246.07,312.42 244.24,309.02 242.54,305.56C239.47,299.29 234.45,293.12 234.04,286.67C233.64,280.45 238.01,273.91 240.32,267.53C247.99,246.34 255.67,225.16 263.5,203.64z" />
+    </group>
+
+    <!-- 5. Liquid Crystal Body of the N Logo -->
+    <group
+        android:scaleX="0.6405882"
+        android:scaleY="0.6405882"
+        android:translateX="92.009415"
+        android:translateY="92.009415">
+        <path
+            android:pathData="M159.35,375.49C140.31,376.95 124.46,364.96 120.65,348.77C118.82,341.01 119.38,333.24 122.12,325.73C141.83,271.65 161.52,217.57 181.31,163.52C186.95,148.1 199.83,138.48 214.5,138.33C239.19,138.09 257.15,162.07 248.99,185.37C237.1,219.36 224.51,253.1 212.19,286.94C204.82,307.21 197.07,327.36 190.12,347.77C184.99,362.84 175.43,372.28 159.35,375.49z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="180"
+                    android:startY="140"
+                    android:endX="210"
+                    android:endY="375"
+                    android:type="linear">
+                    <item android:offset="0.0" android:color="#FFFFFFFF" />
+                    <item android:offset="0.3" android:color="#FFE6F4FF" />
+                    <item android:offset="0.7" android:color="#FF75D2FF" />
+                    <item android:offset="1.0" android:color="#FF0092F2" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:pathData="M328.21,156.29C336.47,143.3 348.28,136.8 362.97,138.68C378.58,140.68 389.48,149.93 393.42,165.67C395.34,173.34 394.44,181.12 391.68,188.68C372.1,242.29 352.61,295.93 333.07,349.55C327.14,365.85 314.35,375.63 298.99,375.67C274.9,375.73 256.99,351.84 264.82,329.06C274.05,302.23 284.18,275.71 293.88,249.04C304.31,220.34 314.68,191.61 325.12,162.92C325.91,160.75 327.06,158.71 328.21,156.29z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="350"
+                    android:startY="140"
+                    android:endX="310"
+                    android:endY="375"
+                    android:type="linear">
+                    <item android:offset="0.0" android:color="#FFFFFFFF" />
+                    <item android:offset="0.3" android:color="#FFE6F4FF" />
+                    <item android:offset="0.7" android:color="#FF75D2FF" />
+                    <item android:offset="1.0" android:color="#FF0092F2" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:pathData="M263.5,203.64C264.15,202.11 264.65,200.91 265.5,198.84C270.36,208.75 274.94,217.91 279.3,227.17C279.83,228.3 279.55,230.09 279.09,231.38C268.96,259.44 258.75,287.47 248.19,316.53C246.07,312.42 244.24,309.02 242.54,305.56C239.47,299.29 234.45,293.12 234.04,286.67C233.64,280.45 238.01,273.91 240.32,267.53C247.99,246.34 255.67,225.16 263.5,203.64z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="260"
+                    android:startY="200"
+                    android:endX="255"
+                    android:endY="316"
+                    android:type="linear">
+                    <item android:offset="0.0" android:color="#FFFFFFFF" />
+                    <item android:offset="0.5" android:color="#FF95DCFF" />
+                    <item android:offset="1.0" android:color="#FF0092F2" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+
+    <!-- 6. Specular Crystal Bevel Edges on the N Logo -->
+    <group
+        android:scaleX="0.6405882"
+        android:scaleY="0.6405882"
+        android:translateX="92.009415"
+        android:translateY="92.009415">
+        <path
+            android:strokeWidth="3.5"
+            android:strokeColor="#A8FFFFFF"
+            android:strokeLineJoin="round"
+            android:pathData="M159.35,375.49C140.31,376.95 124.46,364.96 120.65,348.77C118.82,341.01 119.38,333.24 122.12,325.73C141.83,271.65 161.52,217.57 181.31,163.52C186.95,148.1 199.83,138.48 214.5,138.33C239.19,138.09 257.15,162.07 248.99,185.37C237.1,219.36 224.51,253.1 212.19,286.94C204.82,307.21 197.07,327.36 190.12,347.77C184.99,362.84 175.43,372.28 159.35,375.49z" />
+        <path
+            android:strokeWidth="3.5"
+            android:strokeColor="#A8FFFFFF"
+            android:strokeLineJoin="round"
+            android:pathData="M328.21,156.29C336.47,143.3 348.28,136.8 362.97,138.68C378.58,140.68 389.48,149.93 393.42,165.67C395.34,173.34 394.44,181.12 391.68,188.68C372.1,242.29 352.61,295.93 333.07,349.55C327.14,365.85 314.35,375.63 298.99,375.67C274.9,375.73 256.99,351.84 264.82,329.06C274.05,302.23 284.18,275.71 293.88,249.04C304.31,220.34 314.68,191.61 325.12,162.92C325.91,160.75 327.06,158.71 328.21,156.29z" />
+        <path
+            android:strokeWidth="3.5"
+            android:strokeColor="#A8FFFFFF"
+            android:strokeLineJoin="round"
+            android:pathData="M263.5,203.64C264.15,202.11 264.65,200.91 265.5,198.84C270.36,208.75 274.94,217.91 279.3,227.17C279.83,228.3 279.55,230.09 279.09,231.38C268.96,259.44 258.75,287.47 248.19,316.53C246.07,312.42 244.24,309.02 242.54,305.56C239.47,299.29 234.45,293.12 234.04,286.67C233.64,280.45 238.01,273.91 240.32,267.53C247.99,246.34 255.67,225.16 263.5,203.64z" />
+    </group>
+
+    <!-- 7. Diagonal visionOS Refraction Light Sweep -->
+    <path
+        android:pathData="M 40,100 L 240,60 L 480,420 L 280,460 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="140"
+                android:startY="80"
+                android:endX="380"
+                android:endY="440"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#00FFFFFF" />
+                <item android:offset="0.45" android:color="#24FFFFFF" />
+                <item android:offset="0.55" android:color="#24FFFFFF" />
+                <item android:offset="1.0" android:color="#00FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>
