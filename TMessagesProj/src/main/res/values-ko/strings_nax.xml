@@ -540,4 +540,6 @@
     <string name="AppIconMonetTelegram">모네 (Telegram)</string>
     <string name="AppIconMonetNegram">모네 (Negram)</string>
     <string name="AppIconGlass">Glass</string>
+    <string name="AppIconGlassTelegram">Glass (Telegram)</string>
+    <string name="AppIconGlassNegram">Glass (Negram)</string>
 </resources>

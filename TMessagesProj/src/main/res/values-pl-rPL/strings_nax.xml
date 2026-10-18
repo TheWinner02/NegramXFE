@@ -347,4 +347,6 @@
     <string name="AppIconMonetTelegram">Monet (Telegram)</string>
     <string name="AppIconMonetNegram">Monet (Negram)</string>
     <string name="AppIconGlass">Glass</string>
+    <string name="AppIconGlassTelegram">Glass (Telegram)</string>
+    <string name="AppIconGlassNegram">Glass (Negram)</string>
 </resources>

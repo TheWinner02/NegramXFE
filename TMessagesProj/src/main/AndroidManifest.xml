@@ -322,10 +322,26 @@
 
         <activity-alias
             android:enabled="false"
-            android:name="org.telegram.messenger.GlassIcon"
+            android:name="org.telegram.messenger.GlassTelegramIcon"
             android:targetActivity="org.telegram.ui.LaunchActivity"
-            android:icon="@mipmap/ic_launcher_glass"
-            android:roundIcon="@mipmap/ic_launcher_glass_round"
+            android:icon="@mipmap/ic_launcher_glass_telegram"
+            android:roundIcon="@mipmap/ic_launcher_glass_telegram_round"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity-alias
+            android:enabled="false"
+            android:name="org.telegram.messenger.GlassNegramIcon"
+            android:targetActivity="org.telegram.ui.LaunchActivity"
+            android:icon="@mipmap/ic_launcher_glass_negram"
+            android:roundIcon="@mipmap/ic_launcher_glass_negram_round"
             android:exported="true">
 
             <intent-filter>

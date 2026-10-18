@@ -308,4 +308,6 @@
     <string name="AppIconMonetTelegram">モネ (Telegram)</string>
     <string name="AppIconMonetNegram">モネ (Negram)</string>
     <string name="AppIconGlass">Glass</string>
+    <string name="AppIconGlassTelegram">Glass (Telegram)</string>
+    <string name="AppIconGlassNegram">Glass (Negram)</string>
 </resources>

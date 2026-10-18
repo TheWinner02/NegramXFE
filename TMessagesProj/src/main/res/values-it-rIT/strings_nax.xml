@@ -333,6 +333,8 @@ Non possiamo aiutarti in questo caso; se hai problemi di accesso, contatta il Su
     <string name="AppIconMonetTelegram">Monet (Telegram)</string>
     <string name="AppIconMonetNegram">Monet (Negram)</string>
     <string name="AppIconGlass">Glass</string>
+    <string name="AppIconGlassTelegram">Glass (Telegram)</string>
+    <string name="AppIconGlassNegram">Glass (Negram)</string>
     <string name="TranslatorWithOriginalTextOff">Disattivato</string>
     <string name="TranslatorWithOriginalTextManualOnly">Solo manuale</string>
     <string name="TranslatorWithOriginalTextOn">Attivo</string>
