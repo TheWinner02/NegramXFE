@@ -505,7 +505,7 @@ public class LiteModeSettingsActivity extends BaseFragment {
             switchView.setVisibility(GONE);
             switchView.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
             switchView.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-            addView(switchView, LayoutHelper.createFrame(37, 50, Gravity.CENTER_VERTICAL | (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT), 19, 0, 19, 0));
+            addView(switchView, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchWidth(), xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchHeight(), Gravity.CENTER_VERTICAL | (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT), 19, 0, 19, 0));
 
             checkBoxView = new CheckBox2(context, 21);
             checkBoxView.setColor(Theme.key_radioBackgroundChecked, Theme.key_checkboxDisabled, Theme.key_checkboxCheck);
@@ -577,7 +577,8 @@ public class LiteModeSettingsActivity extends BaseFragment {
                 needLine = false;
             }
 
-            ((MarginLayoutParams) textViewLayout.getLayoutParams()).rightMargin = AndroidUtilities.dp(item.viewType == VIEW_TYPE_SWITCH ? (LocaleController.isRTL ? 64 : 75) + 4 : 8);
+            int switchPad = xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchTextInset(75);
+            ((MarginLayoutParams) textViewLayout.getLayoutParams()).rightMargin = AndroidUtilities.dp(item.viewType == VIEW_TYPE_SWITCH ? (LocaleController.isRTL ? 64 : switchPad) + 4 : 8);
 
             setWillNotDraw(!((needDivider = divider) || needLine));
             setDisabled(LiteMode.isPowerSaverApplied(), false);

@@ -113,12 +113,12 @@ public class NotificationsCheckCell extends FrameLayout {
             }
         };
         checkBox.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
-        addView(checkBox, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 52 : 37, xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 48 : 40, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 21, 0, 21, 0));
+        addView(checkBox, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchWidth(), xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchHeight(), (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 21, 0, 21, 0));
         checkBox.setFocusable(false);
     }
 
     private int getSwitchTextInset() {
-        return xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 104 : 80;
+        return xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchTextInset(80);
     }
 
     public Switch getCheckBox() {
@@ -220,7 +220,7 @@ public class NotificationsCheckCell extends FrameLayout {
                 Theme.dividerPaint
             );
         }
-        if (drawLine) {
+        if (drawLine && !xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             int x = LocaleController.isRTL ? dp(76) : getMeasuredWidth() - dp(76) - 1;
             int y = (getMeasuredHeight() - dp(22)) / 2;
             canvas.drawRect(x, y, x + 2, y + dp(22), Theme.dividerPaint);

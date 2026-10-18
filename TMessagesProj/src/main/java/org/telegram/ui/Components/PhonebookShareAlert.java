@@ -157,7 +157,8 @@ public class PhonebookShareAlert extends BottomSheet {
             textView.setSingleLine(false);
             textView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP);
             textView.setEllipsize(TextUtils.TruncateAt.END);
-            addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? (isImport ? 17 : 64) : 72, 10, LocaleController.isRTL ? 72 : (isImport ? 17 : 64), 0));
+            int switchMargin = isImport ? 17 : xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchTextInset(64);
+            addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? switchMargin : 72, 10, LocaleController.isRTL ? 72 : switchMargin, 0));
 
             valueTextView = new TextView(context);
             valueTextView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteGrayText2));
@@ -166,7 +167,7 @@ public class PhonebookShareAlert extends BottomSheet {
             valueTextView.setMaxLines(1);
             valueTextView.setSingleLine(true);
             valueTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
-            addView(valueTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT, LocaleController.isRTL ? (isImport ? 17 : 64) : 72, 35, LocaleController.isRTL ? 72 : (isImport ? 17 : 64), 0));
+            addView(valueTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT, LocaleController.isRTL ? switchMargin : 72, 35, LocaleController.isRTL ? 72 : switchMargin, 0));
 
             imageView = new ImageView(context);
             imageView.setScaleType(ImageView.ScaleType.CENTER);
@@ -176,7 +177,7 @@ public class PhonebookShareAlert extends BottomSheet {
             if (!isImport) {
                 checkBox = new Switch(context);
                 checkBox.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
-                addView(checkBox, LayoutHelper.createFrame(37, 40, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 22, 0, 22, 0));
+                addView(checkBox, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchWidth(), xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchHeight(), (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 22, 0, 22, 0));
             }
         }
 

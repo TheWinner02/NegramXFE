@@ -135,7 +135,7 @@ public class PluginCell extends FrameLayout implements NotificationCenter.Notifi
         checkBox = new Switch(context);
         checkBox.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
         checkBox.setFocusable(false);
-        addView(checkBox, LayoutHelper.createFrame(37, 40, Gravity.TOP | Gravity.END, 0, 16, 24, 0));
+        addView(checkBox, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchWidth(), xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchHeight(), Gravity.TOP | Gravity.END, 0, 16, 24, 0));
 
         descriptionView = new TextViewEffects(context, resourcesProvider);
         descriptionView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));

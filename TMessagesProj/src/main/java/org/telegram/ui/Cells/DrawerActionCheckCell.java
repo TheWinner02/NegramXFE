@@ -77,8 +77,10 @@ public class DrawerActionCheckCell extends FrameLayout {
         int iconLeft = (isM3 || isIosGlass) ? 16 : 19;
         int textLeft = (isM3 || isIosGlass) ? 56 : 72;
         addView(imageView, LayoutHelper.createFrame(24, 24, Gravity.LEFT | Gravity.CENTER_VERTICAL, iconLeft, 0, 0, 0));
-        addView(checkBox, LayoutHelper.createFrame(37, 20, Gravity.RIGHT | Gravity.CENTER_VERTICAL, 0, 0, 16, 0));
-        int textViewRightMargin = 16 + 37 + 16;
+        int switchW = xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchWidth();
+        int switchH = xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchHeight();
+        addView(checkBox, LayoutHelper.createFrame(switchW, switchH, Gravity.RIGHT | Gravity.CENTER_VERTICAL, 0, 0, 16, 0));
+        int textViewRightMargin = 16 + switchW + 16;
         addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.CENTER_VERTICAL, textLeft, 0, textViewRightMargin, 0));
 
         if (isM3 || isIosGlass) {

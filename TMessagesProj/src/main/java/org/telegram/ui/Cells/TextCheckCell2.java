@@ -73,16 +73,15 @@ public class TextCheckCell2 extends FrameLayout {
                 @Override
                 protected void onDraw(Canvas canvas) {
                     super.onDraw(canvas);
-                    int alpha = Theme.dividerPaint.getAlpha();
-                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                        Theme.dividerPaint.setAlpha((int) (alpha * 0.38f));
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                        return;
                     }
                     canvas.drawLine(0, dp(14), 2, getMeasuredHeight()- dp(14), Theme.dividerPaint);
-                    Theme.dividerPaint.setAlpha(alpha);
                 }
             };
             checkBoxClickArea.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), 2));
-            addView(checkBoxClickArea, LayoutHelper.createFrame(76, LayoutHelper.MATCH_PARENT, LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT));
+            int clickAreaW = (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) ? 88 : 76;
+            addView(checkBoxClickArea, LayoutHelper.createFrame(clickAreaW, LayoutHelper.MATCH_PARENT, LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT));
         }
         animatedTextView.setText(text);
         collapsedArrow.animate().cancel();

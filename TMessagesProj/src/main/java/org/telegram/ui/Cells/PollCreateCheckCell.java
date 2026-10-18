@@ -60,7 +60,8 @@ public class PollCreateCheckCell extends FrameLayout {
         textView.setSingleLine(true);
         textView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
         textView.setEllipsize(TextUtils.TruncateAt.END);
-        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? 66 : 64, 8, LocaleController.isRTL ? 64 : 66, 0));
+        int switchInset = xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchTextInset(66);
+        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? switchInset : 64, 8, LocaleController.isRTL ? 64 : switchInset, 0));
 
         multilineValueTextView = new TextView(context);
         multilineValueTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2, resourcesProvider));
@@ -71,11 +72,11 @@ public class PollCreateCheckCell extends FrameLayout {
         multilineValueTextView.setSingleLine(false);
         multilineValueTextView.setEllipsize(null);
         multilineValueTextView.setLineSpacing(dp(1.66f), 1f);
-        addView(multilineValueTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? 66 : 64, 38 - 7, LocaleController.isRTL ? 64 : 66, 10));
+        addView(multilineValueTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? switchInset : 64, 38 - 7, LocaleController.isRTL ? 64 : switchInset, 10));
 
         checkBox = new Switch(context, resourcesProvider);
         checkBox.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
-        addView(checkBox, LayoutHelper.createFrame(37, 40, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.TOP, 21, 10, 19, 0));
+        addView(checkBox, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchWidth(), xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchHeight(), (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.TOP, 21, 10, 19, 0));
         checkBox.setFocusable(false);
     }
 

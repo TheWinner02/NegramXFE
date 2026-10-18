@@ -407,6 +407,30 @@ public class Switch extends View {
     }
 
     @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+        int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+        int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            int desiredWidth = dp(54);
+            int desiredHeight = dp(36);
+            int measuredWidth = (widthMode == MeasureSpec.EXACTLY) ? Math.max(widthSize, desiredWidth) : desiredWidth;
+            int measuredHeight = (heightMode == MeasureSpec.EXACTLY) ? Math.max(heightSize, desiredHeight) : desiredHeight;
+            setMeasuredDimension(measuredWidth, measuredHeight);
+        } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            int desiredWidth = dp(52);
+            int desiredHeight = dp(40);
+            int measuredWidth = (widthMode == MeasureSpec.EXACTLY) ? Math.max(widthSize, desiredWidth) : desiredWidth;
+            int measuredHeight = (heightMode == MeasureSpec.EXACTLY) ? Math.max(heightSize, desiredHeight) : desiredHeight;
+            setMeasuredDimension(measuredWidth, measuredHeight);
+        } else {
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        }
+    }
+
+    @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         attachedToWindow = true;

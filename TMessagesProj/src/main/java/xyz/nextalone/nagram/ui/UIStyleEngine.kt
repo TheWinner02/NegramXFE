@@ -96,11 +96,19 @@ object UIStyleEngine {
 
     @JvmStatic
     fun getSwitchWidth(): Int {
-        return if (isIosLiquidGlass()) 54 else if (isMaterial3Expressive()) 52 else 38
+        val style = NaConfig.switchStyle.Int()
+        return if (isIosLiquidGlass() || style == 3) 54 else if (isMaterial3Expressive() || style == 2) 52 else 38
     }
 
     @JvmStatic
     fun getSwitchHeight(): Int {
-        return if (isIosLiquidGlass()) 36 else if (isMaterial3Expressive()) 48 else 22
+        val style = NaConfig.switchStyle.Int()
+        return if (isIosLiquidGlass() || style == 3) 36 else if (isMaterial3Expressive() || style == 2) 48 else 22
+    }
+
+    @JvmStatic
+    fun getSwitchTextInset(baseInset: Int = 70): Int {
+        val style = NaConfig.switchStyle.Int()
+        return if (isMaterial3Expressive() || style == 2) 104 else if (isIosLiquidGlass() || style == 3) 86 else baseInset
     }
 }

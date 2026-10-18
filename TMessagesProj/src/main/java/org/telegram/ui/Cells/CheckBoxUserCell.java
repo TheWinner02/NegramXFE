@@ -44,7 +44,8 @@ public class CheckBoxUserCell extends FrameLayout {
         textView.setTextSize(16);
         textView.setEllipsizeByGradient(true);
         textView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
-        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, (LocaleController.isRTL ? 21 : 69), 0, (LocaleController.isRTL ? 69 : 21), 0));
+        int switchInset = xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchTextInset(69);
+        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, (LocaleController.isRTL ? switchInset : 69), 0, (LocaleController.isRTL ? 69 : switchInset), 0));
 
         avatarDrawable = new AvatarDrawable();
         imageView = new BackupImageView(context);
@@ -53,7 +54,7 @@ public class CheckBoxUserCell extends FrameLayout {
 
         checkBox = new Switch(context, null);
         checkBox.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
-        addView(checkBox, LayoutHelper.createFrame(37, 20, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 22, 0, 22, 0));
+        addView(checkBox, LayoutHelper.createFrame(xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchWidth(), xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchHeight(), (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 22, 0, 22, 0));
     }
 
     @Override

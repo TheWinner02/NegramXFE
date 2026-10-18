@@ -76,15 +76,18 @@ public class TextCell extends FrameLayout {
     private int lastWidth;
 
     private int getSwitchWidth() {
-        return xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 52 : 38;
+        return xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchWidth();
     }
 
     private int getSwitchHeight() {
-        return xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 48 : 22;
+        return xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchHeight();
     }
 
     private int getTextEndInset() {
-        return checkBox != null && checkBox.getVisibility() == VISIBLE && xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 104 : 71;
+        if (checkBox == null || checkBox.getVisibility() != VISIBLE) {
+            return 71;
+        }
+        return xyz.nextalone.nagram.ui.UIStyleEngine.getSwitchTextInset(71);
     }
 
     private boolean isM3Expressive() {
