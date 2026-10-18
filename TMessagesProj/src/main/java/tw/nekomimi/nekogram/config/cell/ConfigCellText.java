@@ -17,7 +17,7 @@ public class ConfigCellText extends AbstractConfigCell implements WithKey, WithO
 
     public ConfigCellText(String key, String customValue, Runnable onClick) {
         this.key = key;
-        this.value = (customValue == null) ? "" : customValue;
+        this.value = (customValue == null || customValue.isEmpty()) ? null : customValue;
         this.onClick = onClick;
     }
 

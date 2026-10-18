@@ -73,6 +73,10 @@ public class SettingsHelper {
                 case "spy":
                     fragment = nekox_fragment = new NekoAyuSpySettingsActivity();
                     break;
+                case "onlinetracker":
+                case "tracker":
+                    fragment = new tw.nekomimi.nekogram.settings.NekoAyuOnlineTrackerActivity();
+                    break;
                 case "experimental":
                 case "e":
                     fragment = nekox_fragment = new NekoExperimentalSettingsActivity();

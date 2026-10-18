@@ -20270,6 +20270,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                 LastSeenHelper.saveLastSeen(update.user_id, lastSeen);
                             }
                         }
+                        com.radolyn.ayugram.controllers.AyuOnlineTrackerController.getInstance(currentAccount).processUpdate(update);
                         if (currentUser != null) {
                             currentUser.id = update.user_id;
                             currentUser.status = update.status;
