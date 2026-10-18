@@ -1224,7 +1224,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     public void updateTabsTheme() {
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             if (tabsView != null) {
-                tabsView.setBackground(Theme.createRoundRectDrawable(dp(26), getThemedColor(Theme.key_windowBackgroundGray)));
+                tabsView.setBackground(Theme.createRoundRectDrawable(dp(MainTabsHelper.getMainTabsHeight() / 2f), getThemedColor(Theme.key_windowBackgroundGray)));
                 tabsView.invalidate();
             }
         }
@@ -1235,6 +1235,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
                 }
             }
         }
+        blur3_updateColors();
     }
 
     @Override
@@ -1360,6 +1361,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         ThemeDescription.ThemeDescriptionDelegate cellDelegate = this::blur3_updateColors;
         themeDescriptions.add(new ThemeDescription(null, 0, null, null, null, cellDelegate, Theme.key_windowBackgroundWhite));
         themeDescriptions.add(new ThemeDescription(null, 0, null, null, null, cellDelegate, Theme.key_dialogBackground));
+        themeDescriptions.add(new ThemeDescription(null, 0, null, null, null, cellDelegate, Theme.key_windowBackgroundGray));
 
         return themeDescriptions;
     }
@@ -1481,6 +1483,11 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         blur3_updateFadeColors();
         if (tabsViewBackground != null) {
             tabsViewBackground.updateColors();
+        }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (tabsView != null) {
+                tabsView.setBackground(Theme.createRoundRectDrawable(dp(MainTabsHelper.getMainTabsHeight() / 2f), getThemedColor(Theme.key_windowBackgroundGray)));
+            }
         }
         blur3_invalidateBlur();
         if (fadeView != null) {

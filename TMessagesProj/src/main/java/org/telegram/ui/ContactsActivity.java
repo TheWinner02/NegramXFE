@@ -229,6 +229,8 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.updateInterfaces);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.encryptedChatCreated);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.closeChats);
+        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.didSetNewTheme);
+        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.reloadInterface);
         checkPermission = UserConfig.getInstance(currentAccount).syncContacts;
         if (arguments != null) {
             onlyUsers = arguments.getBoolean("onlyUsers", false);
@@ -271,6 +273,8 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.updateInterfaces);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.encryptedChatCreated);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.closeChats);
+        NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.didSetNewTheme);
+        NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.reloadInterface);
         Bulletin.removeDelegate(this);
         delegate = null;
     }
@@ -1414,6 +1418,10 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
             if (!creatingChat) {
                 removeSelfFromStack(true);
             }
+        } else if (id == NotificationCenter.didSetNewTheme || id == NotificationCenter.reloadInterface) {
+            if (contentView != null) {
+                contentView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+            }
         }
     }
 
@@ -1488,7 +1496,10 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
 
         if (!hasMainTabs) {
             themeDescriptions.add(new ThemeDescription(fragmentView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
+        } else {
+            themeDescriptions.add(new ThemeDescription(contentView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundGray));
         }
+        themeDescriptions.add(new ThemeDescription(null, 0, null, null, null, cellDelegate, Theme.key_windowBackgroundGray));
         themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_LISTGLOWCOLOR, null, null, null, null, Theme.key_actionBarDefault));
         themeDescriptions.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_ITEMSCOLOR, null, null, null, null, Theme.key_actionBarDefaultIcon));
         themeDescriptions.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_TITLECOLOR, null, null, null, null, Theme.key_actionBarDefaultTitle));

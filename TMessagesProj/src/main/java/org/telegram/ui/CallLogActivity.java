@@ -443,6 +443,11 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 				VoIPHelper.startCall(lastCallChat, null, null, false, getParentActivity(), CallLogActivity.this, getAccountInstance());
 				waitingForCallChatId = null;
 			}
+		} else if (id == NotificationCenter.didSetNewTheme || id == NotificationCenter.reloadInterface) {
+			if (listView != null) {
+				listView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray, resourceProvider));
+				listView.invalidate();
+			}
 		}
 	}
 
@@ -705,6 +710,8 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 		getNotificationCenter().addObserver(this, NotificationCenter.activeGroupCallsUpdated);
 		getNotificationCenter().addObserver(this, NotificationCenter.chatInfoDidLoad);
 		getNotificationCenter().addObserver(this, NotificationCenter.groupCallUpdated);
+		getNotificationCenter().addObserver(this, NotificationCenter.didSetNewTheme);
+		getNotificationCenter().addObserver(this, NotificationCenter.reloadInterface);
 
 		if (arguments != null) {
 			needFinishFragment = arguments.getBoolean("needFinishFragment", true);
@@ -725,6 +732,8 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 		getNotificationCenter().removeObserver(this, NotificationCenter.activeGroupCallsUpdated);
 		getNotificationCenter().removeObserver(this, NotificationCenter.chatInfoDidLoad);
 		getNotificationCenter().removeObserver(this, NotificationCenter.groupCallUpdated);
+		getNotificationCenter().removeObserver(this, NotificationCenter.didSetNewTheme);
+		getNotificationCenter().removeObserver(this, NotificationCenter.reloadInterface);
 		Bulletin.removeDelegate(this);
 	}
 
@@ -1594,6 +1603,7 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 
         ThemeDescription.ThemeDescriptionDelegate cellDelegate = () -> {
 			if (listView != null) {
+				listView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray, resourceProvider));
 				int count = listView.getChildCount();
 				for (int a = 0; a < count; a++) {
 					View child = listView.getChildAt(a);
@@ -1615,6 +1625,8 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 		};
 
 		themeDescriptions.add(new ThemeDescription(fragmentView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundGray));
+		themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundGray));
+		themeDescriptions.add(new ThemeDescription(null, 0, null, null, null, cellDelegate, Theme.key_windowBackgroundGray));
 
 //		themeDescriptions.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_actionBarDefault));
 		themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_LISTGLOWCOLOR, null, null, null, null, Theme.key_actionBarDefault));

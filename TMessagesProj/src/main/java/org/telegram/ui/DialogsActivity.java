@@ -4233,7 +4233,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         ContentView contentView = new ContentView(context);
         fragmentView = contentView;
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             hasOwnBackground = true;
             contentView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
         }
@@ -11048,6 +11048,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
         } else if (id == NotificationCenter.didSetNewTheme || id == NotificationCenter.reloadInterface) {
             xyz.nextalone.nagram.ui.folders.FoldersHelper.updateFilterTabsTheme(filterTabsView, resourceProvider);
+            updateBackgroundColors();
         } else if (id == NotificationCenter.closeSearchByActiveAction) {
             if (actionBar != null) {
                 actionBar.closeSearchField();
@@ -12489,9 +12490,28 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         return 0;
     }
 
+    private void updateBackgroundColors() {
+        int bgGray = getThemedColor(Theme.key_windowBackgroundGray);
+        if (fragmentView != null && (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive())) {
+            fragmentView.setBackgroundColor(bgGray);
+        }
+        if (viewPages != null) {
+            for (int a = 0; a < viewPages.length; a++) {
+                if (viewPages[a] != null && viewPages[a].listView != null) {
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || viewPages[a].dialogsType == DIALOGS_TYPE_BOT_REQUEST_PEER) {
+                        viewPages[a].listView.setBackgroundColor(bgGray);
+                        viewPages[a].listView.invalidate();
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     public ArrayList<ThemeDescription> getThemeDescriptions() {
         ThemeDescription.ThemeDescriptionDelegate cellDelegate = () -> {
+            updateBackgroundColors();
+            xyz.nextalone.nagram.ui.folders.FoldersHelper.updateFilterTabsTheme(filterTabsView, resourceProvider);
             for (int b = 0; b < 3; b++) {
                 RecyclerListView list;
                 if (b == 2) {
@@ -12629,7 +12649,25 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         ArrayList<ThemeDescription> arrayList = new ArrayList<>();
 
-        arrayList.add(new ThemeDescription(fragmentView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            arrayList.add(new ThemeDescription(fragmentView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundGray));
+            if (viewPages != null) {
+                for (int a = 0; a < viewPages.length; a++) {
+                    if (viewPages[a] != null && viewPages[a].listView != null) {
+                        arrayList.add(new ThemeDescription(viewPages[a].listView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundGray));
+                    }
+                }
+            }
+        } else {
+            arrayList.add(new ThemeDescription(fragmentView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
+            if (viewPages != null) {
+                for (int a = 0; a < viewPages.length; a++) {
+                    if (viewPages[a] != null && viewPages[a].listView != null && viewPages[a].dialogsType == DIALOGS_TYPE_BOT_REQUEST_PEER) {
+                        arrayList.add(new ThemeDescription(viewPages[a].listView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundGray));
+                    }
+                }
+            }
+        }
 
         if (movingView != null) {
             arrayList.add(new ThemeDescription(movingView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
@@ -12673,6 +12711,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         arrayList.add(new ThemeDescription(null, 0, null, null, null, cellDelegate, Theme.key_actionBarDefaultSubmenuItem));
         arrayList.add(new ThemeDescription(null, 0, null, null, null, cellDelegate, Theme.key_actionBarDefaultSubmenuItemIcon));
         arrayList.add(new ThemeDescription(null, 0, null, null, null, cellDelegate, Theme.key_dialogButtonSelector));
+        arrayList.add(new ThemeDescription(null, 0, null, null, null, cellDelegate, Theme.key_windowBackgroundGray));
 
         if (filterTabsView != null) {
             if (actionBar != null && actionBar.isActionModeShowed()) {

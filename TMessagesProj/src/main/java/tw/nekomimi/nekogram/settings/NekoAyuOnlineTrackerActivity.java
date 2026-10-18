@@ -84,6 +84,8 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
     public boolean onFragmentCreate() {
         super.onFragmentCreate();
         getNotificationCenter().addObserver(this, NotificationCenter.updateInterfaces);
+        getNotificationCenter().addObserver(this, NotificationCenter.didSetNewTheme);
+        getNotificationCenter().addObserver(this, NotificationCenter.reloadInterface);
         AyuOnlineTrackerController.getInstance(currentAccount).addListener(this);
         loadTrackedUsers();
         updateRows();
@@ -94,6 +96,8 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
         getNotificationCenter().removeObserver(this, NotificationCenter.updateInterfaces);
+        getNotificationCenter().removeObserver(this, NotificationCenter.didSetNewTheme);
+        getNotificationCenter().removeObserver(this, NotificationCenter.reloadInterface);
         AyuOnlineTrackerController.getInstance(currentAccount).removeListener(this);
     }
 
@@ -125,6 +129,13 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
                         }
                     }
                 }
+            }
+        } else if (id == NotificationCenter.didSetNewTheme || id == NotificationCenter.reloadInterface) {
+            if (fragmentView != null) {
+                fragmentView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+            }
+            if (listAdapter != null) {
+                listAdapter.notifyDataSetChanged();
             }
         }
     }
@@ -761,6 +772,14 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
     @Override
     public ArrayList<ThemeDescription> getThemeDescriptions() {
         ArrayList<ThemeDescription> themeDescriptions = new ArrayList<>();
+        ThemeDescription.ThemeDescriptionDelegate cellDelegate = () -> {
+            if (fragmentView != null) {
+                fragmentView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+            }
+            if (listAdapter != null) {
+                listAdapter.notifyDataSetChanged();
+            }
+        };
         if (!UIStyleEngine.isMaterial3Expressive() && !UIStyleEngine.isIosLiquidGlass()) {
             themeDescriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_CELLBACKGROUNDCOLOR, new Class[]{HeaderCell.class, TextCheckCell.class, RadioCell.class, TextCell.class, UserCell.class}, null, null, null, Theme.key_windowBackgroundWhite));
         }
@@ -769,6 +788,7 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
         themeDescriptions.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_ITEMSCOLOR, null, null, null, null, Theme.key_actionBarDefaultIcon));
         themeDescriptions.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_TITLECOLOR, null, null, null, null, Theme.key_actionBarDefaultTitle));
         themeDescriptions.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_SELECTORCOLOR, null, null, null, null, Theme.key_actionBarDefaultSelector));
+        themeDescriptions.add(new ThemeDescription(null, 0, null, null, null, cellDelegate, Theme.key_windowBackgroundGray));
         return themeDescriptions;
     }
 }
