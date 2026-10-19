@@ -11,6 +11,7 @@ import com.radolyn.ayugram.controllers.AyuSavePreferences;
 import com.radolyn.ayugram.controllers.AyuMessagesController;
 import com.radolyn.ayugram.utils.AyuMessageUtils;
 import com.radolyn.ayugram.ui.AyuMessageHistory;
+import com.radolyn.ayugram.ui.DummyView;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.lerp;
@@ -31486,8 +31487,8 @@ public class ChatActivity extends BaseFragment implements
                     message = ((ChatMessageCell) view).getMessageObject();
                 } else if (view instanceof ChatActionCell) {
                     message = ((ChatActionCell) view).getMessageObject();
-                } else if (view instanceof android.view.View) { // hide message
-                    // message = getMessageObject()
+                } else if (view instanceof DummyView) { // hide message
+                    message = ((DummyView) view).getMessageObject();
                 }
                 if (message != null && message.messageOwner != null && message.messageOwner.media_unread && message.messageOwner.mentioned) {
                     if (!message.isVoice() && !message.isRoundVideo()) {
@@ -40138,6 +40139,10 @@ public class ChatActivity extends BaseFragment implements
                 ChatMessageUnsupportedCell cell = new ChatMessageUnsupportedCell(mContext, themeDelegate);
                 cell.setDelegate(getChatMessageCellDelegate());
                 view = cell;
+            } else if (viewType == -1000) {
+                view = new DummyView(mContext);
+            } else {
+                view = new View(mContext);
             }
             view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
             return new RecyclerListView.Holder(view);
@@ -40744,9 +40749,9 @@ public class ChatActivity extends BaseFragment implements
                     if (createUnreadMessageAfterId != 0) {
                         createUnreadMessageAfterId = 0;
                     }
-                } else if (view instanceof android.view.View) { // hide message
-                    android.view.View dummyView = (android.view.View) view;
-                    // dummyView.setMessageObject(message)
+                } else if (view instanceof DummyView) { // hide message
+                    DummyView dummyView = (DummyView) view;
+                    dummyView.setMessageObject(message);
                 }
             }
         }
@@ -40776,19 +40781,13 @@ public class ChatActivity extends BaseFragment implements
                 if (msg == null || msg.messageOwner != null && msg.messageOwner.hide) {
                     return -1000;
                 }
-                if (NekoConfig.ignoreBlocked.Bool() && ChatObject.isMegagroup(currentChat)) {
+                if (NekoConfig.ignoreBlocked.Bool() && currentChat != null && !ChatObject.isChannelAndNotMegaGroup(currentChat)) {
                     long fromId = msg.getFromChatId();
                     if (isBlockedUser(fromId) || AyuFilter.isBlockedChannel(fromId)) {
                         return -1000;
                     }
-                    if (msg.replyMessageObject != null) {
-                        fromId = msg.replyMessageObject.getFromChatId();
-                        if (isBlockedUser(fromId) || AyuFilter.isBlockedChannel(fromId)) {
-                            return -1000;
-                        }
-                    }
                 }
-                if (AyuFilter.isFiltered(msg, getGroup(msg.getGroupId()))) {
+                if (AyuFilter.shouldHideFilteredMessage(msg, getGroup(msg.getGroupId()))) {
                     return -1000;
                 }
                 if (msg.contentType == 2) { // ChatUnreadCell
@@ -40800,20 +40799,14 @@ public class ChatActivity extends BaseFragment implements
                         if (m.messageOwner != null && m.messageOwner.hide) {
                             continue;
                         }
-                        if (NekoConfig.ignoreBlocked.Bool() && ChatObject.isMegagroup(currentChat)) {
+                        if (NekoConfig.ignoreBlocked.Bool() && currentChat != null && !ChatObject.isChannelAndNotMegaGroup(currentChat)) {
                             long fromId = m.getFromChatId();
                             if (isBlockedUser(fromId) || AyuFilter.isBlockedChannel(fromId)) {
                                 continue;
                             }
-                            if (m.replyMessageObject != null) {
-                                fromId = m.replyMessageObject.getFromChatId();
-                                if (isBlockedUser(fromId) || AyuFilter.isBlockedChannel(fromId)) {
-                                    continue;
-                                }
-                            }
                         }
                         var g = getGroup(m.getGroupId());
-                        if (AyuFilter.isFiltered(m, g)) {
+                        if (AyuFilter.shouldHideFilteredMessage(m, g)) {
                             continue;
                         }
                         hasVisibleAfter = true;

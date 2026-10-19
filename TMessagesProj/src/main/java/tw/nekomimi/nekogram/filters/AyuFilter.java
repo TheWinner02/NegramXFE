@@ -350,10 +350,7 @@ public class AyuFilter {
         if (msg == null || msg.isOutOwner() || msg.isOut() || !NekoConfig.ignoreBlocked.Bool()) {
             return false;
         }
-        if (isBlockedPeer(msg.currentAccount, msg.getFromChatId())) {
-            return true;
-        }
-        return msg.replyMessageObject != null && isBlockedPeer(msg.currentAccount, msg.replyMessageObject.getFromChatId());
+        return isBlockedPeer(msg.currentAccount, msg.getFromChatId());
     }
 
     private static boolean isBlockedPeer(int currentAccount, long peerId) {

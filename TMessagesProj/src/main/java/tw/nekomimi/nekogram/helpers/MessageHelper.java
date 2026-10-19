@@ -1234,10 +1234,11 @@ public class MessageHelper extends BaseController {
                 return messageOwner.translatedText != null ? reparseMessageEntities(messageOwner.translatedText.entities) : null;
             }
         }
+        ArrayList<TLRPC.MessageEntity> entities = messageOwner.entities;
         if (messageOwner.translated && messageOwner.translatedText != null) {
-            return mergeAppendTranslatedEntities(messageOwner.entities, messageOwner.translatedText, text);
+            entities = mergeAppendTranslatedEntities(messageOwner.entities, messageOwner.translatedText, text);
         }
-        return messageOwner.entities;
+        return AyuFilter.addSpoilerEntities(messageObject, entities, text);
     }
 
     public static ArrayList<TLRPC.MessageEntity> mergeAppendTranslatedEntities(ArrayList<TLRPC.MessageEntity> baseEntities, TLRPC.TL_textWithEntities translatedText, CharSequence fullText) {

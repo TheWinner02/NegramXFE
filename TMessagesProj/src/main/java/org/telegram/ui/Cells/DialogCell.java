@@ -3291,26 +3291,16 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                                 lastFilteredNullTime = 0;
                             }
                             boolean blocked = false;
-                            boolean replyBlocked = false;
-                            boolean needsReplyTargetCheck = false;
-                            if (NekoConfig.ignoreBlocked.Bool() && ChatObject.isMegagroup(MessagesController.getInstance(currentAccount).getChat(-dialog.id))) {
-                                blocked = MessagesController.getInstance(currentAccount).blockePeers.indexOfKey(message.getFromChatId()) >= 0;
-                                blocked = blocked || AyuFilter.isCustomFilteredPeer(message.getFromChatId());
-                                blocked = blocked || AyuFilter.isBlockedChannel(message.getFromChatId());
-                                if (message.replyMessageObject != null) {
-                                    long fromId = message.replyMessageObject.getFromChatId();
-                                    replyBlocked = MessagesController.getInstance(currentAccount).blockePeers.indexOfKey(fromId) >= 0;
-                                    replyBlocked = replyBlocked || AyuFilter.isCustomFilteredPeer(fromId);
-                                    replyBlocked = replyBlocked || AyuFilter.isBlockedChannel(fromId);
-                                } else if (message.getReplyMsgId() != 0) {
-                                    // reply sender is unresolved in the in-memory preview message, fallback to async DB lookup
-                                    needsReplyTargetCheck = true;
-                                }
+                            TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-dialog.id);
+                            if (NekoConfig.ignoreBlocked.Bool() && chat != null && !ChatObject.isChannelAndNotMegaGroup(chat)) {
+                                long fromId = message.getFromChatId();
+                                blocked = MessagesController.getInstance(currentAccount).blockePeers.indexOfKey(fromId) >= 0;
+                                blocked = blocked || AyuFilter.isCustomFilteredPeer(fromId);
+                                blocked = blocked || AyuFilter.isBlockedChannel(fromId);
                             }
-                            boolean hardFiltered = blocked || replyBlocked || AyuFilter.isFiltered(message, null);
-                            boolean softReplyCheckPending = needsReplyTargetCheck && !hardFiltered;
+                            boolean hardFiltered = blocked || AyuFilter.isFiltered(message, null);
                             boolean inNullRetryCooldown = lastFilteredNullMessageId == currentMessageId && System.currentTimeMillis() - lastFilteredNullTime < FILTERED_NULL_RETRY_COOLDOWN_MS;
-                            if (hardFiltered || softReplyCheckPending) {
+                            if (hardFiltered) {
                                 if (filteredMessageCache != null && filteredMessageCache.getDialogId() == dialog.id) {
                                     message = filteredMessageCache;
                                     groupMessages = null;
