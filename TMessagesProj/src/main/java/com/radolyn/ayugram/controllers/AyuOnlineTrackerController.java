@@ -10,6 +10,7 @@ import android.os.Build;
 import android.text.TextUtils;
 import androidx.collection.LongSparseArray;
 import androidx.core.app.NotificationCompat;
+import com.radolyn.ayugram.database.AyuOnlineTrackerEventsDb;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -22,6 +23,7 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.NotificationsController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.UserObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_update;
 import org.telegram.ui.ActionBar.BaseFragment;
@@ -39,9 +41,15 @@ public class AyuOnlineTrackerController extends BaseController {
     private final Set<Long> trackedUserIds = new HashSet<>();
     private final LongSparseArray<StatusRecord> statusRecords = new LongSparseArray<>();
     private final ArrayList<TrackedUsersChangeListener> listeners = new ArrayList<>();
+    private final ArrayList<EventsChangeListener> eventListeners = new ArrayList<>();
+    private volatile boolean initialSyncDone = false;
 
     public interface TrackedUsersChangeListener {
         void onTrackedUsersChanged();
+    }
+
+    public interface EventsChangeListener {
+        void onEventsChanged();
     }
 
     private static class StatusRecord {
@@ -54,6 +62,10 @@ public class AyuOnlineTrackerController extends BaseController {
         super(account);
         preferences = ApplicationLoader.applicationContext.getSharedPreferences("ayutracker_" + account, Context.MODE_PRIVATE);
         loadTrackedUsers();
+        if (isEnabled()) {
+            startPollingIfNeeded();
+        }
+        AndroidUtilities.runOnUIThread(() -> initialSyncDone = true, 5000);
     }
 
     public static AyuOnlineTrackerController getInstance() {
@@ -72,6 +84,51 @@ public class AyuOnlineTrackerController extends BaseController {
             }
         }
         return controller;
+    }
+
+    private boolean pollingScheduled = false;
+    private final Runnable pollRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!isEnabled()) {
+                pollingScheduled = false;
+                return;
+            }
+            if (!ApplicationLoader.mainInterfacePaused) {
+                checkTrackedUsersStatus();
+            }
+            AndroidUtilities.runOnUIThread(this, 45000);
+        }
+    };
+
+    public void startPollingIfNeeded() {
+        if (!isEnabled()) return;
+        if (!pollingScheduled) {
+            pollingScheduled = true;
+            AndroidUtilities.runOnUIThread(pollRunnable, 20000);
+        }
+    }
+
+    public void checkTrackedUsersStatus() {
+        if (!isEnabled()) return;
+        if (getTargetMode() == TARGET_ALL_CONTACTS) {
+            getContactsController().reloadContactsStatusesMaybe(true);
+        } else {
+            ArrayList<Long> ids = getTrackedUserIds();
+            boolean needContactsReload = false;
+            for (Long id : ids) {
+                if (id != null && id != 0) {
+                    if (ContactsController.getInstance(currentAccount).isContact(id)) {
+                        needContactsReload = true;
+                    } else {
+                        getMessagesController().reloadUser(id);
+                    }
+                }
+            }
+            if (needContactsReload) {
+                getContactsController().reloadContactsStatusesMaybe(true);
+            }
+        }
     }
 
     private void loadTrackedUsers() {
@@ -105,6 +162,10 @@ public class AyuOnlineTrackerController extends BaseController {
 
     public void setEnabled(boolean value) {
         preferences.edit().putBoolean("enabled", value).apply();
+        if (value) {
+            startPollingIfNeeded();
+            checkTrackedUsersStatus();
+        }
     }
 
     public boolean isNotifyOnline() {
@@ -176,6 +237,20 @@ public class AyuOnlineTrackerController extends BaseController {
             }
         }
         if (added) {
+            TLRPC.User u = getMessagesController().getUser(userId);
+            if (u != null && u.status != null) {
+                synchronized (statusRecords) {
+                    StatusRecord r = new StatusRecord();
+                    r.statusCode = getStatusCode(u.status);
+                    if (r.statusCode == 1) {
+                        r.onlineSince = System.currentTimeMillis();
+                    } else if (r.statusCode == 0) {
+                        r.lastSeenDate = u.status.expires;
+                    }
+                    statusRecords.put(userId, r);
+                }
+            }
+            getMessagesController().reloadUser(userId);
             notifyListeners();
         }
         return added;
@@ -190,6 +265,9 @@ public class AyuOnlineTrackerController extends BaseController {
             }
         }
         if (removed) {
+            synchronized (statusRecords) {
+                statusRecords.remove(userId);
+            }
             notifyListeners();
         }
     }
@@ -212,6 +290,28 @@ public class AyuOnlineTrackerController extends BaseController {
         });
     }
 
+    public void addEventsListener(EventsChangeListener listener) {
+        if (!eventListeners.contains(listener)) {
+            eventListeners.add(listener);
+        }
+    }
+
+    public void removeEventsListener(EventsChangeListener listener) {
+        eventListeners.remove(listener);
+    }
+
+    public void notifyEventsUpdated() {
+        AndroidUtilities.runOnUIThread(() -> {
+            for (EventsChangeListener l : new ArrayList<>(eventListeners)) {
+                l.onEventsChanged();
+            }
+        });
+    }
+
+    public AyuOnlineTrackerEventsDb getEventsDb() {
+        return AyuOnlineTrackerEventsDb.getInstance(currentAccount);
+    }
+
     private int getStatusCode(TLRPC.UserStatus status) {
         if (status instanceof TLRPC.TL_userStatusOnline) {
             return 1;
@@ -230,11 +330,41 @@ public class AyuOnlineTrackerController extends BaseController {
     }
 
     public void processUpdate(TL_update.TL_updateUserStatus update) {
-        if (!isEnabled() || update == null || update.status == null) {
+        if (update != null && update.status != null) {
+            processStatusUpdate(update.user_id, update.status);
+        }
+    }
+
+    public void onUserActivityDetected(long userId) {
+        if (!isEnabled() || userId == 0 || userId == getUserConfig().getClientUserId()) {
             return;
         }
-        long userId = update.user_id;
-        if (userId == getUserConfig().getClientUserId()) {
+        if (!isUserTracked(userId)) {
+            return;
+        }
+        TLRPC.TL_userStatusOnline onlineStatus = new TLRPC.TL_userStatusOnline();
+        onlineStatus.expires = getConnectionsManager().getCurrentTime() + 60;
+        processStatusUpdate(userId, onlineStatus);
+    }
+
+    public void onUserPrivacyOffline(long userId) {
+        if (!isEnabled() || userId == 0 || userId == getUserConfig().getClientUserId()) {
+            return;
+        }
+        if (!isUserTracked(userId)) {
+            return;
+        }
+        TLRPC.TL_userStatusOffline offlineStatus = new TLRPC.TL_userStatusOffline();
+        offlineStatus.expires = getConnectionsManager().getCurrentTime();
+        processStatusUpdate(userId, offlineStatus);
+    }
+
+    public void onInitialContactsLoaded() {
+        initialSyncDone = true;
+    }
+
+    public void processStatusUpdate(long userId, TLRPC.UserStatus newStatus) {
+        if (!isEnabled() || newStatus == null || userId == 0 || userId == getUserConfig().getClientUserId()) {
             return;
         }
         if (!isUserTracked(userId)) {
@@ -246,66 +376,97 @@ public class AyuOnlineTrackerController extends BaseController {
             return;
         }
 
-        StatusRecord record = statusRecords.get(userId);
-        int newCode = getStatusCode(update.status);
-        if (record == null) {
-            record = new StatusRecord();
-            record.statusCode = newCode;
-            if (newCode == 1) {
-                record.onlineSince = System.currentTimeMillis();
-            } else if (newCode == 0) {
-                record.lastSeenDate = update.status.expires;
-            }
-            statusRecords.put(userId, record);
-            return;
-        }
-
-        int oldCode = record.statusCode;
-        if (oldCode == newCode) {
-            return;
-        }
-
-        record.statusCode = newCode;
+        int newCode = getStatusCode(newStatus);
         long now = System.currentTimeMillis();
-        String userName = ContactsController.formatName(user.first_name, user.last_name);
+        boolean shouldNotifyOnline = false;
+        boolean shouldNotifyOffline = false;
+        long offlineDurationMs = 0;
+        int approximateCode = 0;
 
-        if (newCode == 1) { // Became ONLINE
-            record.onlineSince = now;
+        synchronized (statusRecords) {
+            StatusRecord record = statusRecords.get(userId);
+            if (record == null) {
+                record = new StatusRecord();
+                int oldCode = (user.status != null && user.status != newStatus) ? getStatusCode(user.status) : -999;
+                record.statusCode = newCode;
+                if (newCode == 1) {
+                    record.onlineSince = now;
+                } else if (newCode == 0) {
+                    record.lastSeenDate = newStatus.expires;
+                }
+                statusRecords.put(userId, record);
+
+                if (initialSyncDone) {
+                    if (newCode == 1 && oldCode != 1) {
+                        shouldNotifyOnline = true;
+                    } else if (newCode == 0 && oldCode == 1) {
+                        shouldNotifyOffline = true;
+                    }
+                }
+            } else {
+                int oldCode = record.statusCode;
+                if (oldCode == newCode) {
+                    return;
+                }
+                record.statusCode = newCode;
+
+                if (initialSyncDone) {
+                    if (newCode == 1) {
+                        record.onlineSince = now;
+                        shouldNotifyOnline = true;
+                    } else if (newCode == 0) {
+                        offlineDurationMs = (record.onlineSince > 0) ? (now - record.onlineSince) : 0;
+                        record.onlineSince = 0;
+                        record.lastSeenDate = newStatus.expires;
+                        shouldNotifyOffline = true;
+                    } else if (newCode < 0) {
+                        if (oldCode == 1) {
+                            offlineDurationMs = (record.onlineSince > 0) ? (now - record.onlineSince) : 0;
+                            record.onlineSince = 0;
+                            shouldNotifyOffline = true;
+                        } else if (oldCode != -999) {
+                            approximateCode = newCode;
+                        }
+                    }
+                } else {
+                    if (newCode == 1) {
+                        record.onlineSince = now;
+                    } else if (newCode == 0) {
+                        record.lastSeenDate = newStatus.expires;
+                    }
+                }
+            }
+        }
+
+        if (shouldNotifyOnline) {
+            getEventsDb().insertEvent(userId, 1, now, 0);
+            notifyEventsUpdated();
             if (isNotifyOnline()) {
+                String userName = UserObject.getUserName(user);
                 String text = LocaleController.formatString("AyuOnlineTrackerNotificationOnline", R.string.AyuOnlineTrackerNotificationOnline, userName);
                 sendNotification(user, text, true);
             }
-        } else if (newCode == 0) { // Became OFFLINE
-            long durationMs = (record.onlineSince > 0) ? (now - record.onlineSince) : 0;
-            record.onlineSince = 0;
-            record.lastSeenDate = update.status.expires;
+        } else if (shouldNotifyOffline) {
+            getEventsDb().insertEvent(userId, 0, now, offlineDurationMs);
+            notifyEventsUpdated();
             if (isNotifyOffline()) {
+                String userName = UserObject.getUserName(user);
                 String text;
-                if (isNotifyDuration() && durationMs >= 3000) {
-                    String durationStr = LocaleController.formatDuration((int) (durationMs / 1000));
+                if (isNotifyDuration() && offlineDurationMs >= 3000) {
+                    String durationStr = LocaleController.formatDuration((int) (offlineDurationMs / 1000));
                     text = LocaleController.formatString("AyuOnlineTrackerNotificationOfflineWithDuration", R.string.AyuOnlineTrackerNotificationOfflineWithDuration, userName, durationStr);
                 } else {
                     text = LocaleController.formatString("AyuOnlineTrackerNotificationOffline", R.string.AyuOnlineTrackerNotificationOffline, userName);
                 }
                 sendNotification(user, text, false);
             }
-        } else if (newCode < 0) { // Approximate status
-            if (oldCode == 1) {
-                long durationMs = (record.onlineSince > 0) ? (now - record.onlineSince) : 0;
-                record.onlineSince = 0;
-                if (isNotifyOffline()) {
-                    String text;
-                    if (isNotifyDuration() && durationMs >= 3000) {
-                        String durationStr = LocaleController.formatDuration((int) (durationMs / 1000));
-                        text = LocaleController.formatString("AyuOnlineTrackerNotificationOfflineWithDuration", R.string.AyuOnlineTrackerNotificationOfflineWithDuration, userName, durationStr);
-                    } else {
-                        text = LocaleController.formatString("AyuOnlineTrackerNotificationOffline", R.string.AyuOnlineTrackerNotificationOffline, userName);
-                    }
-                    sendNotification(user, text, false);
-                }
-            } else if (isNotifyApproximate() && oldCode != -999) {
-                String statusName = getApproximateStatusName(newCode);
+        } else if (approximateCode < 0) {
+            getEventsDb().insertEvent(userId, approximateCode, now, 0);
+            notifyEventsUpdated();
+            if (isNotifyApproximate()) {
+                String statusName = getApproximateStatusName(approximateCode);
                 if (statusName != null) {
+                    String userName = UserObject.getUserName(user);
                     String text = LocaleController.formatString("AyuOnlineTrackerNotificationApproximate", R.string.AyuOnlineTrackerNotificationApproximate, userName, statusName);
                     sendNotification(user, text, false);
                 }
@@ -332,13 +493,14 @@ public class AyuOnlineTrackerController extends BaseController {
         if (user == null || TextUtils.isEmpty(text)) return;
         AndroidUtilities.runOnUIThread(() -> {
             try {
+                String userName = UserObject.getUserName(user);
                 // 1. In-app bulletin if foreground
                 if (!ApplicationLoader.mainInterfacePaused) {
                     BaseFragment fragment = LaunchActivity.getLastFragment();
                     if (fragment != null && fragment.getParentActivity() != null) {
                         BulletinFactory.of(fragment).createSimpleBulletin(
                             isOnline ? R.drawable.msg_status_set_solar : R.drawable.msg_notifications_solar,
-                            ContactsController.formatName(user.first_name, user.last_name),
+                            userName,
                             text
                         ).show();
                     }
@@ -366,7 +528,7 @@ public class AyuOnlineTrackerController extends BaseController {
                     );
 
                     NotificationCompat.Builder builder = new NotificationCompat.Builder(ApplicationLoader.applicationContext, channelId != null ? channelId : "Other")
-                        .setContentTitle(ContactsController.formatName(user.first_name, user.last_name))
+                        .setContentTitle(userName)
                         .setContentText(text)
                         .setSmallIcon(R.drawable.notification)
                         .setAutoCancel(true)

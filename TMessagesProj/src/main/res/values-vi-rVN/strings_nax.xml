@@ -348,4 +348,18 @@
     <string name="AyuOnlineTrackerNotificationOffline">%1$s đã ngoại tuyến</string>
     <string name="AyuOnlineTrackerNotificationOfflineWithDuration">%1$s đã ngoại tuyến (đã trực tuyến %2$s)</string>
     <string name="AyuOnlineTrackerNotificationApproximate">Trạng thái của %1$s đổi thành: %2$s</string>
+    <string name="AyuOnlineTrackerEventsLog">Nhật ký hoạt động</string>
+    <string name="AyuOnlineTrackerEventsLogDetail">Xem các sự kiện trạng thái trực tuyến và ngoại tuyến đã ghi lại.</string>
+    <string name="AyuOnlineTrackerEventsEmpty">Chưa có sự kiện nào được ghi lại</string>
+    <string name="AyuOnlineTrackerEventsEmptyDetail">Các chuyển đổi trạng thái trực tuyến và ngoại tuyến sẽ hiển thị ở đây.</string>
+    <string name="AyuOnlineTrackerClearEvents">Xóa nhật ký hoạt động</string>
+    <string name="AyuOnlineTrackerClearEventsAlert">Bạn có chắc chắn muốn xóa tất cả các sự kiện hoạt động đã ghi lại không?</string>
+    <string name="AyuOnlineTrackerClear">Xóa</string>
+    <string name="AyuOnlineTrackerEventsCleared">Đã xóa nhật ký hoạt động.</string>
+    <string name="AyuOnlineTrackerEventOnline">Trực tuyến</string>
+    <string name="AyuOnlineTrackerEventOffline">Ngoại tuyến</string>
+    <string name="AyuOnlineTrackerEventOnlineAt">Trực tuyến lúc %1$s</string>
+    <string name="AyuOnlineTrackerEventOfflineAt">Ngoại tuyến lúc %1$s</string>
+    <string name="AyuOnlineTrackerEventDuration">Thời gian: %1$s</string>
+    <string name="AyuOnlineTrackerEventsCount">%1$d sự kiện</string>
 </resources>

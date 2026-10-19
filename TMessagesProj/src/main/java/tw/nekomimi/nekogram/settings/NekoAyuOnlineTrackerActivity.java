@@ -54,6 +54,9 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
     private int enableRow;
     private int enableDetailRow;
 
+    private int eventsLogRow;
+    private int eventsLogDetailRow;
+
     private int headerEventsRow;
     private int notifyOnlineRow;
     private int notifyOfflineRow;
@@ -140,6 +143,14 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
         }
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (listAdapter != null) {
+            listAdapter.notifyDataSetChanged();
+        }
+    }
+
     private void updateRows() {
         rowCount = 0;
         headerGeneralRow = rowCount++;
@@ -148,6 +159,9 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
 
         boolean enabled = AyuOnlineTrackerController.getInstance(currentAccount).isEnabled();
         if (enabled) {
+            eventsLogRow = rowCount++;
+            eventsLogDetailRow = rowCount++;
+
             headerEventsRow = rowCount++;
             notifyOnlineRow = rowCount++;
             notifyOfflineRow = rowCount++;
@@ -187,6 +201,9 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
                 usersDetailRow = -1;
             }
         } else {
+            eventsLogRow = -1;
+            eventsLogDetailRow = -1;
+
             headerEventsRow = -1;
             notifyOnlineRow = -1;
             notifyOfflineRow = -1;
@@ -298,6 +315,8 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
                 }
                 updateRows();
                 listAdapter.notifyDataSetChanged();
+            } else if (position == eventsLogRow) {
+                presentFragment(new NekoAyuOnlineTrackerEventsActivity());
             } else if (position == notifyOnlineRow) {
                 controller.setNotifyOnline(!controller.isNotifyOnline());
                 if (view instanceof TextCheckCell) {
@@ -578,6 +597,7 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
             return position == enableRow
+                || position == eventsLogRow
                 || position == notifyOnlineRow
                 || position == notifyOfflineRow
                 || position == notifyDurationRow
@@ -673,6 +693,8 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
                     TextInfoPrivacyCell privacyCell = (TextInfoPrivacyCell) holder.itemView;
                     if (position == enableDetailRow) {
                         privacyCell.setText(LocaleController.getString("AyuOnlineTrackerNotice", R.string.AyuOnlineTrackerNotice));
+                    } else if (position == eventsLogDetailRow) {
+                        privacyCell.setText(LocaleController.getString("AyuOnlineTrackerEventsLogDetail", R.string.AyuOnlineTrackerEventsLogDetail));
                     } else if (position == eventsDetailRow) {
                         privacyCell.setText(LocaleController.getString("AyuOnlineTrackerNotifyDurationNotice", R.string.AyuOnlineTrackerNotifyDurationNotice));
                     } else if (position == scopeDetailRow) {
@@ -699,13 +721,20 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
                 }
                 case 4: {
                     TextCell textCell = (TextCell) holder.itemView;
-                    textCell.setColors(Theme.key_windowBackgroundWhiteBlueIcon, Theme.key_windowBackgroundWhiteBlueButton);
-                    if (position == addContactRow) {
-                        textCell.setTextAndIcon(LocaleController.getString("AyuOnlineTrackerAddContact", R.string.AyuOnlineTrackerAddContact), R.drawable.msg_contacts_solar, true);
-                    } else if (position == addUsernameRow) {
-                        textCell.setTextAndIcon(LocaleController.getString("AyuOnlineTrackerAddByUsername", R.string.AyuOnlineTrackerAddByUsername), R.drawable.msg_contacts_name_solar, true);
-                    } else if (position == addPhoneRow) {
-                        textCell.setTextAndIcon(LocaleController.getString("AyuOnlineTrackerAddByPhone", R.string.AyuOnlineTrackerAddByPhone), R.drawable.msg_contact_add_solar, false);
+                    if (position == eventsLogRow) {
+                        textCell.setColors(Theme.key_windowBackgroundWhiteBlueIcon, Theme.key_windowBackgroundWhiteBlackText);
+                        int count = controller.getEventsDb().getEventsCount();
+                        String countStr = count > 0 ? LocaleController.formatPluralString("AyuOnlineTrackerEventsCount", count) : null;
+                        textCell.setTextAndValueAndIcon(LocaleController.getString("AyuOnlineTrackerEventsLog", R.string.AyuOnlineTrackerEventsLog), countStr, R.drawable.msg_calendar2_solar, false);
+                    } else {
+                        textCell.setColors(Theme.key_windowBackgroundWhiteBlueIcon, Theme.key_windowBackgroundWhiteBlueButton);
+                        if (position == addContactRow) {
+                            textCell.setTextAndIcon(LocaleController.getString("AyuOnlineTrackerAddContact", R.string.AyuOnlineTrackerAddContact), R.drawable.msg_contacts_solar, true);
+                        } else if (position == addUsernameRow) {
+                            textCell.setTextAndIcon(LocaleController.getString("AyuOnlineTrackerAddByUsername", R.string.AyuOnlineTrackerAddByUsername), R.drawable.msg_contacts_name_solar, true);
+                        } else if (position == addPhoneRow) {
+                            textCell.setTextAndIcon(LocaleController.getString("AyuOnlineTrackerAddByPhone", R.string.AyuOnlineTrackerAddByPhone), R.drawable.msg_contact_add_solar, false);
+                        }
                     }
                     break;
                 }
@@ -755,11 +784,11 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
                 return 0;
             } else if (position == enableRow || position == notifyOnlineRow || position == notifyOfflineRow || position == notifyDurationRow || position == notifyApproximateRow) {
                 return 1;
-            } else if (position == enableDetailRow || position == eventsDetailRow || position == scopeDetailRow || position == actionsDetailRow || position == usersDetailRow) {
+            } else if (position == enableDetailRow || position == eventsLogDetailRow || position == eventsDetailRow || position == scopeDetailRow || position == actionsDetailRow || position == usersDetailRow) {
                 return 2;
             } else if (position == scopeAllContactsRow || position == scopeSelectedOnlyRow) {
                 return 3;
-            } else if (position == addContactRow || position == addUsernameRow || position == addPhoneRow) {
+            } else if (position == eventsLogRow || position == addContactRow || position == addUsernameRow || position == addPhoneRow) {
                 return 4;
             } else if (position == scopeButtonGroupRow) {
                 return 6;

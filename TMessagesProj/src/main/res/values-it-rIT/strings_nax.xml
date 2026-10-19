@@ -384,4 +384,18 @@ Non possiamo aiutarti in questo caso; se hai problemi di accesso, contatta il Su
     <string name="AyuOnlineTrackerNotificationOffline">%1$s è ora offline</string>
     <string name="AyuOnlineTrackerNotificationOfflineWithDuration">%1$s è offline (è stato online per %2$s)</string>
     <string name="AyuOnlineTrackerNotificationApproximate">Lo stato di %1$s è passato a: %2$s</string>
+    <string name="AyuOnlineTrackerEventsLog">Registro attività</string>
+    <string name="AyuOnlineTrackerEventsLogDetail">Visualizza la cronologia degli accessi online e offline registrati.</string>
+    <string name="AyuOnlineTrackerEventsEmpty">Nessun evento registrato</string>
+    <string name="AyuOnlineTrackerEventsEmptyDetail">Le transizioni di stato online e offline appariranno qui.</string>
+    <string name="AyuOnlineTrackerClearEvents">Cancella registro attività</string>
+    <string name="AyuOnlineTrackerClearEventsAlert">Vuoi davvero cancellare tutti gli eventi registrati?</string>
+    <string name="AyuOnlineTrackerClear">Cancella</string>
+    <string name="AyuOnlineTrackerEventsCleared">Registro attività svuotato.</string>
+    <string name="AyuOnlineTrackerEventOnline">Online</string>
+    <string name="AyuOnlineTrackerEventOffline">Offline</string>
+    <string name="AyuOnlineTrackerEventOnlineAt">Entrato online alle %1$s</string>
+    <string name="AyuOnlineTrackerEventOfflineAt">Uscito alle %1$s</string>
+    <string name="AyuOnlineTrackerEventDuration">Durata: %1$s</string>
+    <string name="AyuOnlineTrackerEventsCount">%1$d eventi</string>
 </resources>

@@ -341,4 +341,18 @@
     <string name="AyuOnlineTrackerNotificationOffline">%1$s 已離線</string>
     <string name="AyuOnlineTrackerNotificationOfflineWithDuration">%1$s 已離線（在線時長：%2$s）</string>
     <string name="AyuOnlineTrackerNotificationApproximate">%1$s 的狀態變更為：%2$s</string>
+    <string name="AyuOnlineTrackerEventsLog">活動紀錄</string>
+    <string name="AyuOnlineTrackerEventsLogDetail">檢視記錄的在線與離線狀態事件。</string>
+    <string name="AyuOnlineTrackerEventsEmpty">尚無記錄事件</string>
+    <string name="AyuOnlineTrackerEventsEmptyDetail">在線與離線狀態變更將顯示於此。</string>
+    <string name="AyuOnlineTrackerClearEvents">清除活動紀錄</string>
+    <string name="AyuOnlineTrackerClearEventsAlert">確定要清除所有記錄的活動事件嗎？</string>
+    <string name="AyuOnlineTrackerClear">清除</string>
+    <string name="AyuOnlineTrackerEventsCleared">活動紀錄已清除。</string>
+    <string name="AyuOnlineTrackerEventOnline">在線</string>
+    <string name="AyuOnlineTrackerEventOffline">離線</string>
+    <string name="AyuOnlineTrackerEventOnlineAt">於 %1$s 上線</string>
+    <string name="AyuOnlineTrackerEventOfflineAt">於 %1$s 離線</string>
+    <string name="AyuOnlineTrackerEventDuration">時長：%1$s</string>
+    <string name="AyuOnlineTrackerEventsCount">%1$d 個事件</string>
 </resources>

@@ -7011,6 +7011,9 @@ public class MessagesController extends BaseController implements NotificationCe
                     getUserConfig().saveConfig(true);
                 }
                 getUserNameResolver().update(oldUser, user);
+                if (user.status != null) {
+                    com.radolyn.ayugram.controllers.AyuOnlineTrackerController.getInstance(currentAccount).processStatusUpdate(user.id, user.status);
+                }
                 if (oldUser != null && user.status != null && oldUser.status != null && user.status.expires != oldUser.status.expires) {
                     return true;
                 }
@@ -10960,6 +10963,7 @@ public class MessagesController extends BaseController implements NotificationCe
             if (toRemove != null) {
                 for (Long uid : toRemove) {
                     onlinePrivacy.remove(uid);
+                    com.radolyn.ayugram.controllers.AyuOnlineTrackerController.getInstance(currentAccount).onUserPrivacyOffline(uid);
                 }
                 AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, UPDATE_MASK_STATUS));
             }
@@ -18230,6 +18234,7 @@ public class MessagesController extends BaseController implements NotificationCe
             if (!updates.out && user != null && user.status != null && user.status.expires <= 0 && Math.abs(getConnectionsManager().getCurrentTime() - updates.date) < 30) {
                 onlinePrivacy.put(user.id, updates.date);
                 LastSeenHelper.saveLastSeen(user.id, updates.date);
+                com.radolyn.ayugram.controllers.AyuOnlineTrackerController.getInstance(currentAccount).onUserActivityDetected(user.id);
                 updateStatus = true;
             }
 
@@ -18863,6 +18868,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             if (!message.out && a == 1 && user.status != null && user.status.expires <= 0 && Math.abs(getConnectionsManager().getCurrentTime() - message.date) < 30) {
                                 onlinePrivacy.put(userId, message.date);
                                 LastSeenHelper.saveLastSeen(userId, message.date);
+                                com.radolyn.ayugram.controllers.AyuOnlineTrackerController.getInstance(currentAccount).onUserActivityDetected(userId);
                                 interfaceUpdateMask |= UPDATE_MASK_STATUS;
                             }
                         }
@@ -19102,6 +19108,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     if (user != null && user.status != null && user.status.expires <= 0 && Math.abs(getConnectionsManager().getCurrentTime() - date) < 30) {
                         onlinePrivacy.put(update.peer.user_id, date);
                         LastSeenHelper.saveLastSeen(update.peer.user_id, date);
+                        com.radolyn.ayugram.controllers.AyuOnlineTrackerController.getInstance(currentAccount).onUserActivityDetected(update.peer.user_id);
                         interfaceUpdateMask |= UPDATE_MASK_STATUS;
                     }
                 }
@@ -19289,6 +19296,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     if (Math.abs(getConnectionsManager().getCurrentTime() - date) < 30) {
                         onlinePrivacy.put(userId, date);
                         LastSeenHelper.saveLastSeen(userId, date);
+                        com.radolyn.ayugram.controllers.AyuOnlineTrackerController.getInstance(currentAccount).onUserActivityDetected(userId);
                     }
                 }
             } else if (baseUpdate instanceof TL_update.TL_updateChatParticipants) {
@@ -19453,6 +19461,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     if (Math.abs(getConnectionsManager().getCurrentTime() - date) < 30) {
                         onlinePrivacy.put(encryptedChat.user_id, date);
                         LastSeenHelper.saveLastSeen(encryptedChat.user_id, date);
+                        com.radolyn.ayugram.controllers.AyuOnlineTrackerController.getInstance(currentAccount).onUserActivityDetected(encryptedChat.user_id);
                     }
                 }
             } else if (baseUpdate instanceof TL_update.TL_updateEncryptedMessagesRead) {

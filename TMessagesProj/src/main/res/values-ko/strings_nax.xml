@@ -572,4 +572,18 @@
     <string name="AyuOnlineTrackerNotificationOffline">%1$s님이 오프라인 상태입니다</string>
     <string name="AyuOnlineTrackerNotificationOfflineWithDuration">%1$s님이 오프라인으로 전환됨 (접속 시간: %2$s)</string>
     <string name="AyuOnlineTrackerNotificationApproximate">%1$s님의 상태가 다음으로 변경됨: %2$s</string>
+    <string name="AyuOnlineTrackerEventsLog">활동 기록</string>
+    <string name="AyuOnlineTrackerEventsLogDetail">기록된 온라인 및 오프라인 상태 이벤트를 확인합니다.</string>
+    <string name="AyuOnlineTrackerEventsEmpty">아직 기록된 이벤트가 없습니다</string>
+    <string name="AyuOnlineTrackerEventsEmptyDetail">온라인 및 오프라인 전환 기록이 여기에 표시됩니다.</string>
+    <string name="AyuOnlineTrackerClearEvents">활동 기록 삭제</string>
+    <string name="AyuOnlineTrackerClearEventsAlert">기록된 모든 활동 이벤트를 삭제하시겠습니까?</string>
+    <string name="AyuOnlineTrackerClear">삭제</string>
+    <string name="AyuOnlineTrackerEventsCleared">활동 기록이 삭제되었습니다.</string>
+    <string name="AyuOnlineTrackerEventOnline">온라인</string>
+    <string name="AyuOnlineTrackerEventOffline">오프라인</string>
+    <string name="AyuOnlineTrackerEventOnlineAt">%1$s에 온라인 접속</string>
+    <string name="AyuOnlineTrackerEventOfflineAt">%1$s에 오프라인 전환</string>
+    <string name="AyuOnlineTrackerEventDuration">유지 시간: %1$s</string>
+    <string name="AyuOnlineTrackerEventsCount">이벤트 %1$d개</string>
 </resources>

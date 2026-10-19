@@ -370,4 +370,18 @@
     <string name="AyuOnlineTrackerNotificationOffline">%1$s is now offline</string>
     <string name="AyuOnlineTrackerNotificationOfflineWithDuration">%1$s went offline (was online for %2$s)</string>
     <string name="AyuOnlineTrackerNotificationApproximate">%1$s status changed to: %2$s</string>
+    <string name="AyuOnlineTrackerEventsLog">Activity log</string>
+    <string name="AyuOnlineTrackerEventsLogDetail">View recorded online and offline status events.</string>
+    <string name="AyuOnlineTrackerEventsEmpty">No events recorded yet</string>
+    <string name="AyuOnlineTrackerEventsEmptyDetail">Online and offline status transitions will appear here.</string>
+    <string name="AyuOnlineTrackerClearEvents">Clear activity log</string>
+    <string name="AyuOnlineTrackerClearEventsAlert">Are you sure you want to clear all recorded activity events?</string>
+    <string name="AyuOnlineTrackerClear">Clear</string>
+    <string name="AyuOnlineTrackerEventsCleared">Activity log cleared.</string>
+    <string name="AyuOnlineTrackerEventOnline">Online</string>
+    <string name="AyuOnlineTrackerEventOffline">Offline</string>
+    <string name="AyuOnlineTrackerEventOnlineAt">Went online at %1$s</string>
+    <string name="AyuOnlineTrackerEventOfflineAt">Went offline at %1$s</string>
+    <string name="AyuOnlineTrackerEventDuration">Duration: %1$s</string>
+    <string name="AyuOnlineTrackerEventsCount">%1$d events</string>
 </resources>

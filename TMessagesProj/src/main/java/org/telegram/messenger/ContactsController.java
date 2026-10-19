@@ -2633,12 +2633,14 @@ public class ContactsController extends BaseController {
 
                             TLRPC.User user = getMessagesController().getUser(status.user_id);
                             if (user != null) {
+                                com.radolyn.ayugram.controllers.AyuOnlineTrackerController.getInstance(currentAccount).processStatusUpdate(status.user_id, status.status);
                                 user.status = status.status;
                             }
                             toDbUser.status = status.status;
                             dbUsersStatus.add(toDbUser);
                         }
                         getMessagesStorage().updateUsers(dbUsersStatus, true, true, true);
+                        com.radolyn.ayugram.controllers.AyuOnlineTrackerController.getInstance(currentAccount).onInitialContactsLoaded();
                     }
                     getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_STATUS);
                 });

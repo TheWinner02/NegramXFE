@@ -371,4 +371,18 @@
     <string name="AyuOnlineTrackerNotificationOffline">%1$s çevrim dışı oldu</string>
     <string name="AyuOnlineTrackerNotificationOfflineWithDuration">%1$s çevrim dışı oldu (%2$s çevrim içi kaldı)</string>
     <string name="AyuOnlineTrackerNotificationApproximate">%1$s durumu şuna değişti: %2$s</string>
+    <string name="AyuOnlineTrackerEventsLog">Etkinlik günlüğü</string>
+    <string name="AyuOnlineTrackerEventsLogDetail">Kaydedilen çevrim içi ve çevrim dışı durum olaylarını görüntüleyin.</string>
+    <string name="AyuOnlineTrackerEventsEmpty">Henüz kaydedilmiş bir olay yok</string>
+    <string name="AyuOnlineTrackerEventsEmptyDetail">Çevrim içi ve çevrim dışı durum geçişleri burada görünecektir.</string>
+    <string name="AyuOnlineTrackerClearEvents">Etkinlik günlüğünü temizle</string>
+    <string name="AyuOnlineTrackerClearEventsAlert">Kaydedilen tüm etkinlik olaylarını temizlemek istediğinizden emin misiniz?</string>
+    <string name="AyuOnlineTrackerClear">Temizle</string>
+    <string name="AyuOnlineTrackerEventsCleared">Etkinlik günlüğü temizlendi.</string>
+    <string name="AyuOnlineTrackerEventOnline">Çevrim içi</string>
+    <string name="AyuOnlineTrackerEventOffline">Çevrim dışı</string>
+    <string name="AyuOnlineTrackerEventOnlineAt">%1$s zamanında çevrim içi oldu</string>
+    <string name="AyuOnlineTrackerEventOfflineAt">%1$s zamanında çevrim dışı oldu</string>
+    <string name="AyuOnlineTrackerEventDuration">Süre: %1$s</string>
+    <string name="AyuOnlineTrackerEventsCount">%1$d olay</string>
 </resources>

@@ -310,4 +310,18 @@
     <string name="AyuOnlineTrackerNotificationOffline">%1$s 已下线</string>
     <string name="AyuOnlineTrackerNotificationOfflineWithDuration">%1$s 已下线（在线时长：%2$s）</string>
     <string name="AyuOnlineTrackerNotificationApproximate">%1$s 的状态变更为：%2$s</string>
+    <string name="AyuOnlineTrackerEventsLog">活动日志</string>
+    <string name="AyuOnlineTrackerEventsLogDetail">查看记录的上线与下线状态事件。</string>
+    <string name="AyuOnlineTrackerEventsEmpty">暂无记录事件</string>
+    <string name="AyuOnlineTrackerEventsEmptyDetail">上线和下线状态变更将显示在此处。</string>
+    <string name="AyuOnlineTrackerClearEvents">清空活动日志</string>
+    <string name="AyuOnlineTrackerClearEventsAlert">确定要清空所有记录的活动事件吗？</string>
+    <string name="AyuOnlineTrackerClear">清空</string>
+    <string name="AyuOnlineTrackerEventsCleared">活动日志已清空。</string>
+    <string name="AyuOnlineTrackerEventOnline">上线</string>
+    <string name="AyuOnlineTrackerEventOffline">下线</string>
+    <string name="AyuOnlineTrackerEventOnlineAt">在 %1$s 上线</string>
+    <string name="AyuOnlineTrackerEventOfflineAt">在 %1$s 下线</string>
+    <string name="AyuOnlineTrackerEventDuration">时长：%1$s</string>
+    <string name="AyuOnlineTrackerEventsCount">%1$d 个事件</string>
 </resources>

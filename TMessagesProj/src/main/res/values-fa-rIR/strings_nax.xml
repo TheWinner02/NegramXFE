@@ -375,4 +375,18 @@
     <string name="AyuOnlineTrackerNotificationOffline">%1$s آفلاین شد</string>
     <string name="AyuOnlineTrackerNotificationOfflineWithDuration">%1$s آفلاین شد (مدت آنلاین: %2$s)</string>
     <string name="AyuOnlineTrackerNotificationApproximate">وضعیت %1$s تغییر یافت به: %2$s</string>
+    <string name="AyuOnlineTrackerEventsLog">گزارش فعالیت</string>
+    <string name="AyuOnlineTrackerEventsLogDetail">مشاهده وقایع ثبت‌شده ورود و خروج از وضعیت آنلاین.</string>
+    <string name="AyuOnlineTrackerEventsEmpty">هنوز رویدادی ثبت نشده است</string>
+    <string name="AyuOnlineTrackerEventsEmptyDetail">تغییرات وضعیت آنلاین و آفلاین در اینجا نمایش داده خواهند شد.</string>
+    <string name="AyuOnlineTrackerClearEvents">پاک کردن گزارش فعالیت</string>
+    <string name="AyuOnlineTrackerClearEventsAlert">آیا مطمئن هستید که می‌خواهید تمام رویدادهای فعالیت ثبت‌شده را پاک کنید؟</string>
+    <string name="AyuOnlineTrackerClear">پاک کردن</string>
+    <string name="AyuOnlineTrackerEventsCleared">گزارش فعالیت پاک شد.</string>
+    <string name="AyuOnlineTrackerEventOnline">آنلاین</string>
+    <string name="AyuOnlineTrackerEventOffline">آفلاین</string>
+    <string name="AyuOnlineTrackerEventOnlineAt">آنلاین شد در %1$s</string>
+    <string name="AyuOnlineTrackerEventOfflineAt">آفلاین شد در %1$s</string>
+    <string name="AyuOnlineTrackerEventDuration">مدت زمان: %1$s</string>
+    <string name="AyuOnlineTrackerEventsCount">%1$d رویداد</string>
 </resources>

@@ -375,4 +375,18 @@
     <string name="AyuOnlineTrackerNotificationOffline">%1$s se ha desconectado</string>
     <string name="AyuOnlineTrackerNotificationOfflineWithDuration">%1$s se ha desconectado (estuvo en línea durante %2$s)</string>
     <string name="AyuOnlineTrackerNotificationApproximate">El estado de %1$s ha cambiado a: %2$s</string>
+    <string name="AyuOnlineTrackerEventsLog">Registro de actividad</string>
+    <string name="AyuOnlineTrackerEventsLogDetail">Ver los eventos registrados de conexión y desconexión.</string>
+    <string name="AyuOnlineTrackerEventsEmpty">Aún no hay eventos registrados</string>
+    <string name="AyuOnlineTrackerEventsEmptyDetail">Las transiciones de estado en línea y desconectado aparecerán aquí.</string>
+    <string name="AyuOnlineTrackerClearEvents">Borrar registro de actividad</string>
+    <string name="AyuOnlineTrackerClearEventsAlert">¿Seguro que deseas borrar todos los eventos registrados?</string>
+    <string name="AyuOnlineTrackerClear">Borrar</string>
+    <string name="AyuOnlineTrackerEventsCleared">Registro de actividad borrado.</string>
+    <string name="AyuOnlineTrackerEventOnline">En línea</string>
+    <string name="AyuOnlineTrackerEventOffline">Desconectado</string>
+    <string name="AyuOnlineTrackerEventOnlineAt">Se conectó a las %1$s</string>
+    <string name="AyuOnlineTrackerEventOfflineAt">Se desconectó a las %1$s</string>
+    <string name="AyuOnlineTrackerEventDuration">Duración: %1$s</string>
+    <string name="AyuOnlineTrackerEventsCount">%1$d eventos</string>
 </resources>

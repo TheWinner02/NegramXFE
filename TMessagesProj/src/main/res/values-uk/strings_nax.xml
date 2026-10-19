@@ -562,4 +562,18 @@
     <string name="AyuOnlineTrackerNotificationOffline">%1$s не в мережі</string>
     <string name="AyuOnlineTrackerNotificationOfflineWithDuration">%1$s вийшов(ла) з мережі (був(ла) онлайн %2$s)</string>
     <string name="AyuOnlineTrackerNotificationApproximate">Статус %1$s змінився на: %2$s</string>
+    <string name="AyuOnlineTrackerEventsLog">Журнал активності</string>
+    <string name="AyuOnlineTrackerEventsLogDetail">Перегляд записаних подій входу та виходу з мережі.</string>
+    <string name="AyuOnlineTrackerEventsEmpty">Подій ще немає</string>
+    <string name="AyuOnlineTrackerEventsEmptyDetail">Тут відображатимуться зміни статусу онлайн та офлайн.</string>
+    <string name="AyuOnlineTrackerClearEvents">Очистити журнал активності</string>
+    <string name="AyuOnlineTrackerClearEventsAlert">Ви впевнені, що хочете очистити всі записані події?</string>
+    <string name="AyuOnlineTrackerClear">Очистити</string>
+    <string name="AyuOnlineTrackerEventsCleared">Журнал активності очищено.</string>
+    <string name="AyuOnlineTrackerEventOnline">У мережі</string>
+    <string name="AyuOnlineTrackerEventOffline">Не в мережі</string>
+    <string name="AyuOnlineTrackerEventOnlineAt">У мережі о %1$s</string>
+    <string name="AyuOnlineTrackerEventOfflineAt">Вийшов(ла) о %1$s</string>
+    <string name="AyuOnlineTrackerEventDuration">Тривалість: %1$s</string>
+    <string name="AyuOnlineTrackerEventsCount">%1$d подій</string>
 </resources>

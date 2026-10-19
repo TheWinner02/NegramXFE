@@ -379,4 +379,18 @@
     <string name="AyuOnlineTrackerNotificationOffline">%1$s jest teraz offline</string>
     <string name="AyuOnlineTrackerNotificationOfflineWithDuration">%1$s przeszedł offline (był online przez %2$s)</string>
     <string name="AyuOnlineTrackerNotificationApproximate">Status %1$s zmienił się na: %2$s</string>
+    <string name="AyuOnlineTrackerEventsLog">Dziennik aktywności</string>
+    <string name="AyuOnlineTrackerEventsLogDetail">Przeglądaj zarejestrowane zdarzenia wejścia i wyjścia z sieci.</string>
+    <string name="AyuOnlineTrackerEventsEmpty">Brak zarejestrowanych zdarzeń</string>
+    <string name="AyuOnlineTrackerEventsEmptyDetail">Tutaj będą wyświetlane zmiany statusu online i offline.</string>
+    <string name="AyuOnlineTrackerClearEvents">Wyczyść dziennik aktywności</string>
+    <string name="AyuOnlineTrackerClearEventsAlert">Czy na pewno chcesz wyczyścić wszystkie zarejestrowane zdarzenia aktywności?</string>
+    <string name="AyuOnlineTrackerClear">Wyczyść</string>
+    <string name="AyuOnlineTrackerEventsCleared">Dziennik aktywności wyczyszczony.</string>
+    <string name="AyuOnlineTrackerEventOnline">Online</string>
+    <string name="AyuOnlineTrackerEventOffline">Offline</string>
+    <string name="AyuOnlineTrackerEventOnlineAt">Online o %1$s</string>
+    <string name="AyuOnlineTrackerEventOfflineAt">Offline o %1$s</string>
+    <string name="AyuOnlineTrackerEventDuration">Czas trwania: %1$s</string>
+    <string name="AyuOnlineTrackerEventsCount">%1$d zdarzeń</string>
 </resources>

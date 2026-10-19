@@ -376,4 +376,18 @@
     <string name="AyuOnlineTrackerNotificationOffline">%1$s sekarang offline</string>
     <string name="AyuOnlineTrackerNotificationOfflineWithDuration">%1$s offline (online selama %2$s)</string>
     <string name="AyuOnlineTrackerNotificationApproximate">Status %1$s berubah menjadi: %2$s</string>
+    <string name="AyuOnlineTrackerEventsLog">Log aktivitas</string>
+    <string name="AyuOnlineTrackerEventsLogDetail">Lihat rekaman peristiwa status online dan offline.</string>
+    <string name="AyuOnlineTrackerEventsEmpty">Belum ada peristiwa yang dicatat</string>
+    <string name="AyuOnlineTrackerEventsEmptyDetail">Perubahan status online dan offline akan muncul di sini.</string>
+    <string name="AyuOnlineTrackerClearEvents">Hapus log aktivitas</string>
+    <string name="AyuOnlineTrackerClearEventsAlert">Apakah Anda yakin ingin menghapus semua rekaman peristiwa aktivitas?</string>
+    <string name="AyuOnlineTrackerClear">Hapus</string>
+    <string name="AyuOnlineTrackerEventsCleared">Log aktivitas dibersihkan.</string>
+    <string name="AyuOnlineTrackerEventOnline">Online</string>
+    <string name="AyuOnlineTrackerEventOffline">Offline</string>
+    <string name="AyuOnlineTrackerEventOnlineAt">Online pada %1$s</string>
+    <string name="AyuOnlineTrackerEventOfflineAt">Offline pada %1$s</string>
+    <string name="AyuOnlineTrackerEventDuration">Durasi: %1$s</string>
+    <string name="AyuOnlineTrackerEventsCount">%1$d peristiwa</string>
 </resources>
