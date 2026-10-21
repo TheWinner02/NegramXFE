@@ -586,4 +586,5 @@
     <string name="AyuOnlineTrackerEventOfflineAt">%1$s에 오프라인 전환</string>
     <string name="AyuOnlineTrackerEventDuration">유지 시간: %1$s</string>
     <string name="AyuOnlineTrackerEventsCount">이벤트 %1$d개</string>
+    <string name="AyuOnlineTrackerEventsCount_other">이벤트 %1$d개</string>
 </resources>

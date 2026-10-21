@@ -324,4 +324,5 @@
     <string name="AyuOnlineTrackerEventOfflineAt">在 %1$s 下线</string>
     <string name="AyuOnlineTrackerEventDuration">时长：%1$s</string>
     <string name="AyuOnlineTrackerEventsCount">%1$d 个事件</string>
+    <string name="AyuOnlineTrackerEventsCount_other">%1$d 个事件</string>
 </resources>

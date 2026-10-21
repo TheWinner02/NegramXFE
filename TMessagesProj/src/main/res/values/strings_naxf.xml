@@ -384,4 +384,6 @@
     <string name="AyuOnlineTrackerEventOfflineAt">Went offline at %1$s</string>
     <string name="AyuOnlineTrackerEventDuration">Duration: %1$s</string>
     <string name="AyuOnlineTrackerEventsCount">%1$d events</string>
+    <string name="AyuOnlineTrackerEventsCount_one">%1$d event</string>
+    <string name="AyuOnlineTrackerEventsCount_other">%1$d events</string>
 </resources>

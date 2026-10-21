@@ -390,4 +390,5 @@
     <string name="AyuOnlineTrackerEventOfflineAt">Offline pada %1$s</string>
     <string name="AyuOnlineTrackerEventDuration">Durasi: %1$s</string>
     <string name="AyuOnlineTrackerEventsCount">%1$d peristiwa</string>
+    <string name="AyuOnlineTrackerEventsCount_other">%1$d peristiwa</string>
 </resources>

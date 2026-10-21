@@ -362,4 +362,5 @@
     <string name="AyuOnlineTrackerEventOfflineAt">Ngoại tuyến lúc %1$s</string>
     <string name="AyuOnlineTrackerEventDuration">Thời gian: %1$s</string>
     <string name="AyuOnlineTrackerEventsCount">%1$d sự kiện</string>
+    <string name="AyuOnlineTrackerEventsCount_other">%1$d sự kiện</string>
 </resources>

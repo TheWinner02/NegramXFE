@@ -393,4 +393,8 @@
     <string name="AyuOnlineTrackerEventOfflineAt">Вийшов(ла) о %1$s</string>
     <string name="AyuOnlineTrackerEventDuration">Тривалість: %1$s</string>
     <string name="AyuOnlineTrackerEventsCount">%1$d подій</string>
+    <string name="AyuOnlineTrackerEventsCount_one">%1$d подія</string>
+    <string name="AyuOnlineTrackerEventsCount_few">%1$d події</string>
+    <string name="AyuOnlineTrackerEventsCount_many">%1$d подій</string>
+    <string name="AyuOnlineTrackerEventsCount_other">%1$d подій</string>
 </resources>

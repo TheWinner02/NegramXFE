@@ -352,4 +352,8 @@
     <string name="AyuOnlineTrackerEventOfflineAt">Вышел(ла) в %1$s</string>
     <string name="AyuOnlineTrackerEventDuration">Длительность: %1$s</string>
     <string name="AyuOnlineTrackerEventsCount">%1$d событий</string>
+    <string name="AyuOnlineTrackerEventsCount_one">%1$d событие</string>
+    <string name="AyuOnlineTrackerEventsCount_few">%1$d события</string>
+    <string name="AyuOnlineTrackerEventsCount_many">%1$d событий</string>
+    <string name="AyuOnlineTrackerEventsCount_other">%1$d событий</string>
 </resources>

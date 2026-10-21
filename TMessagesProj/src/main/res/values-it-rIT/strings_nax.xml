@@ -398,4 +398,6 @@ Non possiamo aiutarti in questo caso; se hai problemi di accesso, contatta il Su
     <string name="AyuOnlineTrackerEventOfflineAt">Uscito alle %1$s</string>
     <string name="AyuOnlineTrackerEventDuration">Durata: %1$s</string>
     <string name="AyuOnlineTrackerEventsCount">%1$d eventi</string>
+    <string name="AyuOnlineTrackerEventsCount_one">%1$d evento</string>
+    <string name="AyuOnlineTrackerEventsCount_other">%1$d eventi</string>
 </resources>

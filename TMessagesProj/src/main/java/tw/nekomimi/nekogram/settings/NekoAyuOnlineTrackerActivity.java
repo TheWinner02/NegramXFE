@@ -724,7 +724,13 @@ public class NekoAyuOnlineTrackerActivity extends BaseFragment implements Notifi
                     if (position == eventsLogRow) {
                         textCell.setColors(Theme.key_windowBackgroundWhiteBlueIcon, Theme.key_windowBackgroundWhiteBlackText);
                         int count = controller.getEventsDb().getEventsCount();
-                        String countStr = count > 0 ? LocaleController.formatPluralString("AyuOnlineTrackerEventsCount", count) : null;
+                        String countStr = null;
+                        if (count > 0) {
+                            countStr = LocaleController.formatPluralString("AyuOnlineTrackerEventsCount", count);
+                            if (countStr != null && countStr.startsWith("LOC_ERR")) {
+                                countStr = LocaleController.formatString("AyuOnlineTrackerEventsCount", R.string.AyuOnlineTrackerEventsCount, count);
+                            }
+                        }
                         textCell.setTextAndValueAndIcon(LocaleController.getString("AyuOnlineTrackerEventsLog", R.string.AyuOnlineTrackerEventsLog), countStr, R.drawable.msg_calendar2_solar, false);
                     } else {
                         textCell.setColors(Theme.key_windowBackgroundWhiteBlueIcon, Theme.key_windowBackgroundWhiteBlueButton);

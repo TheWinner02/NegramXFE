@@ -354,4 +354,5 @@
     <string name="AyuOnlineTrackerEventOfflineAt">%1$s にオフライン</string>
     <string name="AyuOnlineTrackerEventDuration">滞在時間: %1$s</string>
     <string name="AyuOnlineTrackerEventsCount">%1$d 件のイベント</string>
+    <string name="AyuOnlineTrackerEventsCount_other">%1$d 件のイベント</string>
 </resources>

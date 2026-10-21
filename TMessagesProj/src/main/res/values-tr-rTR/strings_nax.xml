@@ -385,4 +385,6 @@
     <string name="AyuOnlineTrackerEventOfflineAt">%1$s zamanında çevrim dışı oldu</string>
     <string name="AyuOnlineTrackerEventDuration">Süre: %1$s</string>
     <string name="AyuOnlineTrackerEventsCount">%1$d olay</string>
+    <string name="AyuOnlineTrackerEventsCount_one">%1$d olay</string>
+    <string name="AyuOnlineTrackerEventsCount_other">%1$d olay</string>
 </resources>
