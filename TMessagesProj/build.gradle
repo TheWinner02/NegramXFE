@@ -72,6 +72,10 @@ if (nativeTarget == 'SKIP') {
 android {
     defaultConfig.applicationId = APP_PACKAGE
 
+    androidResources {
+        noCompress += "pack"
+    }
+
     packaging {
         jniLibs {
             useLegacyPackaging = true
