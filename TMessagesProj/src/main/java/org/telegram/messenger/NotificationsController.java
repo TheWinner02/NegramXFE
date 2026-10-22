@@ -6326,7 +6326,7 @@ public class NotificationsController extends BaseController implements Notificat
         return dialogsNotificationsFacade;
     }
 
-    private int getNotificationIconResId() {
+    public static int getNotificationIconResId() {
         int notificationIconConfigValue = NaConfig.INSTANCE.getNotificationIcon().Int();
         switch (notificationIconConfigValue) {
             case 0:

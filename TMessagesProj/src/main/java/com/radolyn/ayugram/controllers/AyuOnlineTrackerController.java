@@ -530,10 +530,23 @@ public class AyuOnlineTrackerController extends BaseController {
                     NotificationCompat.Builder builder = new NotificationCompat.Builder(ApplicationLoader.applicationContext, channelId != null ? channelId : "Other")
                         .setContentTitle(userName)
                         .setContentText(text)
-                        .setSmallIcon(R.drawable.notification)
+                        .setSmallIcon(NotificationsController.getNotificationIconResId())
+                        .setColor(tw.nekomimi.nekogram.NekoXConfig.getNotificationColor())
                         .setAutoCancel(true)
                         .setPriority(NotificationCompat.PRIORITY_HIGH)
                         .setContentIntent(contentIntent);
+
+                    try {
+                        if (user.photo != null && user.photo.photo_small != null) {
+                            java.io.File file = getFileLoader().getPathToAttach(user.photo.photo_small, true);
+                            if (file != null && file.exists()) {
+                                android.graphics.Bitmap avatarBitmap = android.graphics.BitmapFactory.decodeFile(file.getAbsolutePath());
+                                if (avatarBitmap != null) {
+                                    builder.setLargeIcon(avatarBitmap);
+                                }
+                            }
+                        }
+                    } catch (Throwable ignored) {}
 
                     nm.notify("ayutracker", (int) (user.id & 0x7FFFFFFF), builder.build());
                 }
