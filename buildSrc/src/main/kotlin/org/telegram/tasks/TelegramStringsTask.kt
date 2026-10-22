@@ -491,7 +491,13 @@ abstract class TelegramStringsTask : DefaultTask() {
         if (regionIndex != -1) {
             val language = qualifier.substring(0, regionIndex)
             val region = qualifier.substring(regionIndex + 2)
-            return "$language-$region"
+            if (language == "zh" || (language == "pt" && region.equals("PT", ignoreCase = true))) {
+                return "$language-$region"
+            }
+            if (language == "pt") {
+                return "pt-BR"
+            }
+            return language
         }
 
         return qualifier

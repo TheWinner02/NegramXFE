@@ -86,6 +86,9 @@ abstract class GenerateLocalizationUtilsJavaTask : DefaultTask() {
                 java.appendLine("        final String language = locale.getLanguage();")
                 java.appendLine()
                 java.appendLine("        switch (language) {")
+        java.appendLine("            case \"id\": return \"localization_in.bin\";")
+        java.appendLine("            case \"pt\": return \"localization_pt_br.bin\";")
+        java.appendLine("            case \"zh\": return \"localization_zh_cn.bin\";")
 
                 for (tag in languageTags) {
                     if (!tag.contains('-')) {
@@ -148,7 +151,13 @@ abstract class GenerateLocalizationUtilsJavaTask : DefaultTask() {
             val language = qualifier.substring(0, regionIndex)
             val region = qualifier.substring(regionIndex + 2)
 
-            return "$language-$region"
+            if (language == "zh" || (language == "pt" && region.equals("PT", ignoreCase = true))) {
+                return "$language-$region"
+            }
+            if (language == "pt") {
+                return "pt-BR"
+            }
+            return language
         }
 
         return qualifier
