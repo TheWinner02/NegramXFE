@@ -26,6 +26,7 @@ public class NativeCrashHandler {
         }
         try {
             initNative(path);
+        } catch (UnsatisfiedLinkError ignored) {
         } catch (Throwable t) {
             FileLog.e(t);
         }

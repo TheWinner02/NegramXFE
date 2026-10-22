@@ -13,7 +13,8 @@ import org.telegram.tasks.TelegramStringsTask
 
 class TelegramBuildAppPlugin : Plugin<Project> {
     override fun apply(project: Project) {
-        val telegramModule = project.project(":TMessagesProj")
+        val telegramModule = project.rootProject.findProject(":TMessagesProj") ?: project
+        val isDifferentModule = telegramModule != project
         val androidComponents =
             project.extensions.findByType(AndroidComponentsExtension::class.java)
                 ?: error("Apply com.android.application/library before org.telegram.build-app-plugin")
@@ -24,23 +25,37 @@ class TelegramBuildAppPlugin : Plugin<Project> {
             val task = project.tasks.register<TelegramStringsTask>(
                 "generate${suffix}TelegramStrings"
             ) {
-                stringsXml.from(
-                    telegramModule.fileTree("src/main/res/values") {
-                        include("strings.xml")
-                    },
-                    project.fileTree("src/main/res/values") {
-                        include("strings.xml")
-                    }
-                )
+                if (isDifferentModule) {
+                    stringsXml.from(
+                        telegramModule.fileTree("src/main/res/values") {
+                            include("strings.xml")
+                        },
+                        project.fileTree("src/main/res/values") {
+                            include("strings.xml")
+                        }
+                    )
 
-                localizationFiles.from(
-                    telegramModule.fileTree("src/main/res") {
-                        include("values-*/strings.xml")
-                    },
-                    project.fileTree("src/main/res") {
-                        include("values-*/strings.xml")
-                    }
-                )
+                    localizationFiles.from(
+                        telegramModule.fileTree("src/main/res") {
+                            include("values-*/strings.xml")
+                        },
+                        project.fileTree("src/main/res") {
+                            include("values-*/strings.xml")
+                        }
+                    )
+                } else {
+                    stringsXml.from(
+                        project.fileTree("src/main/res/values") {
+                            include("strings.xml")
+                        }
+                    )
+
+                    localizationFiles.from(
+                        project.fileTree("src/main/res") {
+                            include("values-*/strings.xml")
+                        }
+                    )
+                }
 
                 stringsOutputDir.set(
                     project.layout.buildDirectory.dir(
@@ -113,14 +128,22 @@ class TelegramBuildAppPlugin : Plugin<Project> {
             val lottieTask = project.tasks.register<GenerateLottieMetadataAssetFileTask>("generate${suffix}LottieMeta") {
                 runtimeSymbolList.set(variant.artifacts.get(SingleArtifact.RUNTIME_SYMBOL_LIST))
                 variant.sources.res?.all?.let { layers ->
-                    rawResourceDirs.from(
-                        telegramModule.fileTree("src/main/res") {
-                            include("raw*/*.json")
-                        },
-                        project.fileTree("src/main/res") {
-                            include("raw*/*.json")
-                        }
-                    )
+                    if (isDifferentModule) {
+                        rawResourceDirs.from(
+                            telegramModule.fileTree("src/main/res") {
+                                include("raw*/*.json")
+                            },
+                            project.fileTree("src/main/res") {
+                                include("raw*/*.json")
+                            }
+                        )
+                    } else {
+                        rawResourceDirs.from(
+                            project.fileTree("src/main/res") {
+                                include("raw*/*.json")
+                            }
+                        )
+                    }
                 }
             }
 
