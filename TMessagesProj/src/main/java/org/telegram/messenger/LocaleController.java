@@ -4574,7 +4574,36 @@ public class LocaleController {
             return value;
         }
 
-        return localizationInternal.getByResName(fallback);
+        value = localizationInternal.getByResName(fallback);
+        if (value != null) {
+            return value;
+        }
+
+        if (context != null) {
+            if (stringRes != 0) {
+                try {
+                    return context.getString(stringRes);
+                } catch (Exception ignored) {}
+            }
+            if (key != null) {
+                try {
+                    int id = context.getResources().getIdentifier(key, "string", context.getPackageName());
+                    if (id != 0) {
+                        return context.getString(id);
+                    }
+                } catch (Exception ignored) {}
+            }
+            if (fallback != null) {
+                try {
+                    int id = context.getResources().getIdentifier(fallback, "string", context.getPackageName());
+                    if (id != 0) {
+                        return context.getString(id);
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+
+        return null;
     }
 
 
