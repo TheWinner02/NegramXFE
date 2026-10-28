@@ -12,7 +12,13 @@ import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.view.inputmethod.InputMethodSubtype;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import tw.nekomimi.nekogram.NekoConfig;
+import tw.nekomimi.nekogram.translate.Translator;
+import tw.nekomimi.nekogram.translate.TranslatorKt;
+import xyz.nextalone.nagram.NaConfig;
 
 //import com.google.mlkit.common.model.RemoteModelManager;
 //import com.google.mlkit.common.sdkinternal.MlKitContext;
@@ -92,7 +98,7 @@ public class TranslateController extends BaseController {
     }
 
     public boolean isFeatureAvailable() {
-        return isChatTranslateEnabled() && UserConfig.getInstance(currentAccount).isPremium();
+        return isChatTranslateEnabled() && (UserConfig.getInstance(currentAccount).isRealPremium() || (NaConfig.INSTANCE.getTelegramUIAutoTranslate().Bool() && NekoConfig.translationProvider.Int() != Translator.providerTelegram));
     }
 
     public boolean isFeatureAvailable(long dialogId) {
@@ -101,7 +107,8 @@ public class TranslateController extends BaseController {
         }
         final TLRPC.Chat chat = getMessagesController().getChat(-dialogId);
         return (
-            UserConfig.getInstance(currentAccount).isPremium() ||
+            UserConfig.getInstance(currentAccount).isRealPremium() ||
+            (NaConfig.INSTANCE.getTelegramUIAutoTranslate().Bool() && NekoConfig.translationProvider.Int() != Translator.providerTelegram) ||
             chat != null && chat.autotranslation
         );
     }
@@ -110,6 +117,9 @@ public class TranslateController extends BaseController {
     private Boolean contextTranslateEnabled;
 
     public boolean isChatTranslateEnabled() {
+        if (NaConfig.INSTANCE.getTelegramUIAutoTranslate().Bool()) {
+            return true;
+        }
         if (!getMessagesController().isTranslationsAutoEnabled()) {
             return false;
         }
@@ -205,13 +215,15 @@ public class TranslateController extends BaseController {
         if (hideTranslateDialogs.contains(dialogId)) {
             return true;
         }
-        TLRPC.ChatFull chatFull = getMessagesController().getChatFull(-dialogId);
-        if (chatFull != null) {
-            return chatFull.translations_disabled;
-        }
-        TLRPC.UserFull userFull = getMessagesController().getUserFull(dialogId);
-        if (userFull != null) {
-            return userFull.translations_disabled;
+        if (UserConfig.getInstance(currentAccount).isRealPremium()) {
+            TLRPC.ChatFull chatFull = getMessagesController().getChatFull(-dialogId);
+            if (chatFull != null) {
+                return chatFull.translations_disabled;
+            }
+            TLRPC.UserFull userFull = getMessagesController().getUserFull(dialogId);
+            if (userFull != null) {
+                return userFull.translations_disabled;
+            }
         }
         return false;
     }
@@ -267,7 +279,10 @@ public class TranslateController extends BaseController {
     public String getDialogTranslateTo(long dialogId) {
         String lang = translateDialogLanguage.get(dialogId);
         if (lang == null) {
-            lang = TranslateAlert2.getToLanguage();
+            lang = NekoConfig.translateToLang.String();
+            if (TextUtils.isEmpty(lang)) {
+                lang = TranslateAlert2.getToLanguage();
+            }
             if (lang == null || lang.equals(getDialogDetectedLanguage(dialogId))) {
                 lang = currentLanguage();
             }
@@ -355,18 +370,20 @@ public class TranslateController extends BaseController {
     }
 
     public void setHideTranslateDialog(long dialogId, boolean hide, boolean doNotNotify, boolean minimize) {
-        TLRPC.TL_messages_togglePeerTranslations req = new TLRPC.TL_messages_togglePeerTranslations();
-        req.peer = getMessagesController().getInputPeer(dialogId);
-        req.disabled = hide;
-        getConnectionsManager().sendRequest(req, null);
+        if (UserConfig.getInstance(currentAccount).isRealPremium()) {
+            TLRPC.TL_messages_togglePeerTranslations req = new TLRPC.TL_messages_togglePeerTranslations();
+            req.peer = getMessagesController().getInputPeer(dialogId);
+            req.disabled = hide;
+            getConnectionsManager().sendRequest(req, null);
+        }
 
         TLRPC.ChatFull chatFull = getMessagesController().getChatFull(-dialogId);
-        if (chatFull != null) {
+        if (chatFull != null && UserConfig.getInstance(currentAccount).isRealPremium()) {
             chatFull.translations_disabled = hide;
             getMessagesStorage().updateChatInfo(chatFull, true);
         }
         TLRPC.UserFull userFull = getMessagesController().getUserFull(dialogId);
-        if (userFull != null) {
+        if (userFull != null && UserConfig.getInstance(currentAccount).isRealPremium()) {
             userFull.translations_disabled = hide;
             getMessagesStorage().updateUserInfo(userFull, true);
         }
@@ -974,6 +991,7 @@ public class TranslateController extends BaseController {
 
     private final Set<Integer> loadingTranslations = new HashSet<>();
     private final Set<Integer> loadingTranscriptionTranslations = new HashSet<>();
+    private final Set<Integer> loadingNonPremiumTranslations = new HashSet<>();
     private final HashMap<Long, ArrayList<PendingTranslation>> pendingTranslations = new HashMap<>();
     private final HashMap<Long, ArrayList<PendingTranslation>> pendingTranscriptionsTranslations = new HashMap<>();
 
@@ -1053,6 +1071,32 @@ public class TranslateController extends BaseController {
         } else {
             source.text = message.messageOwner.message;
             source.entities = message.messageOwner.entities;
+        }
+
+        if (!isTranscription && NekoConfig.translationProvider.Int() != Translator.providerTelegram) {
+            synchronized (this) {
+                loadingNonPremiumTranslations.add(message.getId());
+            }
+
+            ArrayList<TLRPC.MessageEntity> entities = message.messageOwner.entities != null ? message.messageOwner.entities : new ArrayList<>();
+            Translator.translate(TranslatorKt.getCode2Locale(language), message.messageOwner.message, entities, new Translator.Companion.TranslateCallBack2() {
+                @Override
+                public void onSuccess(@NonNull TLRPC.TL_textWithEntities textObj) {
+                    synchronized (TranslateController.this) {
+                        loadingNonPremiumTranslations.remove(message.getId());
+                    }
+                    callback.run(false, message.getId(), textObj, language);
+                }
+
+                @Override
+                public void onFailed(boolean unsupported, @NonNull String error) {
+                    synchronized (TranslateController.this) {
+                        loadingNonPremiumTranslations.remove(message.getId());
+                    }
+                    callback.run(false, message.getId(), null, language);
+                }
+            });
+            return;
         }
 
         PendingTranslation pendingTranslation;
@@ -1367,6 +1411,20 @@ public class TranslateController extends BaseController {
             }
             final TLRPC.TL_messageMediaPoll mediaPoll = (TLRPC.TL_messageMediaPoll) media;
             final PollText pollText = PollText.fromPoll(mediaPoll);
+            if (NekoConfig.translationProvider.Int() != Translator.providerTelegram) {
+                Translator.translatePoll(TranslatorKt.getCode2Locale(language), pollText, new Translator.Companion.TranslateCallBack3() {
+                    @Override
+                    public void onSuccess(@NonNull PollText poll) {
+                        callback.run(message.getId(), poll, language);
+                    }
+
+                    @Override
+                    public void onFailed(boolean unsupported, @NonNull String error) {
+                        callback.run(message.getId(), null, language);
+                    }
+                });
+                return;
+            }
             final PollText translatedText = message.messageOwner.translatedPoll;
             final int messageSymbolsCount = pollText.length();
 
@@ -1607,18 +1665,22 @@ public class TranslateController extends BaseController {
     }
 
     public boolean isTranslating(MessageObject messageObject) {
-        if (messageObject != null && messageObject.messageOwner != null && messageObject.messageOwner.summarizedOpen)
+        if (messageObject != null && messageObject.messageOwner != null && messageOwnerIsSummarized(messageObject))
             return loadingSummarizations.contains(Objects.hash(messageObject.getDialogId(), messageObject.getId(), isTranslatingDialog(messageObject.getDialogId()) ? 1 : 0));
         synchronized (this) {
             return (
                 messageObject != null &&
                 messageObject.messageOwner != null &&
-                (messageObject.messageOwner.voiceTranscriptionOpen && messageObject.messageOwner.voiceTranscriptionFinal ?
+                ((messageObject.messageOwner.voiceTranscriptionOpen && messageObject.messageOwner.voiceTranscriptionFinal ?
                     loadingTranscriptionTranslations : loadingTranslations
-                ).contains(messageObject.getId()) &&
+                ).contains(messageObject.getId()) || loadingNonPremiumTranslations.contains(messageObject.getId())) &&
                 isTranslatingDialog(messageObject.getDialogId())
             );
         }
+    }
+
+    private static boolean messageOwnerIsSummarized(MessageObject messageObject) {
+        return messageObject.messageOwner.summarizedOpen;
     }
 
     public boolean isTranslating(MessageObject messageObject, MessageObject.GroupedMessages group) {
@@ -1630,12 +1692,13 @@ public class TranslateController extends BaseController {
         }
         final boolean isTranscription = messageObject.messageOwner != null && messageObject.messageOwner.voiceTranscriptionOpen && messageObject.messageOwner.voiceTranscriptionFinal;
         synchronized (this) {
-            if ((isTranscription ? loadingTranscriptionTranslations : loadingTranslations).contains(messageObject.getId())) {
+            Set<Integer> currentLoading = isTranscription ? loadingTranscriptionTranslations : loadingTranslations;
+            if (currentLoading.contains(messageObject.getId()) || loadingNonPremiumTranslations.contains(messageObject.getId())) {
                 return true;
             }
             if (group != null) {
                 for (MessageObject message : group.messages) {
-                    if ((isTranscription ? loadingTranscriptionTranslations : loadingTranslations).contains(message.getId())) {
+                    if (currentLoading.contains(message.getId()) || loadingNonPremiumTranslations.contains(message.getId())) {
                         return true;
                     }
                 }
@@ -1646,6 +1709,7 @@ public class TranslateController extends BaseController {
 
     public void cancelAllTranslations() {
         synchronized (this) {
+            loadingNonPremiumTranslations.clear();
             for (ArrayList<PendingTranslation> translations : pendingTranslations.values()) {
                 if (translations != null) {
                     for (PendingTranslation pendingTranslation : translations) {
@@ -1703,6 +1767,7 @@ public class TranslateController extends BaseController {
 
     public void cancelTranslations(long dialogId) {
         synchronized (this) {
+            loadingNonPremiumTranslations.clear();
             ArrayList<PendingTranslation> translations = pendingTranslations.get(dialogId);
             if (translations != null) {
                 for (PendingTranslation pendingTranslation : translations) {

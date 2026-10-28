@@ -580,6 +580,14 @@ public class UserConfig extends BaseController {
         return user.premium;
     }
 
+    public boolean isRealPremium() {
+        TLRPC.User user = currentUser;
+        if (user == null) {
+            return false;
+        }
+        return user.premium;
+    }
+
     public boolean isPremiumOrLocal() {
         TLRPC.User user = currentUser;
         if (user == null) {

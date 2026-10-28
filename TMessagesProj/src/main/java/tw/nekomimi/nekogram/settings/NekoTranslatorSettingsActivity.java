@@ -40,6 +40,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.BotWebViewVibrationEffect;
+import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
@@ -414,6 +416,15 @@ public class NekoTranslatorSettingsActivity extends BaseNekoXSettingsActivity {
             } else if (key.equals(NaConfig.INSTANCE.getLlmUseContext().getKey())) {
                 checkContextRows();
                 checkTemperatureRows();
+            } else if (key.equals(NaConfig.INSTANCE.getTelegramUIAutoTranslate().getKey())) {
+                boolean enabled = (boolean) newValue;
+                for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                    if (UserConfig.getInstance(a).isClientActivated()) {
+                        MessagesController.getInstance(a).getTranslateController().setChatTranslateEnabled(enabled);
+                    }
+                }
+                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.updateSearchSettings);
+                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.reloadInterface);
             }
         };
 
