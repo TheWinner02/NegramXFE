@@ -42,7 +42,7 @@ public class BlurredRecyclerView extends RecyclerListView {
         if (getLayoutParams() == null) {
             return;
         }
-        if (SharedConfig.chatBlurEnabled()) {
+        if (SharedConfig.chatBlurEnabled() && !xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             blurTopPadding = measureBlurTopPadding();
             ((MarginLayoutParams) getLayoutParams()).topMargin = -blurTopPadding;
         } else {
@@ -82,7 +82,7 @@ public class BlurredRecyclerView extends RecyclerListView {
 
     @Override
     public boolean drawChild(Canvas canvas, View child, long drawingTime) {
-        if ((child.getY() + child.getMeasuredHeight() < blurTopPadding) && !alwaysDrawChild && !hasActiveEdgeEffects()) {
+        if (blurTopPadding != 0 && (child.getY() + child.getMeasuredHeight() < blurTopPadding) && !alwaysDrawChild && !hasActiveEdgeEffects()) {
             return true;
         }
         return super.drawChild(canvas, child, drawingTime);

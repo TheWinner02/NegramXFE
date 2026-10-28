@@ -55,6 +55,7 @@ import android.widget.ImageView;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.annotation.NonNull;
 import androidx.core.graphics.ColorUtils;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -1567,28 +1568,35 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     }
 
     public void updateM3TitleTransform() {
-        if (!m3LargeFlexible || titleTextView[0] == null) return;
+        if (!m3LargeFlexible) return;
         float p = m3CollapseProgress;
 
         float targetScale = 20.0f / 32.0f;
         float scale = AndroidUtilities.lerp(1.0f, targetScale, p);
-        titleTextView[0].setPivotX(0f);
-        titleTextView[0].setPivotY(0f);
-        titleTextView[0].setScaleX(scale);
-        titleTextView[0].setScaleY(scale);
 
         int additionalTop = occupyStatusBar ? AndroidUtilities.statusBarHeight : 0;
         int collapsedX = backButtonImageView != null && backButtonImageView.getVisibility() != GONE ? dp(AndroidUtilities.isTablet() ? 80 : 72) : dp(AndroidUtilities.isTablet() ? 26 : 24);
-        int textH = titleTextView[0].getTextHeight() > 0 ? titleTextView[0].getTextHeight() : dp(38);
         int collapsedY = additionalTop + (getCurrentActionBarHeight() - dp(24)) / 2;
         int expandedX = dp(24);
-        int expandedY = additionalTop + getCurrentActionBarHeight() + m3ExpandedExtraHeight - dp(24) - textH;
 
-        float transX = AndroidUtilities.lerp((float) (expandedX - collapsedX), 0f, p);
-        float transY = AndroidUtilities.lerp((float) (expandedY - collapsedY), 0f, p);
-        titleTextView[0].setTranslationX(transX);
-        titleTextView[0].setTranslationY(transY);
-        titleTextView[0].setAlpha(1.0f);
+        for (int i = 0; i < 2; i++) {
+            if (titleTextView[i] == null) continue;
+            titleTextView[i].setPivotX(0f);
+            titleTextView[i].setPivotY(0f);
+            titleTextView[i].setScaleX(scale);
+            titleTextView[i].setScaleY(scale);
+
+            int textH = titleTextView[i].getTextHeight() > 0 ? titleTextView[i].getTextHeight() : dp(38);
+            int expandedY = additionalTop + getCurrentActionBarHeight() + m3ExpandedExtraHeight - dp(24) - textH;
+
+            float transX = AndroidUtilities.lerp((float) (expandedX - collapsedX), 0f, p);
+            float transY = AndroidUtilities.lerp((float) (expandedY - collapsedY), 0f, p);
+            titleTextView[i].setTranslationX(transX);
+            titleTextView[i].setTranslationY(transY);
+            if (i == 0) {
+                titleTextView[i].setAlpha(1.0f);
+            }
+        }
     }
 
     public void closeSearchField() {
@@ -3247,24 +3255,45 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     public void setAdaptiveBackground(RecyclerView list, boolean hideTitle, final int topColorKey, final int lowerColorKey) {
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             setM3LargeFlexible(true);
+            int statusBar = occupyStatusBar ? AndroidUtilities.statusBarHeight : 0;
+            int targetPaddingTop = statusBar + getCurrentActionBarHeight() + getM3ExpandedExtraHeight();
+            if (list.getPaddingTop() < targetPaddingTop) {
+                list.setPadding(list.getPaddingLeft(), targetPaddingTop, list.getPaddingRight(), list.getPaddingBottom());
+                list.setClipToPadding(false);
+            }
             if (m3AdaptiveBackgroundList == list) {
                 setM3CollapseProgress(list.canScrollVertically(-1) ? 1.0f : 0.0f);
                 return;
             }
             m3AdaptiveBackgroundList = list;
-            final int[] m3ScrollOffset = new int[]{0};
             list.addOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
                 public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                     if (!m3LargeFlexible) return;
                     int maxScroll = getM3ExpandedExtraHeight();
-                    if (!recyclerView.canScrollVertically(-1)) {
-                        m3ScrollOffset[0] = 0;
-                    } else {
-                        m3ScrollOffset[0] = Math.max(0, Math.min(maxScroll, m3ScrollOffset[0] + dy));
+                    RecyclerView.LayoutManager lm = recyclerView.getLayoutManager();
+                    if (lm instanceof LinearLayoutManager) {
+                        LinearLayoutManager llm = (LinearLayoutManager) lm;
+                        int firstPos = llm.findFirstVisibleItemPosition();
+                        if (firstPos == 0) {
+                            View firstChild = llm.findViewByPosition(0);
+                            if (firstChild != null) {
+                                int atRest = recyclerView.getPaddingTop();
+                                int scrolled = atRest - firstChild.getTop();
+                                float progress = Math.max(0.0f, Math.min(1.0f, (float) scrolled / (float) maxScroll));
+                                setM3CollapseProgress(progress);
+                                return;
+                            }
+                        } else if (firstPos > 0) {
+                            setM3CollapseProgress(1.0f);
+                            return;
+                        }
                     }
-                    float progress = maxScroll > 0 ? (float) m3ScrollOffset[0] / (float) maxScroll : 1.0f;
-                    setM3CollapseProgress(progress);
+                    if (!recyclerView.canScrollVertically(-1)) {
+                        setM3CollapseProgress(0.0f);
+                    } else {
+                        setM3CollapseProgress(1.0f);
+                    }
                 }
             });
             setM3CollapseProgress(list.canScrollVertically(-1) ? 1.0f : 0.0f);

@@ -207,16 +207,29 @@ public class NekoAyuOnlineTrackerEventsActivity extends BaseFragment implements 
         if (UIStyleEngine.isMaterial3Expressive()) {
             actionBar.setTitle(LocaleController.getString("AyuOnlineTrackerEventsLog", R.string.AyuOnlineTrackerEventsLog));
             actionBar.setM3LargeFlexible(true);
-            m3ScrollOffset = 0;
             listView.setPadding(0, getM3HeaderTopPadding(), 0, AndroidUtilities.dp(80));
             listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
                 public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                     if (actionBar != null && actionBar.isM3LargeFlexible()) {
                         int maxScroll = actionBar.getM3ExpandedExtraHeight();
-                        m3ScrollOffset = Math.max(0, Math.min(maxScroll, m3ScrollOffset + dy));
-                        float progress = maxScroll > 0 ? (float) m3ScrollOffset / (float) maxScroll : 1.0f;
-                        actionBar.setM3CollapseProgress(progress);
+                        RecyclerView.LayoutManager lm = recyclerView.getLayoutManager();
+                        if (lm instanceof LinearLayoutManager) {
+                            LinearLayoutManager llm = (LinearLayoutManager) lm;
+                            int firstPos = llm.findFirstVisibleItemPosition();
+                            if (firstPos == 0) {
+                                View firstChild = llm.findViewByPosition(0);
+                                if (firstChild != null) {
+                                    int top = firstChild.getTop();
+                                    int atRest = getM3HeaderTopPadding();
+                                    int scrolled = atRest - top;
+                                    float progress = Math.max(0.0f, Math.min(1.0f, (float) scrolled / (float) maxScroll));
+                                    actionBar.setM3CollapseProgress(progress);
+                                }
+                            } else if (firstPos > 0) {
+                                actionBar.setM3CollapseProgress(1.0f);
+                            }
+                        }
                     }
                 }
             });

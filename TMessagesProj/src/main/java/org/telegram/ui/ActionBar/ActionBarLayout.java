@@ -416,6 +416,50 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             }
         }
 
+        private void applyM3FlexiblePadding(View view, ActionBar bar) {
+            if (view == null) return;
+            BaseFragment fragment = getLastFragment();
+            if (fragment instanceof SettingsActivity || fragment instanceof ChatActivity || fragment instanceof org.telegram.ui.DialogsActivity || fragment instanceof org.telegram.ui.ProfileActivity) {
+                return;
+            }
+            int statusBar = (bar != null && bar.getOccupyStatusBar()) ? AndroidUtilities.statusBarHeight : 0;
+            int extra = bar != null ? bar.getM3ExpandedExtraHeight() : AndroidUtilities.dp(52);
+            final int targetPaddingTop = statusBar + ActionBar.getCurrentActionBarHeight() + extra;
+
+            View scrollableView = findScrollableView(view);
+            if (scrollableView != null) {
+                if (scrollableView instanceof ViewGroup) {
+                    ((ViewGroup) scrollableView).setClipToPadding(false);
+                }
+                if (scrollableView.getPaddingTop() < targetPaddingTop) {
+                    scrollableView.setPadding(
+                        scrollableView.getPaddingLeft(),
+                        targetPaddingTop,
+                        scrollableView.getPaddingRight(),
+                        scrollableView.getPaddingBottom()
+                    );
+                }
+                View parent = (View) scrollableView.getParent();
+                while (parent != null && parent != this) {
+                    if (parent instanceof ViewGroup) {
+                        ((ViewGroup) parent).setClipToPadding(false);
+                        ((ViewGroup) parent).setClipChildren(false);
+                    }
+                    if (parent == view) break;
+                    parent = (View) parent.getParent();
+                }
+            } else {
+                if (view.getPaddingTop() < targetPaddingTop) {
+                    view.setPadding(
+                        view.getPaddingLeft(),
+                        targetPaddingTop,
+                        view.getPaddingRight(),
+                        view.getPaddingBottom()
+                    );
+                }
+            }
+        }
+
         public static class SubSettingsFallbackColor extends BlurredBackgroundSourceColor {}
 
         @RequiresApi(Build.VERSION_CODES.S)
@@ -551,6 +595,8 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
             int count = getChildCount();
             int actionBarHeight = 0;
+            boolean isM3Flexible = false;
+            ActionBar m3ActionBar = null;
 
             getWindowVisibleDisplayFrame(rect);
 
@@ -565,6 +611,11 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         MeasureSpec.makeMeasureSpec(width - getPaddingLeft() - getPaddingRight(), MeasureSpec.EXACTLY),
                         MeasureSpec.makeMeasureSpec(height, MeasureSpec.UNSPECIFIED));
                     actionBarHeight = child.getMeasuredHeight();
+                    ActionBar ab = (ActionBar) child;
+                    if (ab.isM3LargeFlexible()) {
+                        isM3Flexible = true;
+                        m3ActionBar = ab;
+                    }
                     break;
                 }
             }
@@ -574,9 +625,12 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && actionBarHeight > 0) {
                         applyLiquidGlassPadding(child, actionBarHeight);
                     }
+                    if (isM3Flexible && m3ActionBar != null) {
+                        applyM3FlexiblePadding(child, m3ActionBar);
+                    }
                     if (child instanceof BaseFragment.AttachedSheetWindow) {
                         measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, getBottomTabsHeight(false) > 0 || !isSupportEdgeToEdge ? 0 : systemAndDisplayInsets.bottom);
-                    } else if (child.getTag(R.id.sheet_attached_to_fragment_tag) != null || child.getFitsSystemWindows() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    } else if (child.getTag(R.id.sheet_attached_to_fragment_tag) != null || child.getFitsSystemWindows() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || isM3Flexible) {
                         int addHeight = isSupportEdgeToEdge ? systemAndDisplayInsets.bottom : 0;
                         measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, addHeight);
                     } else {
@@ -593,10 +647,17 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             final int paddingLeft = getPaddingLeft();
 
             int actionBarHeight = 0;
+            boolean isM3Flexible = false;
+            ActionBar m3ActionBar = null;
             for (int a = 0; a < count; a++) {
                 View child = getChildAt(a);
                 if (child instanceof ActionBar) {
                     actionBarHeight = child.getMeasuredHeight();
+                    ActionBar ab = (ActionBar) child;
+                    if (ab.isM3LargeFlexible()) {
+                        isM3Flexible = true;
+                        m3ActionBar = ab;
+                    }
                     child.layout(paddingLeft, 0, paddingLeft + child.getMeasuredWidth(), actionBarHeight);
                     break;
                 }
@@ -605,7 +666,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 View child = getChildAt(a);
                 if (!(child instanceof ActionBar)) {
                     FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) child.getLayoutParams();
-                    if (child.getTag(R.id.sheet_attached_to_fragment_tag) != null || child.getFitsSystemWindows() || child instanceof BaseFragment.AttachedSheetWindow || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                    if (child.getTag(R.id.sheet_attached_to_fragment_tag) != null || child.getFitsSystemWindows() || child instanceof BaseFragment.AttachedSheetWindow || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || isM3Flexible) {
                         child.layout(
                             paddingLeft + layoutParams.leftMargin,
                             layoutParams.topMargin,
@@ -614,6 +675,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         );
                         if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && actionBarHeight > 0) {
                             applyLiquidGlassPadding(child, actionBarHeight);
+                        }
+                        if (isM3Flexible && m3ActionBar != null) {
+                            applyM3FlexiblePadding(child, m3ActionBar);
                         }
                     } else {
                         child.layout(

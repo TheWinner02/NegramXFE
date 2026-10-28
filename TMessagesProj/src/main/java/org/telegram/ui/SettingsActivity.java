@@ -64,6 +64,7 @@ import androidx.core.graphics.ColorUtils;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.PhoneFormat.PhoneFormat;
@@ -635,9 +636,29 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             return;
         }
         int maxScroll = actionBar.getM3ExpandedExtraHeight();
-        m3ScrollOffset = Math.max(0, Math.min(maxScroll, m3ScrollOffset + dy));
-        float progress = maxScroll > 0 ? (float) m3ScrollOffset / (float) maxScroll : 1.0f;
-        actionBar.setM3CollapseProgress(progress);
+        RecyclerView.LayoutManager lm = listView.getLayoutManager();
+        if (lm instanceof LinearLayoutManager) {
+            LinearLayoutManager llm = (LinearLayoutManager) lm;
+            int firstPos = llm.findFirstVisibleItemPosition();
+            if (firstPos == 0) {
+                View firstChild = llm.findViewByPosition(0);
+                if (firstChild != null) {
+                    int atRest = getSettingsTopPadding(AndroidUtilities.statusBarHeight);
+                    int scrolled = atRest - firstChild.getTop();
+                    float progress = Math.max(0.0f, Math.min(1.0f, (float) scrolled / (float) maxScroll));
+                    actionBar.setM3CollapseProgress(progress);
+                    return;
+                }
+            } else if (firstPos > 0) {
+                actionBar.setM3CollapseProgress(1.0f);
+                return;
+            }
+        }
+        if (!listView.canScrollVertically(-1)) {
+            actionBar.setM3CollapseProgress(0.0f);
+        } else {
+            actionBar.setM3CollapseProgress(1.0f);
+        }
     }
     private float top() {
         if (listView.getChildCount() > 0) {
