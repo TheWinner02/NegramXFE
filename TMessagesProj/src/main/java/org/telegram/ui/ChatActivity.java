@@ -4429,9 +4429,10 @@ public class ChatActivity extends BaseFragment implements
                     openSearchWithText(isSupportedTags() ? "" : null);
                 } else if (id == translate) {
                     getMessagesController().getTranslateController().setHideTranslateDialog(getDialogId(), false, true);
-                    if (!getMessagesController().getTranslateController().toggleTranslatingDialog(getDialogId(), true)) {
-                        updateTopPanel(true);
-                    }
+                    boolean isTranslating = getMessagesController().getTranslateController().isTranslatingDialog(getDialogId());
+                    getMessagesController().getTranslateController().toggleTranslatingDialog(getDialogId(), !isTranslating);
+                    updateTopPanel(true);
+                    updateTranslateItemVisibility();
                 } else if (id == call || id == video_call) {
                     if (currentUser != null && getParentActivity() != null) {
                         VoIPHelper.startCall(currentUser, id == video_call, userInfo != null && userInfo.video_calls_available, getParentActivity(), getMessagesController().getUserFull(currentUser.id), getAccountInstance());
@@ -12285,7 +12286,14 @@ public class ChatActivity extends BaseFragment implements
         if (translateItem == null) {
             return;
         }
-        translateItem.setVisibility(getMessagesController().getTranslateController().isTranslateDialogHidden(getDialogId())/* && getMessagesController().getTranslateController().isDialogTranslatable(getDialogId())*/ ? View.VISIBLE : View.GONE);
+        boolean available = getMessagesController().getTranslateController().isFeatureAvailable(getDialogId())
+            && !DialogObject.isEncryptedDialog(getDialogId())
+            && getUserConfig().getClientUserId() != getDialogId();
+        translateItem.setVisibility(available ? View.VISIBLE : View.GONE);
+        if (available) {
+            boolean isTranslating = getMessagesController().getTranslateController().isTranslatingDialog(getDialogId());
+            translateItem.setText(LocaleController.getString(isTranslating ? R.string.ShowOriginalButton : R.string.TranslateMessage));
+        }
     }
 
     private Animator infoTopViewAnimator;
@@ -31191,7 +31199,7 @@ public class ChatActivity extends BaseFragment implements
         boolean showRestartTopic = !isInPreviewMode() && forumTopic != null && forumTopic.closed && !forumTopic.hidden && ChatObject.canManageTopic(currentAccount, currentChat, forumTopic);
         boolean showTranslate = (
             getMessagesController().getTranslateController().isFeatureAvailable(getDialogId()) ?
-                getMessagesController().getTranslateController().isDialogTranslatable(getDialogId()) && !getMessagesController().getTranslateController().isTranslateDialogHidden(getDialogId()) :
+                (getMessagesController().getTranslateController().isTranslatingDialog(getDialogId()) || getMessagesController().getTranslateController().isDialogTranslatable(getDialogId())) && !getMessagesController().getTranslateController().isTranslateDialogHidden(getDialogId()) :
                 !getMessagesController().premiumFeaturesBlocked() && preferences.getInt("dialog_show_translate_count" + did, 5) <= 0
         ) || DEBUG_TOP_PANELS;
         boolean showAddProfilePicture = UserObject.isBot(currentUser) && currentUser.bot_can_edit && currentUser.photo == null;

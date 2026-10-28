@@ -62,12 +62,12 @@ public class TranslateController extends BaseController {
 
     public static final String UNKNOWN_LANGUAGE = "und";
 
-    private static final int REQUIRED_TOTAL_MESSAGES_CHECKED = 6;
-    private static final int REQUIRED_TOTAL_MESSAGES_CHECKED_AUTOTRANSLATE = 2;
-    private static final float REQUIRED_PERCENTAGE_MESSAGES_TRANSLATABLE = .60F;
-    private static final float REQUIRED_MIN_MESSAGES_TRANSLATABLE_AUTOTRANSLATE = 2;
-    private static final float REQUIRED_MIN_PERCENTAGE_MESSAGES_UNKNOWN = .65F;
-    private static final float REQUIRED_MIN_PERCENTAGE_MESSAGES_UNKNOWN_AUTOTRANSLATE = .80F;
+    private static final int REQUIRED_TOTAL_MESSAGES_CHECKED = 2;
+    private static final int REQUIRED_TOTAL_MESSAGES_CHECKED_AUTOTRANSLATE = 1;
+    private static final float REQUIRED_PERCENTAGE_MESSAGES_TRANSLATABLE = .40F;
+    private static final float REQUIRED_MIN_MESSAGES_TRANSLATABLE_AUTOTRANSLATE = 1;
+    private static final float REQUIRED_MIN_PERCENTAGE_MESSAGES_UNKNOWN = .85F;
+    private static final float REQUIRED_MIN_PERCENTAGE_MESSAGES_UNKNOWN_AUTOTRANSLATE = .90F;
 
     private static final int MAX_SYMBOLS_PER_REQUEST = 25000;
     private static final int MAX_MESSAGES_PER_REQUEST = 20;
@@ -97,8 +97,13 @@ public class TranslateController extends BaseController {
         AndroidUtilities.runOnUIThread(this::loadTranslatingDialogsCached, 150);
     }
 
+    public boolean isFeatureAllowed() {
+        return UserConfig.getInstance(currentAccount).isRealPremium() ||
+               (NaConfig.INSTANCE.getTelegramUIAutoTranslate().Bool() && NekoConfig.translationProvider.Int() != Translator.providerTelegram);
+    }
+
     public boolean isFeatureAvailable() {
-        return isChatTranslateEnabled() && (UserConfig.getInstance(currentAccount).isRealPremium() || (NaConfig.INSTANCE.getTelegramUIAutoTranslate().Bool() && NekoConfig.translationProvider.Int() != Translator.providerTelegram));
+        return isChatTranslateEnabled() && isFeatureAllowed();
     }
 
     public boolean isFeatureAvailable(long dialogId) {
@@ -106,27 +111,20 @@ public class TranslateController extends BaseController {
             return false;
         }
         final TLRPC.Chat chat = getMessagesController().getChat(-dialogId);
-        return (
-            UserConfig.getInstance(currentAccount).isRealPremium() ||
-            (NaConfig.INSTANCE.getTelegramUIAutoTranslate().Bool() && NekoConfig.translationProvider.Int() != Translator.providerTelegram) ||
-            chat != null && chat.autotranslation
-        );
+        return isFeatureAllowed() || (chat != null && chat.autotranslation);
     }
 
     private Boolean chatTranslateEnabled;
     private Boolean contextTranslateEnabled;
 
     public boolean isChatTranslateEnabled() {
-        if (NaConfig.INSTANCE.getTelegramUIAutoTranslate().Bool()) {
-            return true;
-        }
         if (!getMessagesController().isTranslationsAutoEnabled()) {
             return false;
         }
         if (chatTranslateEnabled == null) {
             chatTranslateEnabled = messagesController.getMainSettings().getBoolean("translate_chat_button", true);
         }
-        return chatTranslateEnabled;
+        return chatTranslateEnabled && NaConfig.INSTANCE.getTelegramUIAutoTranslate().Bool();
     }
 
     public boolean isContextTranslateEnabled() {
@@ -145,6 +143,7 @@ public class TranslateController extends BaseController {
 
     public void setChatTranslateEnabled(boolean enable) {
         messagesController.getMainSettings().edit().putBoolean("translate_chat_button", chatTranslateEnabled = enable).apply();
+        NaConfig.INSTANCE.getTelegramUIAutoTranslate().setConfigBool(enable);
     }
 
     public static boolean isSummarizable(MessageObject messageObject) {
@@ -203,7 +202,7 @@ public class TranslateController extends BaseController {
 
     public boolean isDialogTranslatable(long dialogId) {
         return (
-            translatableDialogs.contains(dialogId) &&
+            (translatableDialogs.contains(dialogId) || isTranslatingDialog(dialogId)) &&
             isFeatureAvailable(dialogId) &&
             !DialogObject.isEncryptedDialog(dialogId) &&
             getUserConfig().getClientUserId() != dialogId
@@ -247,6 +246,7 @@ public class TranslateController extends BaseController {
     public boolean toggleTranslatingDialog(long dialogId, boolean value) {
         boolean currentValue = isTranslatingDialog(dialogId), notified = false;
         if (value && !currentValue) {
+            translatableDialogs.add(dialogId);
             translatingDialogs.put(dialogId, true);
             NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogTranslate, dialogId, true);
             notified = true;
@@ -973,13 +973,17 @@ public class TranslateController extends BaseController {
         final int notTranslatableCount = translatableMessages.certainlyNotTranslatable.size();
         final int totalCount = translatableCount + unknownCount + notTranslatableCount;
         final boolean autotranslation = isChatAutoTranslated(dialogId);
+        final boolean negramAutoTranslate = NaConfig.INSTANCE.getTelegramUIAutoTranslate().Bool();
         if (
-            totalCount >= (autotranslation ? REQUIRED_TOTAL_MESSAGES_CHECKED_AUTOTRANSLATE : REQUIRED_TOTAL_MESSAGES_CHECKED) &&
-            (autotranslation ?
-                translatableCount >= REQUIRED_MIN_MESSAGES_TRANSLATABLE_AUTOTRANSLATE :
-                (translatableCount / (float) (translatableCount + notTranslatableCount)) >= REQUIRED_PERCENTAGE_MESSAGES_TRANSLATABLE
-            ) &&
-            (unknownCount / (float) totalCount) < (autotranslation ? REQUIRED_MIN_PERCENTAGE_MESSAGES_UNKNOWN_AUTOTRANSLATE : REQUIRED_MIN_PERCENTAGE_MESSAGES_UNKNOWN)
+            (negramAutoTranslate && translatableCount >= 1) ||
+            (
+                totalCount >= (autotranslation ? REQUIRED_TOTAL_MESSAGES_CHECKED_AUTOTRANSLATE : REQUIRED_TOTAL_MESSAGES_CHECKED) &&
+                (autotranslation ?
+                    translatableCount >= REQUIRED_MIN_MESSAGES_TRANSLATABLE_AUTOTRANSLATE :
+                    (translatableCount / (float) (translatableCount + notTranslatableCount)) >= REQUIRED_PERCENTAGE_MESSAGES_TRANSLATABLE
+                ) &&
+                (unknownCount / (float) totalCount) < (autotranslation ? REQUIRED_MIN_PERCENTAGE_MESSAGES_UNKNOWN_AUTOTRANSLATE : REQUIRED_MIN_PERCENTAGE_MESSAGES_UNKNOWN)
+            )
         ) {
             translatableDialogs.add(dialogId);
             translatableDialogMessages.remove((Long) dialogId);

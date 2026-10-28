@@ -226,7 +226,7 @@ public class LanguageSelectActivity extends BaseFragment implements Notification
                         NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateSearchSettings);
                     } else if (position == autoTranslationPosition) {
                         boolean value = !getChatValue();
-                        if (value && !getMessagesController().getTranslateController().isFeatureAvailable()) {
+                        if (value && !getMessagesController().getTranslateController().isFeatureAllowed()) {
                             showDialog(new PremiumFeatureBottomSheet(LanguageSelectActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_TRANSLATIONS, false));
                             return;
                         }
@@ -570,7 +570,7 @@ public class LanguageSelectActivity extends BaseFragment implements Notification
     }
 
     private boolean getChatValue() {
-        return getMessagesController().getTranslateController().isFeatureAvailable();
+        return getMessagesController().getTranslateController().isChatTranslateEnabled();
     }
 
     public static final int VIEW_TYPE_LANGUAGE = 0;
@@ -762,7 +762,7 @@ public class LanguageSelectActivity extends BaseFragment implements Notification
                         cell.setCheckBoxIcon(0);
                     } else if (position == autoTranslationPosition) {
                         cell.setTextAndCheck(LocaleController.getString(R.string.ShowTranslateChatButton), getChatValue(), getContextValue() || getChatValue());
-                        cell.setCheckBoxIcon(!getMessagesController().getTranslateController().isFeatureAvailable() ? R.drawable.permission_locked : 0);
+                        cell.setCheckBoxIcon(!getMessagesController().getTranslateController().isFeatureAllowed() ? R.drawable.permission_locked : 0);
                     }
                     break;
                 }
