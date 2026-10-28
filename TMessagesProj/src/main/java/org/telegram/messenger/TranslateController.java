@@ -202,7 +202,7 @@ public class TranslateController extends BaseController {
 
     public boolean isDialogTranslatable(long dialogId) {
         return (
-            (translatableDialogs.contains(dialogId) || isTranslatingDialog(dialogId)) &&
+            translatableDialogs.contains(dialogId) &&
             isFeatureAvailable(dialogId) &&
             !DialogObject.isEncryptedDialog(dialogId) &&
             getUserConfig().getClientUserId() != dialogId
@@ -228,7 +228,7 @@ public class TranslateController extends BaseController {
     }
 
     private boolean isChatAutoTranslated(long dialogId) {
-        if (!isDialogTranslatable(dialogId)) {
+        if (!translatableDialogs.contains(dialogId) || !isFeatureAvailable(dialogId)) {
             return false;
         }
         final TLRPC.Chat chat = getMessagesController().getChat(-dialogId);
