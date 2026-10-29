@@ -244,6 +244,24 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
         return -1;
     }
 
+    public boolean isDialogPinned(int position) {
+        if (position >= 0 && position < itemInternals.size()) {
+            ItemInternal item = itemInternals.get(position);
+            if (item != null) {
+                return item.pinned;
+            }
+        }
+        return false;
+    }
+
+    public boolean isDialog(int position) {
+        if (position >= 0 && position < itemInternals.size()) {
+            ItemInternal item = itemInternals.get(position);
+            return item != null && (item.viewType == VIEW_TYPE_DIALOG || item.viewType == VIEW_TYPE_DIALOG_COMMUNITY || item.viewType == VIEW_TYPE_FORWARD_TO_STORIES_CELL || item.viewType == VIEW_TYPE_USER);
+        }
+        return false;
+    }
+
     public int fixScrollGap(RecyclerListView animationSupportListView, int p, int offset, boolean hasHiddenArchive, boolean hasStories, boolean hasTabs, boolean oppened) {
 //        int itemsToEnd = getItemCount() - p;
         int cellHeight = AndroidUtilities.dp(SharedConfig.useThreeLinesLayout ? 76 : 70);
@@ -922,6 +940,15 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
                     cell.setCustomMessageWithoutRebuild(getString(R.string.Bot));
                     cell.setDialog(user.id, null, 0, false, false);
                 }
+                boolean isGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+                boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+                if (isGlass || isM3) {
+                    boolean isPinned = isDialogPinned(i);
+                    boolean nextPinned = isDialogPinned(i + 1);
+                    boolean isNextDialog = isDialog(i + 1);
+                    cell.useSeparator = isNextDialog && (isPinned == nextPinned);
+                    cell.fullSeparator = false;
+                }
                 break;
             }
             case VIEW_TYPE_DIALOG: {
@@ -995,10 +1022,13 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
                 } else {
                     DialogCell cell = (DialogCell) holder.itemView;
                     cell.isHiddenInCommunity = communityId != 0 && ChatObject.isHiddenInCommunity(currentAccount, dialog.id);
-                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
-                        boolean isPinned = parentFragment != null && parentFragment.isDialogPinned(dialog);
-                        boolean nextPinned = nextDialog != null && parentFragment != null && parentFragment.isDialogPinned(nextDialog);
-                        cell.useSeparator = nextDialog != null && (isPinned == nextPinned);
+                    boolean isGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+                    boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+                    if (isGlass || isM3) {
+                        boolean isPinned = isDialogPinned(i);
+                        boolean nextPinned = isDialogPinned(i + 1);
+                        boolean isNextDialog = isDialog(i + 1);
+                        cell.useSeparator = isNextDialog && (isPinned == nextPinned);
                         cell.fullSeparator = false;
                     } else {
                         cell.useSeparator = false; // nextDialog != null;

@@ -4297,22 +4297,20 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     return false;
                 });
                 viewPage.listView.setSectionGroupingChecker((v1, pos1, v2, pos2) -> {
+                    if (viewPage.dialogsAdapter != null) {
+                        if (!viewPage.dialogsAdapter.isDialog(pos1) || !viewPage.dialogsAdapter.isDialog(pos2)) {
+                            return false;
+                        }
+                        return viewPage.dialogsAdapter.isDialogPinned(pos1) == viewPage.dialogsAdapter.isDialogPinned(pos2);
+                    }
                     boolean p1Pinned = false;
                     if (v1 instanceof org.telegram.ui.Cells.DialogCell) {
                         p1Pinned = ((org.telegram.ui.Cells.DialogCell) v1).getIsPinned();
-                    } else if (viewPage.dialogsAdapter != null) {
-                        Object o1 = viewPage.dialogsAdapter.getItem(pos1);
-                        p1Pinned = (o1 instanceof TLRPC.Dialog) && isDialogPinned((TLRPC.Dialog) o1);
                     }
-
                     boolean p2Pinned = false;
                     if (v2 instanceof org.telegram.ui.Cells.DialogCell) {
                         p2Pinned = ((org.telegram.ui.Cells.DialogCell) v2).getIsPinned();
-                    } else if (viewPage.dialogsAdapter != null) {
-                        Object o2 = viewPage.dialogsAdapter.getItem(pos2);
-                        p2Pinned = (o2 instanceof TLRPC.Dialog) && isDialogPinned((TLRPC.Dialog) o2);
                     }
-
                     return p1Pinned == p2Pinned;
                 });
                 viewPage.listView.setSections(
@@ -9573,12 +9571,19 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (dialog == null) {
             return false;
         }
-        MessagesController.DialogFilter filter;
-        boolean containsFilter = (viewPages[0].dialogsType == 7 || viewPages[0].dialogsType == 8) && (!actionBar.isActionModeShowed() || actionBar.isActionModeShowed(null));
-        if (containsFilter) {
+        MessagesController.DialogFilter filter = null;
+        if (viewPages != null) {
+            for (int i = 0; i < viewPages.length; i++) {
+                if (viewPages[i] != null && viewPages[i].getVisibility() == View.VISIBLE) {
+                    if (viewPages[i].dialogsType == 7 || viewPages[i].dialogsType == 8) {
+                        filter = getMessagesController().selectedDialogFilter[viewPages[i].dialogsType == 8 ? 1 : 0];
+                    }
+                    break;
+                }
+            }
+        }
+        if (filter == null && viewPages != null && viewPages[0] != null && (viewPages[0].dialogsType == 7 || viewPages[0].dialogsType == 8)) {
             filter = getMessagesController().selectedDialogFilter[viewPages[0].dialogsType == 8 ? 1 : 0];
-        } else {
-            filter = null;
         }
         if (filter != null) {
             return filter.pinnedDialogs.indexOfKey(dialog.id) >= 0;
