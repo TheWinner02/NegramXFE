@@ -630,9 +630,11 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     }
                     if (child instanceof BaseFragment.AttachedSheetWindow) {
                         measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, getBottomTabsHeight(false) > 0 || !isSupportEdgeToEdge ? 0 : systemAndDisplayInsets.bottom);
-                    } else if (child.getTag(R.id.sheet_attached_to_fragment_tag) != null || child.getFitsSystemWindows() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || isM3Flexible) {
+                    } else if (child.getTag(R.id.sheet_attached_to_fragment_tag) != null || child.getFitsSystemWindows()) {
                         int addHeight = isSupportEdgeToEdge ? systemAndDisplayInsets.bottom : 0;
                         measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, addHeight);
+                    } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || isM3Flexible) {
+                        measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, 0);
                     } else {
                         measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, actionBarHeight);
                     }
