@@ -5591,24 +5591,25 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         mediaPreviewView.setAlpha(0);
         selectedView.setAlpha(1);
 
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidAnchorView != null && fluidAnchorView.isAttachedToWindow()) {
+            if (buttonsAnimation != null) buttonsAnimation.cancel();
+            currentSheetAnimationType = 0;
+            super.containerView.setTranslationY(0);
+            if (buttonsRecyclerViewWrapper != null) buttonsRecyclerViewWrapper.setTranslationY(0);
+            updateActionBarVisibility(false, false);
+            actionBar.setTag(null);
+            actionBar.setAlpha(0f);
+            // Native buttons keep their size; the enclosing surface reveals them.
+            ATTACH_ALERT_PROGRESS.set(this, 400f);
+            return false;
+        }
+
         buttonsAnimation = new AnimatorSet();
         buttonsAnimation.playTogether(ObjectAnimator.ofFloat(this, ATTACH_ALERT_PROGRESS, 0.0f, 400.0f));
         buttonsAnimation.setDuration(400);
         buttonsAnimation.setStartDelay(20);
         ATTACH_ALERT_PROGRESS.set(this, 0.0f);
         buttonsAnimation.start();
-
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidAnchorView != null && fluidAnchorView.isAttachedToWindow()) {
-            currentSheetAnimationType = 0;
-            super.containerView.setTranslationY(0);
-            if (buttonsRecyclerViewWrapper != null) {
-                buttonsRecyclerViewWrapper.setTranslationY(0);
-            }
-            updateActionBarVisibility(false, false);
-            actionBar.setTag(null);
-            actionBar.setAlpha(0.0f);
-            return false;
-        }
 
         int fromTranslationY = super.containerView.getMeasuredHeight();
         super.containerView.setTranslationY(fromTranslationY);
@@ -5714,6 +5715,54 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         navigationBarAnimator.start();
 
         return true;
+    }
+
+    private boolean fluidPhotoDismissPending;
+
+    @Override
+    protected void onFluidCloseCancelled() {
+        allowPassConfirmationAlert = false;
+        fluidPhotoDismissPending = false;
+    }
+
+    @Override
+    protected boolean canPreviewFluidBack() {
+        return currentAttachLayout == photoLayout && photoLayout.canPreviewFluidBack()
+                && (allowPassConfirmationAlert || currentAttachLayout.getSelectedItemsCount() == 0 || isPhotoPicker);
+    }
+
+    @Override
+    protected boolean allowFluidDismiss() { return !gramSendDismissalInProgress; }
+
+    @Override
+    public int getFluidSurfaceColor() {
+        return currentAttachLayout != null && currentAttachLayout.hasCustomBackground()
+                ? currentAttachLayout.getCustomBackground() : getActionBarDrawableColor();
+    }
+
+    @Override
+    public void getFluidSurfaceBounds(android.graphics.RectF bounds) {
+        if (currentAttachLayout == null) { super.getFluidSurfaceBounds(bounds); return; }
+        int offset = dp(13) + (int) ((headerView != null ? headerView.getAlpha() : 0f) * dp(26))
+                + (int) (topCommentContainer != null ? topCommentContainer.getAlpha() * topCommentContainer.getMeasuredHeight() : 0);
+        int top = getScrollOffsetY(0) - offset;
+        int type = currentAttachLayout.needsActionBar();
+        if (type != 2) {
+            float toMove = offset;
+            if (currentAttachLayout == locationLayout) toMove += dp(11);
+            else if (currentAttachLayout == pollLayout || currentAttachLayout == todoLayout) toMove -= dp(3);
+            else toMove += dp(4);
+            int h = type != 0 ? ActionBar.getCurrentActionBarHeight() : backgroundPaddingTop;
+            top -= (int) ((h - toMove + AndroidUtilities.statusBarHeight) * actionBar.getAlpha());
+        }
+        if (!inBubbleMode) top += AndroidUtilities.statusBarHeight;
+        bounds.set(backgroundPaddingLeft, Math.max(0, top + currentPanTranslationY),
+                containerView.getWidth() - backgroundPaddingLeft, containerView.getHeight());
+    }
+
+    @Override
+    protected void onFluidProgress(float progress) {
+        setNavBarAlpha(progress);
     }
 
     private void setNavBarAlpha(float alpha) {
@@ -7277,9 +7326,9 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     @Override
     public void dismiss() {
-        if (currentAttachLayout.onDismiss() || isDismissed()) {
-            return;
-        }
+        if (isDismissed()) return;
+        boolean deferPhoto = isFluidMorphActive() && currentAttachLayout == photoLayout;
+        if (deferPhoto ? photoLayout.onFluidDismissRequested() : currentAttachLayout.onDismiss()) return;
         gramSendDismissalInProgress = currentAttachLayout == gramLayout && gramLayout != null && gramLayout.hasQueuedSend();
         if (!gramSendDismissalInProgress && commentTextView != null) {
             AndroidUtilities.hideKeyboard(commentTextView.getEditText());
@@ -7287,7 +7336,6 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         if (!gramSendDismissalInProgress && topCommentTextView != null) {
             AndroidUtilities.hideKeyboard(topCommentTextView.getEditText());
         }
-        botAttachLayouts.clear();
         BaseFragment baseFragment = this.baseFragment;
         if (baseFragment == null) {
             baseFragment = LaunchActivity.getLastFragment();
@@ -7327,6 +7375,19 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             }
             return;
         }
+        fluidPhotoDismissPending = deferPhoto;
+        if (deferFluidDismiss(this::finishConfirmedDismiss)) return;
+        finishConfirmedDismiss();
+    }
+
+    private void finishConfirmedDismiss() {
+        if (fluidPhotoDismissPending) {
+            fluidPhotoDismissPending = false;
+            photoLayout.onDismiss();
+        }
+        BaseFragment baseFragment = this.baseFragment;
+        if (baseFragment == null) baseFragment = LaunchActivity.getLastFragment();
+        botAttachLayouts.clear();
         for (int a = 0; a < layouts.length; a++) {
             if (layouts[a] != null && currentAttachLayout != layouts[a]) {
                 layouts[a].onDismiss();

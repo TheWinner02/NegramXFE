@@ -270,7 +270,8 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
     private boolean skipDismissAnimation;
 
     protected View fluidAnchorView;
-    protected xyz.nextalone.nagram.ui.fluid.FluidContainerTransform fluidTransform;
+    protected xyz.nextalone.nagram.ui.fluid.FluidTransform fluidTransform;
+    private boolean fluidCommitting;
     private Runnable fluidUnregisterBack;
 
     public void setFluidAnchorView(View view) {
@@ -1915,34 +1916,29 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         boolean customOpen = onCustomOpenAnimation();
 
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidAnchorView != null && fluidAnchorView.isAttachedToWindow()) {
-            if (fluidTransform == null) {
-                float rad = xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius();
-                fluidTransform = new xyz.nextalone.nagram.ui.fluid.FluidContainerTransform(
-                        fluidAnchorView,
-                        containerView,
-                        backDrawable,
-                        dimBehind ? dimBehindAlpha : 0,
-                        rad
-                );
-            }
-            if (getWindow() != null && fluidUnregisterBack == null) {
-                fluidUnregisterBack = xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.installDialog(getWindow(), fluidTransform.backMotion(this::dismiss));
-            }
-            if (navigationBarAnimation != null) {
-                navigationBarAnimation.cancel();
-            }
-            navigationBarAnimation = ValueAnimator.ofFloat(navigationBarAlpha, 1f);
-            navigationBarAnimation.addUpdateListener(a -> {
-                navigationBarAlpha = (float) a.getAnimatedValue();
-                if (container != null) {
-                    container.invalidate();
-                }
+            if (fluidUnregisterBack != null) { fluidUnregisterBack.run(); fluidUnregisterBack = null; }
+            if (fluidTransform != null) fluidTransform.abort();
+            fluidTransform = xyz.nextalone.nagram.ui.fluid.FluidTransform.attach(this, fluidAnchorView);
+            fluidTransform.setOnCloseCancelled(this::onFluidCloseCancelled);
+            fluidTransform.setProgressListener(progress -> {
+                backDrawable.setAlpha(Math.round((dimBehind ? dimBehindAlpha : 0) * progress));
+                navigationBarAlpha = progress;
+                onFluidProgress(progress);
+                container.invalidate();
             });
-            navigationBarAnimation.start();
+            if (getWindow() != null && attachedFragment == null && fluidUnregisterBack == null) {
+                fluidUnregisterBack = xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.installDialog(
+                        getWindow(), fluidTransform.backMotion(this::onBackPressed, this::canPreviewFluidBack));
+            }
+            if (navigationBarAnimation != null) navigationBarAnimation.cancel();
             containerView.setTranslationY(0);
             onContainerViewTranslation();
             currentSheetAnimationType = 0;
+            backDrawable.setAlpha(0);
+            navigationBarAlpha = 0f;
+            onFluidProgress(0f);
             fluidTransform.open(() -> {
+                onOpenAnimationEnd();
                 if (delegate != null) {
                     delegate.onOpenAnimationEnd();
                 }
@@ -2179,12 +2175,8 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
 
     @Override
     public boolean dispatchTouchEvent(@NonNull MotionEvent ev) {
-        if (dismissed) {
-            return false;
-        }
-        if (fluidTransform != null && fluidTransform.dispatchTouchEvent(ev)) {
-            return true;
-        }
+        if (fluidTransform != null && fluidTransform.dispatchTouchEvent(ev)) return true;
+        if (dismissed) return false;
         return super.dispatchTouchEvent(ev);
     }
 
@@ -2228,6 +2220,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         if (dismissed) {
             return;
         }
+        if (deferFluidDismiss(this::dismiss)) return;
         dismissed = true;
         if (onHideListener != null) {
             onHideListener.onDismiss(this);
@@ -2235,7 +2228,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         cancelSheetAnimation();
         long duration = 0;
         onDismissAnimationStart();
-        if (skipDismissAnimation) {
+        if (skipDismissAnimation || fluidCommitting) {
             AndroidUtilities.runOnUIThread(() -> {
                 try {
                     dismissInternal();
@@ -2244,31 +2237,6 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                 }
             });
         } else {
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidTransform != null && !skipDismissAnimation) {
-                AndroidUtilities.hideKeyboard(container);
-                currentSheetAnimationType = 0;
-                if (navigationBarAnimation != null) {
-                    navigationBarAnimation.cancel();
-                }
-                navigationBarAnimation = ValueAnimator.ofFloat(navigationBarAlpha, 0f);
-                navigationBarAnimation.addUpdateListener(a -> {
-                    navigationBarAlpha = (float) a.getAnimatedValue();
-                    if (container != null) {
-                        container.invalidate();
-                    }
-                });
-                navigationBarAnimation.start();
-                fluidTransform.close(() -> {
-                    AndroidUtilities.runOnUIThread(() -> {
-                        try {
-                            dismissInternal();
-                        } catch (Exception e) {
-                            FileLog.e(e);
-                        }
-                    });
-                });
-                return;
-            }
             if (!allowCustomAnimation || !onCustomCloseAnimation()) {
                 AndroidUtilities.hideKeyboard(container);
                 currentSheetAnimationType = 2;
@@ -2481,30 +2449,40 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         }
     }
 
-    protected boolean onCustomCloseAnimation() {
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidTransform != null && (fluidTransform.isOpened() || fluidTransform.isMorphing())) {
-            AndroidUtilities.hideKeyboard(container);
-            currentSheetAnimationType = 2;
-            if (navigationBarAnimation != null) {
-                navigationBarAnimation.cancel();
-            }
-            navigationBarAnimation = ValueAnimator.ofFloat(navigationBarAlpha, 0f);
-            navigationBarAnimation.addUpdateListener(a -> {
-                navigationBarAlpha = (float) a.getAnimatedValue();
-                if (container != null) {
-                    container.invalidate();
-                }
-            });
-            navigationBarAnimation.start();
-            fluidTransform.close(() -> {
-                try {
-                    dismissInternal();
-                } catch (Exception e) {
-                    FileLog.e(e);
-                }
-            });
-            return true;
+    /** Visible surface in containerView-local coordinates, excluding transparent sheet margins. */
+    public void getFluidSurfaceBounds(android.graphics.RectF bounds) {
+        bounds.set(0, 0, containerView.getWidth(), containerView.getHeight());
+    }
+
+    public int getFluidSurfaceColor() { return getThemedColor(Theme.key_dialogBackground); }
+
+    protected boolean allowFluidDismiss() { return true; }
+    protected boolean canPreviewFluidBack() { return true; }
+    protected void onFluidCloseCancelled() {}
+    protected final boolean isFluidMorphActive() {
+        return fluidTransform != null && fluidTransform.isStarted();
+    }
+
+    /** Called for every physical frame, including predictive cancellation. */
+    protected void onFluidProgress(float progress) {}
+
+    /** Defer destructive subclass cleanup until the reversible visual return has finished. */
+    protected final boolean deferFluidDismiss(Runnable confirmedDismiss) {
+        if (fluidCommitting || skipDismissAnimation || !allowFluidDismiss() || fluidTransform == null) return false;
+        if (!fluidTransform.isStarted()) {
+            fluidTransform.abort();
+            return false;
         }
+        AndroidUtilities.hideKeyboard(container);
+        fluidTransform.close(() -> {
+            fluidCommitting = true;
+            try { confirmedDismiss.run(); }
+            finally { fluidCommitting = false; }
+        });
+        return true;
+    }
+
+    protected boolean onCustomCloseAnimation() {
         return false;
     }
 

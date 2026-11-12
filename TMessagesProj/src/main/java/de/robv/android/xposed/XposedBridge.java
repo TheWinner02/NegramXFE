@@ -46,6 +46,9 @@ public class XposedBridge {
             throw new RuntimeException("Failed to initialize XposedBridge metadata", t);
         }
         try {
+            if (!com.exteragram.messenger.plugins.utils.HookRuntimeSupport.canLoadNativeHooks()) {
+                throw new UnsupportedOperationException("ARM native hooks disabled on x86 ART/native translation");
+            }
             try {
                 System.loadLibrary("c++_shared");
             } catch (Throwable ignored) {

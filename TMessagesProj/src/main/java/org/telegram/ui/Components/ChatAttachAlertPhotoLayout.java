@@ -2013,7 +2013,9 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             }
             if (!takingPhoto) {
                 maybeStartDraging = true;
-                lastY = event.getY();
+                // CameraView also dispatches this gesture in its own moving coordinate space.
+                // Screen coordinates stay stable while its translation follows the finger.
+                lastY = event.getRawY();
                 zooming = false;
                 zoomWas = false;
                 pressed = true;
@@ -2052,12 +2054,14 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                         pinchStartDistance = newDistance;
                     }
                 } else {
-                    float newY = event.getY();
+                    float newY = event.getRawY();
                     float dy = (newY - lastY);
                     if (maybeStartDraging) {
                         if (Math.abs(dy) > AndroidUtilities.getPixelsInCM(0.4f, false)) {
                             maybeStartDraging = false;
                             dragging = true;
+                            // Consume touch slop once, rather than applying it as a jump next frame.
+                            lastY = newY;
                         }
                     } else if (dragging) {
                         if (cameraView != null) {
@@ -2099,7 +2103,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                 if (dragging) {
                     dragging = false;
                     if (cameraView != null) {
-                        if (Math.abs(cameraView.getTranslationY()) > cameraView.getMeasuredHeight() / 6.0f) {
+                        if (action == MotionEvent.ACTION_UP && Math.abs(cameraView.getTranslationY()) > cameraView.getMeasuredHeight() / 6.0f) {
                             closeCamera(true);
                         } else {
                             AnimatorSet animatorSet = new AnimatorSet();
@@ -4291,6 +4295,15 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
     @Override
     public void onDismissWithButtonClick(int item) {
         hideCamera(item != 0 && item != 2);
+    }
+
+    /** Resolve nested camera Back without destroying its preview before a reversible morph. */
+    public boolean canPreviewFluidBack() { return !cameraOpened && !cameraAnimationInProgress; }
+
+    public boolean onFluidDismissRequested() {
+        if (cameraAnimationInProgress) return true;
+        if (cameraOpened) { closeCamera(true); return true; }
+        return false;
     }
 
     @Override

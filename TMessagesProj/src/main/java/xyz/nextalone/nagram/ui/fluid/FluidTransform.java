@@ -6,7 +6,6 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,12 +24,13 @@ import java.lang.ref.WeakReference;
 /**
  * Global Container Morphing Coordinator for the Fluid theme.
  * Implements continuous geometric surface transformation using organic cubic-spline contours,
- * zero fake screenshots, true view layouts, interruptible physics, and subpixel handoff.
+ * native-size live View drawing (no bitmap snapshots), interruptible physics and a single spring.
+ * The bridge owns rendering/input only during motion; the original hierarchy owns settled content.
  */
 public final class FluidTransform {
 
-    public interface MorphCallback {
-        void onComplete();
+    public interface ProgressListener {
+        void onProgress(float progress);
     }
 
     private final WeakReference<View> sourceRef;
@@ -51,11 +51,30 @@ public final class FluidTransform {
     private boolean disposed;
     private Runnable onDismissComplete;
 
-    private View returningTouchRoot;
-    private boolean finishAfterTouch;
-    private boolean endpointPosted;
+    private Runnable onOpenComplete;
+    private ProgressListener progressListener;
+    private Runnable onCloseCancelled;
+    private boolean seeking;
+    private final View.OnAttachStateChangeListener detachListener = new View.OnAttachStateChangeListener() {
+        @Override public void onViewAttachedToWindow(View view) {}
+        @Override public void onViewDetachedFromWindow(View view) { abort(); }
+    };
 
-    private final Runnable finishAtEndpoint = this::finishAtEndpoint;
+    public void setProgressListener(ProgressListener listener) { progressListener = listener; }
+    public void setOnCloseCancelled(Runnable listener) { onCloseCancelled = listener; }
+
+    private void retarget(float endpoint) {
+        spring.getSpring().setStiffness(FluidTiming.stiffness(Math.max(.01f, FluidCapabilities.motionScale(host.getContext()))));
+        spring.animateToFinalPosition(endpoint);
+        if (!FluidCapabilities.isMotionEnabled(host.getContext())) spring.skipToEnd();
+    }
+
+    private void render(float value) {
+        if (bridge == null || disposed) return;
+        bridge.progress = value;
+        bridge.invalidate();
+        if (progressListener != null) progressListener.onProgress(Math.max(0f, Math.min(1f, value)));
+    }
 
     public static FluidTransform attach(BottomSheet bottomSheet, View sourceView) {
         if (bottomSheet == null || sourceView == null) return null;
@@ -81,7 +100,11 @@ public final class FluidTransform {
         this.sourceRef = new WeakReference<>(source);
     }
 
-    public void open() {
+    public void open(Runnable completion) {
+        if (disposed) return;
+        onOpenComplete = completion;
+        if (started) { reopen(); return; }
+        if (pendingLayout != null) return;
         closing = false;
         onDismissComplete = null;
         View source = sourceRef.get();
@@ -104,6 +127,9 @@ public final class FluidTransform {
             host = (ViewGroup) decor;
         }
 
+        FluidCapabilities.motionScale(target.getContext());
+        FluidCapabilities.refresh();
+        target.addOnAttachStateChangeListener(detachListener);
         targetAlpha = target.getAlpha();
         targetAccessibility = target.getImportantForAccessibility();
         target.setAlpha(0f);
@@ -115,12 +141,21 @@ public final class FluidTransform {
             }
             removeLayoutListener();
 
+            if (disposed) return true;
             View origin = sourceRef.get();
             if (origin == null || !origin.isAttachedToWindow() || !origin.isShown()) {
                 restoreTarget();
+                if (progressListener != null) progressListener.onProgress(1f);
+                runOpenComplete();
                 return true;
             }
 
+            if (!FluidCapabilities.isMotionEnabled(host.getContext())) {
+                restoreTarget();
+                if (progressListener != null) progressListener.onProgress(1f);
+                runOpenComplete();
+                return true;
+            }
             sourceAlpha = origin.getAlpha();
             bridge = new MorphBridge(host.getContext());
             bridge.capture(origin, target);
@@ -135,9 +170,7 @@ public final class FluidTransform {
 
                 @Override
                 public void setValue(MorphBridge view, float value) {
-                    view.progress = value;
-                    view.invalidate();
-                    checkEndpoint();
+                    render(value);
                 }
             });
 
@@ -146,21 +179,25 @@ public final class FluidTransform {
             FluidCapabilities.track(host.getContext(), spring);
             spring.setMinimumVisibleChange(FluidTiming.MIN_VISIBLE_CHANGE);
             spring.addEndListener((animation, canceled, value, velocity) -> {
-                if (canceled) return;
+                if (canceled || disposed || seeking) return;
                 if (closing) {
                     finishClose();
                 } else {
+                    render(1f);
                     removeBridge();
                     restoreTarget();
+                    runOpenComplete();
                 }
             });
 
             started = true;
+            render(0f);
             spring.animateToFinalPosition(1f);
             return false; // The bridge already displays the first morphed frame.
         };
 
         target.getViewTreeObserver().addOnPreDrawListener(pendingLayout);
+        target.invalidate();
     }
 
     public void close(Runnable completion) {
@@ -171,7 +208,9 @@ public final class FluidTransform {
 
         if (!started || bridge == null || origin == null || !origin.isAttachedToWindow()
                 || !FluidCapabilities.isMotionEnabled(host != null ? host.getContext() : null)) {
+            render(0f);
             dispose();
+            if (target != null) target.setAlpha(0f);
             if (completion != null) completion.run();
             return;
         }
@@ -185,7 +224,7 @@ public final class FluidTransform {
             target.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         }
         addBridge();
-        spring.animateToFinalPosition(0f);
+        retarget(0f);
     }
 
     public boolean isRunning() {
@@ -193,47 +232,44 @@ public final class FluidTransform {
     }
 
     public boolean isStarted() {
-        return started;
+        return started && !disposed;
     }
 
     public boolean isClosing() {
         return closing;
     }
 
-    private void checkEndpoint() {
-        if (started && bridge != null && !endpointPosted && !finishAfterTouch && bridge.atEndpoint(!closing)) {
-            endpointPosted = true;
-            bridge.post(finishAtEndpoint);
-        }
+    private void runOpenComplete() {
+        Runnable done = onOpenComplete;
+        onOpenComplete = null;
+        if (done != null) done.run();
     }
 
-    private void finishAtEndpoint() {
-        endpointPosted = false;
-        if (!started || bridge == null) return;
-        if (closing && bridge.atEndpoint(false)) {
-            finishClose();
-        } else if (!closing && bridge.atEndpoint(true)) {
-            if (spring != null) spring.cancel();
-            removeBridge();
-            restoreTarget();
-        }
+    private void reopen() {
+        if (!started || disposed) return;
+        closing = false;
+        onDismissComplete = null;
+        // Retarget the same spring, preserving live geometry and velocity.
+        if (onCloseCancelled != null) onCloseCancelled.run();
+        retarget(1f);
     }
 
     private void finishClose() {
         if (!started) return;
-        if (returningTouchRoot != null) {
-            finishAfterTouch = true;
-            return;
-        }
         Runnable done = onDismissComplete;
         onDismissComplete = null;
+        render(0f);
         dispose();
+        // Keep the native target hidden until its owning Dialog is actually removed.
+        View target = targetRef.get();
+        if (target != null) target.setAlpha(0f);
         if (done != null) done.run();
     }
 
     public void abort() {
         onDismissComplete = null;
         dispose();
+        restoreTarget();
     }
 
     private void addBridge() {
@@ -271,19 +307,10 @@ public final class FluidTransform {
     private void dispose() {
         if (disposed) return;
         disposed = true;
-        if (bridge != null) bridge.removeCallbacks(finishAtEndpoint);
-        endpointPosted = false;
-        finishAfterTouch = false;
-
-        View receiver = returningTouchRoot;
-        returningTouchRoot = null;
-        if (receiver != null && receiver.isAttachedToWindow()) {
-            long now = android.os.SystemClock.uptimeMillis();
-            MotionEvent cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0);
-            receiver.dispatchTouchEvent(cancel);
-            cancel.recycle();
-        }
-
+        onOpenComplete = null;
+        seeking = false;
+        View target = targetRef.get();
+        if (target != null) target.removeOnAttachStateChangeListener(detachListener);
         removeLayoutListener();
         if (spring != null) spring.cancel();
         removeBridge();
@@ -296,42 +323,17 @@ public final class FluidTransform {
         started = false;
     }
 
-    public boolean dispatchReturningTouch(MotionEvent event) {
-        int action = event.getActionMasked();
-        if (returningTouchRoot == null && action == MotionEvent.ACTION_DOWN
-                && closing && started && bridge != null && bridge.atEndpoint(false)) {
-            View origin = sourceRef.get();
-            View root = origin == null ? null : origin.getRootView();
-            if (root != null && root.isAttachedToWindow() && root != host) {
-                returningTouchRoot = root;
-                finishAfterTouch = true;
-                origin.setAlpha(sourceAlpha);
-                bridge.setVisibility(View.INVISIBLE);
-            }
-        }
-        View root = returningTouchRoot;
-        if (root == null) return false;
-        int[] position = new int[2];
-        root.getLocationOnScreen(position);
-        MotionEvent forwarded = MotionEvent.obtain(event);
-        forwarded.offsetLocation(
-                event.getRawX() - event.getX() - position[0],
-                event.getRawY() - event.getY() - position[1]
-        );
-        try {
-            if (root.isAttachedToWindow()) root.dispatchTouchEvent(forwarded);
-        } finally {
-            forwarded.recycle();
-        }
-        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
-            returningTouchRoot = null;
-            finishAfterTouch = false;
-            finishClose();
+    /** Consume window coordinates during a morph, without cross-window touch forwarding. */
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (!started || disposed || bridge == null || bridge.getParent() == null) return false;
+        if (event.getActionMasked() == MotionEvent.ACTION_UP && closing) {
+            float x = event.getRawX(), y = event.getRawY();
+            if (bridge.frame.contains(x, y) || bridge.start.contains(x, y)) reopen();
         }
         return true;
     }
 
-    public FluidPredictiveBack.Motion backMotion(Runnable committed) {
+    public FluidPredictiveBack.Motion backMotion(Runnable committed, java.util.function.BooleanSupplier canPreview) {
         return new FluidPredictiveBack.Motion() {
             private FluidPredictiveBack.Motion preview;
 
@@ -339,11 +341,15 @@ public final class FluidTransform {
             public void start() {
                 View origin = sourceRef.get();
                 View target = targetRef.get();
-                if (!started || closing || bridge == null || origin == null || target == null
+                if (!canPreview.getAsBoolean() || !started || disposed || bridge == null || origin == null || target == null
                         || !origin.isAttachedToWindow()
                         || !FluidCapabilities.isMotionEnabled(host != null ? host.getContext() : null)) {
                     return;
                 }
+                if (closing && onCloseCancelled != null) onCloseCancelled.run();
+                closing = false;
+                onDismissComplete = null;
+                seeking = true;
                 if (!spring.isRunning()) bridge.capture(origin, target);
                 preview = FluidPredictiveBack.spring(
                         host.getContext(),
@@ -351,10 +357,14 @@ public final class FluidTransform {
                         () -> started && !closing,
                         () -> bridge.progress,
                         value -> {
-                            bridge.progress = (float) value;
-                            bridge.invalidate();
+                            render((float) value);
                         },
-                        committed
+                        () -> {
+                            // A discard confirmation or a layout can consume Back. Restore the
+                            // surface unless dismiss() immediately retargets this spring to zero.
+                            retarget(1f);
+                            committed.run();
+                        }
                 );
                 preview.start();
                 target.setAlpha(0f);
@@ -364,17 +374,21 @@ public final class FluidTransform {
 
             @Override
             public void update(float progress) {
-                if (preview != null) preview.update(progress);
+                if (preview != null && !FluidCapabilities.isMotionEnabled(host.getContext())) {
+                    cancel();
+                } else if (preview != null) preview.update(progress);
             }
 
             @Override
             public void cancel() {
+                seeking = false;
                 if (preview != null) preview.cancel();
                 preview = null;
             }
 
             @Override
             public void commit() {
+                seeking = false;
                 FluidPredictiveBack.Motion current = preview;
                 preview = null;
                 if (current != null) current.commit();
@@ -408,6 +422,7 @@ public final class FluidTransform {
         private int sourceColor;
         private int targetColor;
         private int count;
+        private float targetX, targetY;
 
         MorphBridge(Context context) {
             super(context);
@@ -418,15 +433,24 @@ public final class FluidTransform {
 
         void capture(View origin, View target) {
             target.getLocationOnScreen(location);
-            end.set(location[0], location[1], location[0] + target.getWidth(), location[1] + target.getHeight());
+            targetX = location[0]; targetY = location[1];
+            BottomSheet sheet = bottomSheetRef == null ? null : bottomSheetRef.get();
+            if (sheet != null) sheet.getFluidSurfaceBounds(end);
+            else end.set(0, 0, target.getWidth(), target.getHeight());
+            if (end.isEmpty()) end.set(0, 0, target.getWidth(), target.getHeight());
+            end.offset(targetX, targetY);
             updateOrigin(origin);
 
-            sourceColor = Theme.getColor(Theme.key_windowBackgroundWhite);
-            if (origin.getBackground() instanceof ColorDrawable) {
-                sourceColor = ((ColorDrawable) origin.getBackground()).getColor();
+            sourceColor = Theme.getColor(Theme.key_windowBackgroundWhite, sheet == null ? null : sheet.getResourcesProvider());
+            for (View view = origin; view != null; ) {
+                if (view.getBackground() instanceof ColorDrawable) {
+                    sourceColor = ((ColorDrawable) view.getBackground()).getColor();
+                    break;
+                }
+                view = view.getParent() instanceof View ? (View) view.getParent() : null;
             }
 
-            targetColor = Theme.getColor(Theme.key_dialogBackground);
+            targetColor = sheet == null ? Theme.getColor(Theme.key_dialogBackground) : sheet.getFluidSurfaceColor();
             if (target.getBackground() instanceof ColorDrawable) {
                 targetColor = ((ColorDrawable) target.getBackground()).getColor();
             }
@@ -448,18 +472,6 @@ public final class FluidTransform {
             float distance = Math.max(1f, (float) Math.hypot(dx, dy));
             directionX = dx / distance;
             directionY = dy / distance;
-        }
-
-        boolean atEndpoint(boolean opened) {
-            float p = Math.max(0f, Math.min(1.04f, progress));
-            float top = smooth(0.12f, 1f, Math.max(0f, Math.min(1f, p)));
-            frame.set(
-                    mix(start.left, end.left, p),
-                    mix(start.top, end.top, top),
-                    mix(start.right, end.right, p),
-                    mix(start.bottom, end.bottom, p)
-            );
-            return FluidHandoff.atBounds(frame, opened ? end : start);
         }
 
         @Override
@@ -543,7 +555,7 @@ public final class FluidTransform {
             if (incoming > 0f && target != null) {
                 int alpha = Math.round(incoming * targetAlpha * 255f);
                 int layer = alpha >= 255 ? canvas.save() : canvas.saveLayerAlpha(frame, alpha);
-                canvas.translate(end.left, end.top);
+                canvas.translate(targetX, targetY);
                 target.draw(canvas);
                 canvas.restoreToCount(layer);
             }
@@ -583,24 +595,7 @@ public final class FluidTransform {
         }
 
         @Override
-        public boolean onTouchEvent(MotionEvent event) {
-            if (event.getActionMasked() == MotionEvent.ACTION_UP) {
-                getLocationOnScreen(location);
-                float x = event.getX() + location[0];
-                float y = event.getY() + location[1];
-                BottomSheet sheet = bottomSheetRef != null ? bottomSheetRef.get() : null;
-                if (closing && (frame.contains(x, y) || start.contains(x, y))) {
-                    closing = false;
-                    onDismissComplete = null;
-                    if (spring != null) spring.animateToFinalPosition(1f);
-                } else if (!frame.contains(x, y)) {
-                    if (sheet != null) {
-                        sheet.dismiss();
-                    }
-                }
-            }
-            return true;
-        }
+        public boolean onTouchEvent(MotionEvent event) { return true; }
     }
 
     private static float mix(float a, float b, float p) {

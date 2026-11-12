@@ -13,6 +13,9 @@ public class NativeCrashHandler {
 
     static {
         try {
+            if (!HookRuntimeSupport.canLoadNativeHooks()) {
+                throw new UnsupportedOperationException("ARM native crash hooks disabled on x86 ART/native translation");
+            }
             System.loadLibrary("aliuhook");
             aliuHookLoaded = true;
         } catch (Throwable ignored) {
