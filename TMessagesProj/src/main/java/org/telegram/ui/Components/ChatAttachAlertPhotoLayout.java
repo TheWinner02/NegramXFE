@@ -140,6 +140,9 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
 
     private static final float RADIUS = 16f;
     private static float getRadius() {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            return 24f;
+        }
         return xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 20f : RADIUS;
     }
     private static final int VIEW_TYPE_AVATAR_CONSTRUCTOR = 4;
@@ -2731,11 +2734,18 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                     } else if (cameraAnimationInProgress) {
                         maxY = AndroidUtilities.lerp(maxY, view.getMeasuredHeight(), cameraOpenProgress);
                     }
+                    int rad = dp(getRadius());
                     if (cameraAnimationInProgress) {
+                        float curRad = AndroidUtilities.lerp(rad, 0f, cameraOpenProgress);
                         AndroidUtilities.rectTmp.set(animationClipLeft + cameraViewOffsetX * (1f - cameraOpenProgress), animationClipTop + cameraViewOffsetY * (1f - cameraOpenProgress), animationClipRight, animationClipBottom);
-                        outline.setRect((int) AndroidUtilities.rectTmp.left, (int) AndroidUtilities.rectTmp.top, (int) AndroidUtilities.rectTmp.right, Math.min(maxY, (int) AndroidUtilities.rectTmp.bottom));
-                    } else if (!cameraAnimationInProgress && !cameraOpened) {
-                        int rad = dp(getRadius());
+                        outline.setRoundRect(
+                            (int) AndroidUtilities.rectTmp.left,
+                            (int) AndroidUtilities.rectTmp.top,
+                            (int) AndroidUtilities.rectTmp.right,
+                            Math.min(maxY, (int) AndroidUtilities.rectTmp.bottom),
+                            curRad
+                        );
+                    } else if (!cameraOpened) {
                         outline.setRoundRect((int) cameraViewOffsetX, (int) cameraViewOffsetY, view.getMeasuredWidth() + rad, Math.min(maxY, view.getMeasuredHeight()) + rad, rad);
                     } else {
                         outline.setRect(0, 0, view.getMeasuredWidth(), Math.min(maxY, view.getMeasuredHeight()));
@@ -2823,7 +2833,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         }
         if (!cameraOpened) {
             cameraView.setTranslationX(cameraViewLocation[0]);
-            // cameraView.setTranslationY(cameraViewLocation[1] + currentPanTranslationY);
+            cameraView.setTranslationY(cameraViewLocation[1] + currentPanTranslationY);
         }
     }
 
@@ -3016,17 +3026,21 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                 public void onAnimationEnd(Animator animator) {
                     notificationsLocker.unlock();
                     cameraExpanded = false;
+                    cameraOpened = false;
+                    cameraAnimationInProgress = false;
                     parentAlert.getWindow().clearFlags(FLAG_KEEP_SCREEN_ON);
                     setCameraOpenProgress(0f);
-                    cameraAnimationInProgress = false;
+                    checkCameraViewPosition();
+                    if (cameraView != null) {
+                        cameraView.setFpsLimit(30);
+                        cameraView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+                        cameraView.invalidateOutline();
+                        cameraView.invalidate();
+                        cameraView.showTexture(true, false);
+                    }
                     if (gridView != null) {
                         gridView.invalidate();
                     }
-                    if (cameraView != null) {
-                        cameraView.invalidateOutline();
-                        cameraView.invalidate();
-                    }
-                    cameraOpened = false;
 
                     if (cameraPanel != null) {
                         cameraPanel.setVisibility(View.GONE);
@@ -3041,19 +3055,18 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                     if (cameraPhotoRecyclerView != null) {
                         cameraPhotoRecyclerView.setVisibility(View.GONE);
                     }
-                    if (cameraView != null) {
-                        cameraView.setFpsLimit(30);
-                        cameraView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
-                    }
+                    resumeCameraPreview();
                 }
             });
             animatorSet.start();
         } else {
             cameraExpanded = false;
+            cameraOpened = false;
+            cameraAnimationInProgress = false;
             parentAlert.getWindow().clearFlags(FLAG_KEEP_SCREEN_ON);
             setCameraOpenProgress(0f);
             animateCameraValues[0] = 0;
-            setCameraOpenProgress(0);
+            checkCameraViewPosition();
             cameraPanel.setAlpha(0);
             cameraPanel.setVisibility(View.GONE);
             cameraLensSelectorView.setAlpha(0f);
@@ -3070,23 +3083,22 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                     break;
                 }
             }
-            cameraOpened = false;
             if (cameraView != null) {
                 cameraView.setFpsLimit(30);
                 cameraView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+                cameraView.invalidateOutline();
+                cameraView.invalidate();
+                cameraView.showTexture(true, false);
             }
             if (gridView != null) {
                 gridView.invalidate();
             }
+            resumeCameraPreview();
         }
         if (cameraView != null) {
             cameraView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
         }
         gridView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
-
-        if (!LiteMode.isEnabled(LiteMode.FLAGS_CHAT) && cameraView != null) {
-            cameraView.showTexture(false, animated);
-        }
     }
 
     float animationClipTop;
@@ -3271,7 +3283,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         if (cameraView != null) {
             if (!cameraOpened) {
                 cameraView.setTranslationX(cameraViewLocation[0]);
-                // cameraView.setTranslationY(cameraViewLocation[1] + currentPanTranslationY);
+                cameraView.setTranslationY(cameraViewLocation[1] + currentPanTranslationY);
             }
             int finalWidth = itemSize;
             int finalHeight = itemSize * 2 + dp(GAP);
@@ -5144,6 +5156,14 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         }
 
         public boolean drawInDecoration;
+        private final Path dispatchClipPath = new Path();
+
+        @Override
+        protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+            super.onLayout(changed, left, top, right, bottom);
+            invalidateOutline();
+            invalidate();
+        }
 
         @Override
         protected void dispatchDraw(Canvas canvas) {
@@ -5158,12 +5178,21 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
 
             int maxY = (int) Math.min(parentAlert.getCommentTextViewTop() + currentPanTranslationY + parentAlert.getContainerView().getTranslationY() - cameraView.getTranslationY() - (parentAlert.mentionContainer != null ? parentAlert.mentionContainer.clipBottom() + dp(8) : 0), getMeasuredHeight());
             if (cameraAnimationInProgress) {
+                float rad = dp(getRadius());
+                float curRad = AndroidUtilities.lerp(rad, 0f, cameraOpenProgress);
                 AndroidUtilities.rectTmp.set(
                     animationClipLeft + cameraViewOffsetX * (1f - cameraOpenProgress),
                     animationClipTop + cameraViewOffsetY * (1f - cameraOpenProgress),
                     animationClipRight,
                     lerp(Math.min(maxY, animationClipBottom), getMeasuredHeight(), cameraOpenProgress)
                 );
+                dispatchClipPath.rewind();
+                dispatchClipPath.addRoundRect(AndroidUtilities.rectTmp, curRad, curRad, Path.Direction.CW);
+                canvas.save();
+                canvas.clipPath(dispatchClipPath);
+                super.dispatchDraw(canvas);
+                canvas.restore();
+                return;
             } else if (!cameraAnimationInProgress && !cameraOpened) {
                 AndroidUtilities.rectTmp.set(cameraViewOffsetX, cameraViewOffsetY, getMeasuredWidth(), Math.min(maxY, getMeasuredHeight()));
                 return;

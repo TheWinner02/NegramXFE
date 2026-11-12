@@ -2260,7 +2260,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                         buttonsRecyclerViewWrapper.setTranslationY(0);
                     } else {
                         currentAttachLayout.setTranslationY(0);
-                        buttonsRecyclerViewWrapper.setTranslationY(-translationY + buttonsRecyclerViewWrapper.getMeasuredHeight() * (translationY / initialTranslationY));
+                        buttonsRecyclerViewWrapper.setTranslationY(-translationY + buttonsRecyclerViewWrapper.getMeasuredHeight() * (initialTranslationY > 0 ? (translationY / initialTranslationY) : 0f));
                     }
                     containerView.invalidate();
                 }
@@ -5591,15 +5591,27 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         mediaPreviewView.setAlpha(0);
         selectedView.setAlpha(1);
 
-        int fromTranslationY = super.containerView.getMeasuredHeight();
-        super.containerView.setTranslationY(fromTranslationY);
-
         buttonsAnimation = new AnimatorSet();
         buttonsAnimation.playTogether(ObjectAnimator.ofFloat(this, ATTACH_ALERT_PROGRESS, 0.0f, 400.0f));
         buttonsAnimation.setDuration(400);
         buttonsAnimation.setStartDelay(20);
         ATTACH_ALERT_PROGRESS.set(this, 0.0f);
         buttonsAnimation.start();
+
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidAnchorView != null && fluidAnchorView.isAttachedToWindow()) {
+            currentSheetAnimationType = 0;
+            super.containerView.setTranslationY(0);
+            if (buttonsRecyclerViewWrapper != null) {
+                buttonsRecyclerViewWrapper.setTranslationY(0);
+            }
+            updateActionBarVisibility(false, false);
+            actionBar.setTag(null);
+            actionBar.setAlpha(0.0f);
+            return false;
+        }
+
+        int fromTranslationY = super.containerView.getMeasuredHeight();
+        super.containerView.setTranslationY(fromTranslationY);
 
         if (navigationBarAnimation != null) {
             navigationBarAnimation.cancel();

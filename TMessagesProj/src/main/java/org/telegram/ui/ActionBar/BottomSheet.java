@@ -269,6 +269,18 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
     protected int openedLayerNum;
     private boolean skipDismissAnimation;
 
+    protected View fluidAnchorView;
+    protected xyz.nextalone.nagram.ui.fluid.FluidContainerTransform fluidTransform;
+    private Runnable fluidUnregisterBack;
+
+    public void setFluidAnchorView(View view) {
+        this.fluidAnchorView = view;
+    }
+
+    public View getFluidAnchorView() {
+        return this.fluidAnchorView;
+    }
+
     public void skipDismissAnimation() {
         skipDismissAnimation = true;
     }
@@ -1900,7 +1912,45 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         containerView.setVisibility(View.VISIBLE);
         com.exteragram.messenger.utils.system.VibratorUtils.vibrateGesture(containerView, true);
 
-        if (!onCustomOpenAnimation()) {
+        boolean customOpen = onCustomOpenAnimation();
+
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidAnchorView != null && fluidAnchorView.isAttachedToWindow()) {
+            if (fluidTransform == null) {
+                float rad = xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius();
+                fluidTransform = new xyz.nextalone.nagram.ui.fluid.FluidContainerTransform(
+                        fluidAnchorView,
+                        containerView,
+                        backDrawable,
+                        dimBehind ? dimBehindAlpha : 0,
+                        rad
+                );
+            }
+            if (getWindow() != null && fluidUnregisterBack == null) {
+                fluidUnregisterBack = xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.installDialog(getWindow(), fluidTransform.backMotion(this::dismiss));
+            }
+            if (navigationBarAnimation != null) {
+                navigationBarAnimation.cancel();
+            }
+            navigationBarAnimation = ValueAnimator.ofFloat(navigationBarAlpha, 1f);
+            navigationBarAnimation.addUpdateListener(a -> {
+                navigationBarAlpha = (float) a.getAnimatedValue();
+                if (container != null) {
+                    container.invalidate();
+                }
+            });
+            navigationBarAnimation.start();
+            containerView.setTranslationY(0);
+            onContainerViewTranslation();
+            currentSheetAnimationType = 0;
+            fluidTransform.open(() -> {
+                if (delegate != null) {
+                    delegate.onOpenAnimationEnd();
+                }
+            });
+            return;
+        }
+
+        if (!customOpen) {
             if (useHardwareLayer) {
                 container.setLayerType(View.LAYER_TYPE_HARDWARE, null);
             }
@@ -2132,6 +2182,9 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         if (dismissed) {
             return false;
         }
+        if (fluidTransform != null && fluidTransform.dispatchTouchEvent(ev)) {
+            return true;
+        }
         return super.dispatchTouchEvent(ev);
     }
 
@@ -2191,6 +2244,31 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                 }
             });
         } else {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidTransform != null && !skipDismissAnimation) {
+                AndroidUtilities.hideKeyboard(container);
+                currentSheetAnimationType = 0;
+                if (navigationBarAnimation != null) {
+                    navigationBarAnimation.cancel();
+                }
+                navigationBarAnimation = ValueAnimator.ofFloat(navigationBarAlpha, 0f);
+                navigationBarAnimation.addUpdateListener(a -> {
+                    navigationBarAlpha = (float) a.getAnimatedValue();
+                    if (container != null) {
+                        container.invalidate();
+                    }
+                });
+                navigationBarAnimation.start();
+                fluidTransform.close(() -> {
+                    AndroidUtilities.runOnUIThread(() -> {
+                        try {
+                            dismissInternal();
+                        } catch (Exception e) {
+                            FileLog.e(e);
+                        }
+                    });
+                });
+                return;
+            }
             if (!allowCustomAnimation || !onCustomCloseAnimation()) {
                 AndroidUtilities.hideKeyboard(container);
                 currentSheetAnimationType = 2;
@@ -2376,6 +2454,14 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
     }
 
     public void dismissInternal() {
+        if (fluidUnregisterBack != null) {
+            fluidUnregisterBack.run();
+            fluidUnregisterBack = null;
+        }
+        if (fluidTransform != null) {
+            fluidTransform.abort();
+            fluidTransform = null;
+        }
         if (Build.VERSION.SDK_INT >= 31) {
             View targetView = getBlurTargetView();
             if (targetView != null) {
@@ -2396,6 +2482,29 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
     }
 
     protected boolean onCustomCloseAnimation() {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidTransform != null && (fluidTransform.isOpened() || fluidTransform.isMorphing())) {
+            AndroidUtilities.hideKeyboard(container);
+            currentSheetAnimationType = 2;
+            if (navigationBarAnimation != null) {
+                navigationBarAnimation.cancel();
+            }
+            navigationBarAnimation = ValueAnimator.ofFloat(navigationBarAlpha, 0f);
+            navigationBarAnimation.addUpdateListener(a -> {
+                navigationBarAlpha = (float) a.getAnimatedValue();
+                if (container != null) {
+                    container.invalidate();
+                }
+            });
+            navigationBarAnimation.start();
+            fluidTransform.close(() -> {
+                try {
+                    dismissInternal();
+                } catch (Exception e) {
+                    FileLog.e(e);
+                }
+            });
+            return true;
+        }
         return false;
     }
 

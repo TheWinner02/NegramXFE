@@ -27,10 +27,13 @@ object UIStyleEngine {
     }
 
     @JvmStatic
-    fun isMaterial3Expressive(): Boolean = NaConfig.isMaterial3Expressive()
+    fun isMaterial3Expressive(): Boolean = NaConfig.isMaterial3Expressive() || isFluid()
 
     @JvmStatic
     fun isIosLiquidGlass(): Boolean = NaConfig.isIosLiquidGlass()
+
+    @JvmStatic
+    fun isFluid(): Boolean = NaConfig.isFluid()
 
     @JvmStatic
     fun isClassic(): Boolean = NaConfig.isClassic()
@@ -38,6 +41,7 @@ object UIStyleEngine {
     @JvmStatic
     fun getBubbleCornerRadius(): Float {
         return when {
+            isFluid() -> AndroidUtilities.dp(22f).toFloat()
             isMaterial3Expressive() -> AndroidUtilities.dp(22f).toFloat()
             isIosLiquidGlass() -> AndroidUtilities.dp(18f).toFloat()
             else -> AndroidUtilities.dp(16f).toFloat()
@@ -47,6 +51,7 @@ object UIStyleEngine {
     @JvmStatic
     fun getCardCornerRadius(): Float {
         return when {
+            isFluid() -> AndroidUtilities.dp(24f).toFloat()
             isMaterial3Expressive() -> AndroidUtilities.dp(24f).toFloat()
             isIosLiquidGlass() -> AndroidUtilities.dp(24f).toFloat()
             else -> AndroidUtilities.dp(12f).toFloat()
@@ -56,6 +61,7 @@ object UIStyleEngine {
     @JvmStatic
     fun getDialogCornerRadius(): Float {
         return when {
+            isFluid() -> AndroidUtilities.dp(28f).toFloat()
             isMaterial3Expressive() -> AndroidUtilities.dp(28f).toFloat()
             isIosLiquidGlass() -> AndroidUtilities.dp(20f).toFloat()
             else -> AndroidUtilities.dp(14f).toFloat()
@@ -65,6 +71,7 @@ object UIStyleEngine {
     @JvmStatic
     fun getButtonCornerRadius(): Float {
         return when {
+            isFluid() -> AndroidUtilities.dp(24f).toFloat()
             isMaterial3Expressive() -> AndroidUtilities.dp(24f).toFloat()
             isIosLiquidGlass() -> AndroidUtilities.dp(14f).toFloat()
             else -> AndroidUtilities.dp(8f).toFloat()
@@ -73,7 +80,7 @@ object UIStyleEngine {
 
     @JvmStatic
     fun shouldUseFloatingBars(): Boolean {
-        return isMaterial3Expressive() || isIosLiquidGlass()
+        return isMaterial3Expressive() || isIosLiquidGlass() || isFluid()
     }
 
     @JvmStatic
@@ -97,18 +104,18 @@ object UIStyleEngine {
     @JvmStatic
     fun getSwitchWidth(): Int {
         val style = NaConfig.switchStyle.Int()
-        return if (isIosLiquidGlass() || style == 3) 54 else if (isMaterial3Expressive() || style == 2) 52 else 38
+        return if (isIosLiquidGlass() || style == 3) 54 else if (isMaterial3Expressive() || isFluid() || style == 2) 52 else 38
     }
 
     @JvmStatic
     fun getSwitchHeight(): Int {
         val style = NaConfig.switchStyle.Int()
-        return if (isIosLiquidGlass() || style == 3) 36 else if (isMaterial3Expressive() || style == 2) 48 else 22
+        return if (isIosLiquidGlass() || style == 3) 36 else if (isMaterial3Expressive() || isFluid() || style == 2) 48 else 22
     }
 
     @JvmStatic
     fun getSwitchTextInset(baseInset: Int = 70): Int {
         val style = NaConfig.switchStyle.Int()
-        return if (isMaterial3Expressive() || style == 2) 104 else if (isIosLiquidGlass() || style == 3) 86 else baseInset
+        return if (isMaterial3Expressive() || isFluid() || style == 2) 104 else if (isIosLiquidGlass() || style == 3) 86 else baseInset
     }
 }

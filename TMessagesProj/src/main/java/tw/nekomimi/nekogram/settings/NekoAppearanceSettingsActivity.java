@@ -83,12 +83,14 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
     private final AbstractConfigCell uiStyleRow = cellGroup.appendCell(new ConfigCellSelectBox("UiStyle", NaConfig.INSTANCE.getUiStyle(), new String[]{
             getString(R.string.UiStyleClassic),
             getString(R.string.UiStyleMaterial3Expressive),
-            getString(R.string.UiStyleIosLiquidGlass)
+            getString(R.string.UiStyleIosLiquidGlass),
+            getString(R.string.UiStyleFluid)
     }, null));
     private final AbstractConfigCell uiStyleConnectedGroupRow = cellGroup.appendCell(new ConfigCellConnectedButtonGroup("UiStyle", NaConfig.INSTANCE.getUiStyle(), new String[]{
             getString(R.string.UiStyleClassic),
             getString(R.string.UiStyleMaterial3Expressive),
-            getString(R.string.UiStyleIosLiquidGlass)
+            getString(R.string.UiStyleIosLiquidGlass),
+            getString(R.string.UiStyleFluid)
     }));
     private final AbstractConfigCell typefaceRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.typeface));
     private final AbstractConfigCell hideDividersRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getHideDividers()));
@@ -274,7 +276,7 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
         cellGroup.rows.add(4, getUiStyleModeRow());
         cellGroup.rows.add(5, fabShapePreviewRow);
         cellGroup.rows.add(6, typefaceRow);
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
             replaceRow(switchStyleRow, switchStyleConnectedGroupRow);
             replaceRow(sliderStyleRow, sliderStyleConnectedGroupRow);
             replaceRow(tabletModeRow, tabletModeConnectedGroupRow);
@@ -320,11 +322,11 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
     }
 
     private AbstractConfigCell getUiStyleModeRow() {
-        return xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? uiStyleConnectedGroupRow : uiStyleRow;
+        return (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) ? uiStyleConnectedGroupRow : uiStyleRow;
     }
 
     private AbstractConfigCell getTabsTitleTypeModeRow() {
-        return xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? tabsTitleTypeConnectedGroupRow : tabsTitleTypeRow;
+        return (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) ? tabsTitleTypeConnectedGroupRow : tabsTitleTypeRow;
     }
 
     private void replaceRow(AbstractConfigCell oldRow, AbstractConfigCell newRow) {
@@ -360,7 +362,8 @@ public class NekoAppearanceSettingsActivity extends BaseNekoXSettingsActivity {
         cellGroup.callBackSettingsChanged = (key, newValue) -> {
             if (key.equals(NaConfig.INSTANCE.getUiStyle().getKey())) {
                 if (newValue instanceof Integer
-                        && (Integer) newValue == xyz.nextalone.nagram.NaConfig.UI_STYLE_MATERIAL3_EXPRESSIVE
+                        && ((Integer) newValue == xyz.nextalone.nagram.NaConfig.UI_STYLE_MATERIAL3_EXPRESSIVE
+                            || (Integer) newValue == xyz.nextalone.nagram.NaConfig.UI_STYLE_FLUID)
                         && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                     boolean isNight = Theme.isCurrentThemeDark();
                     Theme.ThemeInfo targetTheme = Theme.getTheme(isNight ? "Monet Dark" : "Monet Light");

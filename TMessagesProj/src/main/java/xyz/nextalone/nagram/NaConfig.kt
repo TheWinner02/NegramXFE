@@ -1560,12 +1560,13 @@ object NaConfig {
     const val UI_STYLE_CLASSIC = 0
     const val UI_STYLE_MATERIAL3_EXPRESSIVE = 1
     const val UI_STYLE_IOS_LIQUID_GLASS = 2
+    const val UI_STYLE_FLUID = 3
 
     val uiStyle =
         addConfig(
             "UiStyle",
             ConfigItem.configTypeInt,
-            UI_STYLE_CLASSIC // 0: Classic, 1: M3 Expressive, 2: iOS Liquid Glass
+            UI_STYLE_CLASSIC // 0: Classic, 1: M3 Expressive, 2: iOS Liquid Glass, 3: Fluid
         )
 
     @JvmStatic
@@ -1573,6 +1574,9 @@ object NaConfig {
 
     @JvmStatic
     fun isIosLiquidGlass(): Boolean = uiStyle.Int() == UI_STYLE_IOS_LIQUID_GLASS
+
+    @JvmStatic
+    fun isFluid(): Boolean = uiStyle.Int() == UI_STYLE_FLUID
 
     @JvmStatic
     fun isClassic(): Boolean = uiStyle.Int() == UI_STYLE_CLASSIC

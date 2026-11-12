@@ -451,4 +451,5 @@
     <string name="UiStyleClassic">Классический Telegram</string>
     <string name="UiStyleMaterial3Expressive">Expressive</string>
     <string name="UiStyleIosLiquidGlass">Glass</string>
+    <string name="UiStyleFluid">Fluid</string>
 </resources>

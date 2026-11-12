@@ -14767,6 +14767,9 @@ public class ChatActivity extends BaseFragment implements
         final boolean isEphemeralMessage = chatActivityEnterView != null && chatActivityEnterView.isEphemeralMessageVisible();
 
         createChatAttachView();
+        if (chatActivityEnterView != null && chatAttachAlert != null) {
+            chatAttachAlert.setFluidAnchorView(chatActivityEnterView.getAttachButton());
+        }
         chatAttachAlert.restrictEphemeralMessageTypes = isEphemeralMessage || chatMode == MODE_WELCOME_MESSAGES;
         chatAttachAlert.getPhotoLayout().loadGalleryPhotos();
         if (chatActivityEnterView != null) {
@@ -14793,6 +14796,9 @@ public class ChatActivity extends BaseFragment implements
             return;
         }
         createChatAttachView();
+        if (chatActivityEnterView != null && chatAttachAlert != null) {
+            chatAttachAlert.setFluidAnchorView(chatActivityEnterView.getAttachButton());
+        }
         chatAttachAlert.getPhotoLayout().loadGalleryPhotos();
         if (chatActivityEnterView != null) {
             chatActivityEnterView.closeKeyboard();
