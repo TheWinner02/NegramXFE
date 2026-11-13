@@ -68,6 +68,15 @@
  * presses to background-only expansion: labels, icons and touch targets are not scaled. The
  * native group layout remains responsible for neighbouring buttons' reaction.
  *
+ * <p>PhotoViewer retains its native shared-thumbnail geometry and player ownership. FluidAnimator
+ * seeks the existing together-timeline with the common tracked spring, including drag/zoom
+ * settling and neighbouring-media changes. The legacy 500ms watchdog does not truncate a
+ * running Fluid transition. Predictive Back previews the native media transform and backdrop;
+ * cancellation springs back without releasing the player, while commit hands the current
+ * geometry to the native thumbnail return. Caption/keyboard, editing, text selection, quality
+ * selection, embedded web players and PiP keep their own Back handling. Return motion can be
+ * interrupted by another gesture; attached ViewRoot registrations and timelines stop on teardown.
+ *
  * <p>Other UI styles retain their original motion. Gesture displacement, playback timelines,
  * indeterminate loading loops and specialized content transitions are not globally time-warped.
  */

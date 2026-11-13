@@ -121,6 +121,10 @@ import android.widget.Space;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.window.OnBackInvokedDispatcher;
+import xyz.nextalone.nagram.ui.fluid.FluidAnimator;
+import xyz.nextalone.nagram.ui.fluid.FluidCapabilities;
+import xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack;
+import xyz.nextalone.nagram.ui.fluid.FluidTiming;
 
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
@@ -137,6 +141,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.widget.NestedScrollView;
 import androidx.dynamicanimation.animation.DynamicAnimation;
 import androidx.dynamicanimation.animation.FloatValueHolder;
+import androidx.dynamicanimation.animation.FloatPropertyCompat;
 import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
 import androidx.media3.common.util.UnstableApi;
@@ -1963,6 +1968,109 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private boolean openAnimationInProgress;
     private long transitionAnimationStartTime;
     private Runnable animationEndRunnable;
+    private FluidAnimator fluidTransition, fluidImageMove;
+    private Runnable unregisterFluidBack;
+    private SpringAnimation fluidBackSpring;
+    private boolean fluidBackPreview;
+    private float fluidBackProgress = 1f;
+    private float fluidBackScale, fluidBackX, fluidBackY, fluidBackAlpha, fluidBackNavigationAlpha;
+
+    private void startViewerTransition(AnimatorSet animator) {
+        if (UIStyleEngine.isFluid()) {
+            fluidTransition = FluidAnimator.start(parentActivity, animator);
+        } else {
+            animator.start();
+        }
+    }
+
+    private boolean canPreviewFluidBack() {
+        return UIStyleEngine.isFluid() && isVisible && animationInProgress == 0
+                && currentEditMode == EDIT_MODE_NONE && !isInline && !pipAnimationInProgress
+                && sendPhotoType != SELECT_TYPE_AVATAR && sendPhotoType != SELECT_TYPE_STICKER
+                && photoViewerWebView == null && !isCaptionOpen()
+                && (visibleDialog == null || !visibleDialog.isShowing())
+                && (qualityChooseView == null || qualityChooseView.getTag() == null)
+                && (textSelectionHelper == null || !textSelectionHelper.isInSelectionMode())
+                && !ContentPreviewViewer.getInstance().isVisible();
+    }
+
+    private void renderFluidBack(float value) {
+        fluidBackProgress = value;
+        if (!fluidBackPreview || containerView == null) return;
+        float p = 1f - Math.max(0f, Math.min(1f, value));
+        // Move the native image/player; closePhoto then returns from this exact geometry.
+        scale = fluidBackScale * (1f - .12f * p);
+        translationX = fluidBackX;
+        translationY = fluidBackY + dp(32) * p;
+        containerView.setAlpha(fluidBackAlpha * (1f - .25f * p));
+        navigationBar.setAlpha(fluidBackNavigationAlpha * (1f - p));
+        containerView.invalidate();
+        invalidateBlur();
+    }
+
+    private void stopFluidBack() {
+        if (fluidBackSpring != null) fluidBackSpring.cancel();
+        fluidBackPreview = false;
+        fluidBackProgress = 1f;
+    }
+
+    private FluidPredictiveBack.Motion createFluidViewerBack() {
+        if (fluidBackSpring == null) {
+            fluidBackSpring = new SpringAnimation(this, new FloatPropertyCompat<PhotoViewer>("fluidViewerBack") {
+                @Override public float getValue(PhotoViewer viewer) { return viewer.fluidBackProgress; }
+                @Override public void setValue(PhotoViewer viewer, float value) { viewer.renderFluidBack(value); }
+            });
+            fluidBackSpring.setSpring(FluidTiming.springForce(FluidCapabilities.motionScale(parentActivity)));
+            fluidBackSpring.setMinimumVisibleChange(FluidTiming.MIN_VISIBLE_CHANGE);
+            FluidCapabilities.track(parentActivity, fluidBackSpring);
+            fluidBackSpring.addEndListener((animation, cancelled, value, velocity) -> {
+                if (!cancelled) {
+                    renderFluidBack(1f);
+                    fluidBackPreview = false;
+                }
+            });
+        }
+        FluidPredictiveBack.Motion preview = FluidPredictiveBack.spring(parentActivity, fluidBackSpring,
+                this::canPreviewFluidBack, () -> fluidBackProgress, value -> renderFluidBack((float) value),
+                () -> {
+                    stopFluidBack();
+                    dispatchViewerBack();
+                });
+        return new FluidPredictiveBack.Motion() {
+            @Override public void start() {
+                if (canPreviewFluidBack() && FluidCapabilities.isMotionEnabled(parentActivity)) {
+                    cancelMoveZoomAnimation();
+                    if (!scroller.isFinished()) scroller.abortAnimation();
+                    if (!fluidBackPreview) {
+                        fluidBackScale = scale;
+                        fluidBackX = translationX;
+                        fluidBackY = translationY;
+                        fluidBackAlpha = containerView.getAlpha();
+                        fluidBackNavigationAlpha = navigationBar.getAlpha();
+                        fluidBackProgress = 1f;
+                        fluidBackPreview = true;
+                    }
+                    moving = zooming = draggingDown = false;
+                }
+                preview.start();
+            }
+            @Override public void update(float progress) { preview.update(progress); }
+            @Override public void cancel() { preview.cancel(); }
+            @Override public void commit() { preview.commit(); }
+        };
+    }
+
+    private void dispatchViewerBack() {
+        if (isCaptionOpen()) {
+            closeCaptionEnter(true);
+        } else if (textSelectionHelper != null && textSelectionHelper.isInSelectionMode()) {
+            textSelectionHelper.clear();
+        } else if (parentActivity instanceof LaunchActivity) {
+            ((LaunchActivity) parentActivity).onBackPressed();
+        } else if (isVisible()) {
+            closePhoto(true, false);
+        }
+    }
     private PlaceProviderObject showAfterAnimation;
     private PlaceProviderObject hideAfterAnimation;
     private boolean disableShowCheck;
@@ -9949,6 +10057,14 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void onHideView() {
+        if (unregisterFluidBack != null) {
+            unregisterFluidBack.run();
+            unregisterFluidBack = null;
+        }
+        stopFluidBack();
+        if (fluidTransition != null) { fluidTransition.abort(); fluidTransition = null; }
+        if (fluidImageMove != null) { fluidImageMove.abort(); fluidImageMove = null; }
+        transitionNotificationLocker.unlock();
         if (parentActivity instanceof LaunchActivity) {
             LaunchActivity launchActivity = (LaunchActivity) parentActivity;
             launchActivity.removeOnUserLeaveHintListener(onUserLeaveHintListener);
@@ -18047,7 +18163,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private boolean checkAnimation() {
         if (animationInProgress != 0) {
             invalidateBlur();
-            if (Math.abs(transitionAnimationStartTime - System.currentTimeMillis()) >= 500) {
+            if ((fluidTransition == null || !fluidTransition.isRunning())
+                    && Math.abs(transitionAnimationStartTime - System.currentTimeMillis()) >= 500) {
                 if (animationEndRunnable != null) {
                     animationEndRunnable.run();
                     animationEndRunnable = null;
@@ -18138,21 +18255,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             wm.addView(windowView, windowLayoutParams);
             onShowView();
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (unregisterFluidBack != null) unregisterFluidBack.run();
+            unregisterFluidBack = null;
+            if (UIStyleEngine.isFluid()) {
+                unregisterFluidBack = FluidPredictiveBack.installPopup(windowView, createFluidViewerBack());
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 final OnBackInvokedDispatcher dispatcher = windowView.findOnBackInvokedDispatcher();
                 if (dispatcher != null) {
                     dispatcher.registerOnBackInvokedCallback(
-                        OnBackInvokedDispatcher.PRIORITY_DEFAULT,
-                        () -> {
-                            if (parentActivity instanceof LaunchActivity) {
-                                ((LaunchActivity) parentActivity).onBackPressed();
-                            } else {
-                                if (isVisible()) {
-                                    closePhoto(true, false);
-                                }
-                            }
-                        }
-                    );
+                            OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::dispatchViewerBack);
                 }
             }
         } catch (Exception e) {
@@ -18522,7 +18633,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                         transitionAnimationStartTime = System.currentTimeMillis();
                         AndroidUtilities.runOnUIThread(() -> {
                             transitionNotificationLocker.lock();
-                            animatorSet.start();
+                            startViewerTransition(animatorSet);
                         });
                     } else {
                         if (animationEndRunnable != null) {
@@ -18577,23 +18688,26 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 @Override
                 public boolean onPreDraw() {
                     windowView.getViewTreeObserver().removeOnPreDrawListener(this);
-                    actionBar.setTranslationY(-dp(32));
-                    actionBar.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
+                    if (!UIStyleEngine.isFluid()) {
+                        actionBar.setTranslationY(-dp(32));
+                        actionBar.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
 
-                    checkImageView.setTranslationY(-dp(32));
-                    checkImageView.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
+                        checkImageView.setTranslationY(-dp(32));
+                        checkImageView.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
 
-                    photosCounterView.setTranslationY(-dp(32));
-                    photosCounterView.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
+                        photosCounterView.setTranslationY(-dp(32));
+                        photosCounterView.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
 
-                    pickerView.setTranslationY(dp(32));
-                    pickerView.animate().alpha(1).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
-                    pickerViewSendButton.setTranslationY(dp(32));
-                    pickerViewSendButton.setAlpha(0f);
-                    pickerViewSendButton.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
+                        pickerView.setTranslationY(dp(32));
+                        pickerView.animate().alpha(1).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
+                        pickerViewSendButton.setTranslationY(dp(32));
+                        pickerViewSendButton.setAlpha(0f);
+                        pickerViewSendButton.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
 
-                    videoPreviewFrame.setTranslationY(dp(32));
-                    videoPreviewFrame.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
+                        videoPreviewFrame.setTranslationY(dp(32));
+                        videoPreviewFrame.animate().alpha(1).translationY(0).setDuration(150).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
+
+                    }
 
                     containerView.setAlpha(0);
                     backgroundDrawable.setAlpha(0);
@@ -18610,6 +18724,21 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                             ObjectAnimator.ofFloat(navigationBar, View.ALPHA, 0f, 1f).setDuration(220),
                             a2, a3
                     );
+                    if (UIStyleEngine.isFluid()) {
+                        ArrayList<Animator> controls = new ArrayList<>(animatorSet.getChildAnimations());
+                        View[] top = { actionBar, checkImageView, photosCounterView };
+                        View[] bottom = { pickerViewSendButton, videoPreviewFrame };
+                        for (View view : top) {
+                            controls.add(ObjectAnimator.ofFloat(view, View.ALPHA, 0f, 1f));
+                            controls.add(ObjectAnimator.ofFloat(view, View.TRANSLATION_Y, -dp(32), 0f));
+                        }
+                        for (View view : bottom) {
+                            controls.add(ObjectAnimator.ofFloat(view, View.ALPHA, 0f, 1f));
+                            controls.add(ObjectAnimator.ofFloat(view, View.TRANSLATION_Y, dp(32), 0f));
+                        }
+                        a2.setFloatValues(dp(32), 0f);
+                        animatorSet.playTogether(controls);
+                    }
                     animatorSet.addListener(new AnimatorListenerAdapter() {
                         @Override
                         public void onAnimationStart(Animator animation) {
@@ -18636,7 +18765,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                             }
                         }
                     });
-                    animatorSet.start();
+                    startViewerTransition(animatorSet);
                     return true;
                 }
             });
@@ -18754,6 +18883,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     public void closePhoto(boolean animated, boolean fromEditMode) {
+        stopFluidBack();
         if (stickerMakerView != null) {
             stickerMakerView.isThanosInProgress = false;
             if (cutOutBtn.isCancelState()) {
@@ -18843,6 +18973,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 //        if (captionEditText.hideActionMode() && !fromEditMode) {
 //            return;
 //        }
+        if (UIStyleEngine.isFluid()) cancelMoveZoomAnimation();
         if (parentActivity != null && fullscreenedByButton != 0) {
             parentActivity.setRequestedOrientation(prevOrientation);
             fullscreenedByButton = 0;
@@ -19147,6 +19278,14 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     containerView.setLayerType(View.LAYER_TYPE_NONE, null);
                     animationInProgress = 0;
                     invalidateBlur();
+                    if (UIStyleEngine.isFluid()) {
+                        // Hand off in one frame: onPhotoClosed restores the source immediately,
+                        // but removal of the viewer window is posted to the next UI turn.
+                        containerView.setAlpha(0f);
+                        for (ClippingImageView image : animatingImageViews) {
+                            image.setVisibility(View.GONE);
+                        }
+                    }
                     onPhotoClosed(object);
                     MediaController.getInstance().tryResumePausedAudio();
                     if (stickerEmpty && !stickerEmptySent && imagesArrLocals != null) {
@@ -19182,7 +19321,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     containerView.invalidate();
                     transitionAnimationStartTime = System.currentTimeMillis();
                     containerView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-                    animatorSet.start();
+                    startViewerTransition(animatorSet);
                 };
                 if (allowStart[0]) {
                     start[0].run();
@@ -19251,7 +19390,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     animationInProgress = 2;
                     transitionAnimationStartTime = System.currentTimeMillis();
                     containerView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-                    animatorSet.start();
+                    startViewerTransition(animatorSet);
                     if (object != null) {
                         object.imageReceiver.setVisible(true, true);
                     }
@@ -19304,6 +19443,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     public void destroyPhotoViewer() {
+        onHideView();
         if (parentActivity == null || windowView == null) {
             return;
         }
@@ -19612,6 +19752,17 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
     private boolean onTouchEvent(MotionEvent ev) {
         lastX = ev.getX();
+        if (UIStyleEngine.isFluid() && ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            if (fluidBackPreview && fluidBackSpring != null && fluidBackSpring.isRunning()) {
+                float alpha = fluidBackAlpha, navAlpha = fluidBackNavigationAlpha;
+                stopFluidBack();
+                containerView.setAlpha(alpha);
+                navigationBar.setAlpha(navAlpha);
+            }
+            if (fluidImageMove != null && fluidImageMove.isRunning() && switchImageAfterAnimation == 0) {
+                cancelMoveZoomAnimation();
+            }
+        }
         if (ev.getActionMasked() == MotionEvent.ACTION_DOWN || ev.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN) {
             if (photoProgressViews[0] != null && photoProgressViews[0].isVisible() && photoProgressViews[0].backgroundState != PROGRESS_NONE && Math.sqrt(Math.pow(AndroidUtilities.displaySize.x / 2f - ev.getX(), 2) + Math.pow((AndroidUtilities.displaySize.y + AndroidUtilities.statusBarHeight) / 2f - ev.getY(), 2)) < dp(44)) {
                 photoProgressViews[0].setPressed(true);
@@ -19667,7 +19818,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 doubleTap = false;
                 moving = false;
                 zooming = false;
-                checkMinMax(false);
+                // onDoubleTap already clamps and starts its zoom. A second movement here
+                // would interrupt that spring and retarget it to the pre-zoom scale.
+                if (!UIStyleEngine.isFluid() || imageMoveAnimation == null) {
+                    checkMinMax(false);
+                }
                 return true;
             }
         }
@@ -20068,6 +20223,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void animateTo(float newScale, float newTx, float newTy, boolean isZoom, int duration) {
+        if (UIStyleEngine.isFluid() && fluidImageMove != null && fluidImageMove.isRunning()) {
+            cancelMoveZoomAnimation();
+        }
         if (scale == newScale && translationX == newTx && translationY == newTy) {
             return;
         }
@@ -20086,10 +20244,23 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             @Override
             public void onAnimationEnd(Animator animation) {
                 imageMoveAnimation = null;
+                if (UIStyleEngine.isFluid()) {
+                    translationX = animateToX;
+                    translationY = animateToY;
+                    scale = animateToScale;
+                    rotate = animateToRotate;
+                    animationStartTime = 0;
+                    zoomAnimation = false;
+                    updateMinMax(scale);
+                }
                 containerView.invalidate();
             }
         });
-        imageMoveAnimation.start();
+        if (UIStyleEngine.isFluid()) {
+            fluidImageMove = FluidAnimator.start(parentActivity, imageMoveAnimation);
+        } else {
+            imageMoveAnimation.start();
+        }
     }
 
     public int getCurrentIndex() {
@@ -20428,7 +20599,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (videoSizeSet && aspectRatioFrameLayout != null && aspectRatioFrameLayout.getVisibility() == View.VISIBLE) {
             containerHeight = getVideoFitHeight();
         }
-        if (animationInProgress != 2 && animationInProgress != 4 && !pipAnimationInProgress && !isInline) {
+        if (fluidBackPreview) {
+            backgroundDrawable.setAlpha((int) (255f * Math.max(0f, Math.min(1f, fluidBackProgress))));
+        } else if (animationInProgress != 2 && animationInProgress != 4 && !pipAnimationInProgress && !isInline) {
             if (currentEditMode == EDIT_MODE_NONE && sendPhotoType != SELECT_TYPE_AVATAR && sendPhotoType != SELECT_TYPE_STICKER && scale == 1 && aty != -1 && !zoomAnimation) {
                 float maxValue = containerWidth / 4.0f;
                 backgroundDrawable.setAlpha((int) Math.max(127, 255 * (1.0f - (Math.min(Math.abs(aty), maxValue) / maxValue))));
