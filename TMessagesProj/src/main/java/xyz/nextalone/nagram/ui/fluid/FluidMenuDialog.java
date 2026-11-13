@@ -32,6 +32,14 @@ public final class FluidMenuDialog extends Dialog {
     private float offsetX, offsetY, placementOffsetY;
     private boolean forceAbove, forceBelow;
     private boolean reopenOnOriginTouch, originReopenGesture;
+    private float nativeDim = -1f;
+    private int nativeBlurRadius;
+
+    /** Preserve a native popup's existing backdrop when its surface moves into this window. */
+    public void setNativeBackdrop(float dim, int blurRadius) {
+        nativeDim = Math.max(0f, Math.min(1f, dim));
+        nativeBlurRadius = Math.max(0, blurRadius);
+    }
 
     /** Context-menu builders create a new instance on every click: reverse this surface directly. */
     public void setReopenOnOriginTouch(boolean enabled) { reopenOnOriginTouch = enabled; }
@@ -106,6 +114,16 @@ public final class FluidMenuDialog extends Dialog {
             window.setBackgroundDrawableResource(android.R.color.transparent);
             window.setWindowAnimations(0);
             window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            if (nativeDim >= 0f) {
+                WindowManager.LayoutParams attributes = window.getAttributes();
+                attributes.flags |= WindowManager.LayoutParams.FLAG_DIM_BEHIND;
+                attributes.dimAmount = nativeDim;
+                if (Build.VERSION.SDK_INT >= 31 && nativeBlurRadius > 0) {
+                    attributes.flags |= WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
+                    attributes.setBlurBehindRadius(nativeBlurRadius);
+                }
+                window.setAttributes(attributes);
+            }
             window.addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
             if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false);
             View source = origin.get();
@@ -136,6 +154,15 @@ public final class FluidMenuDialog extends Dialog {
         surface.refreshOrigin();
         surface.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         surface.animateTo(0f);
+    }
+
+    /** Owner teardown must revoke queued actions rather than execute them after navigation. */
+    public void dismissImmediately() {
+        pendingItem = null;
+        touchReceiver = null;
+        originReopenGesture = false;
+        closing = true;
+        finishClose();
     }
 
     private void finishClose() {

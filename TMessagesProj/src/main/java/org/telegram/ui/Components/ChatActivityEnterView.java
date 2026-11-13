@@ -4936,6 +4936,18 @@ public class ChatActivityEnterView extends FrameLayout implements
 
     private boolean isInInput;
     private ActionBarPopupWindow menuPopupWindow;
+    private xyz.nextalone.nagram.ui.fluid.FluidMenuDialog fluidInputMenu;
+
+    private void dismissInputMenu() {
+        if (fluidInputMenu != null) fluidInputMenu.dismiss();
+        if (menuPopupWindow != null && menuPopupWindow.isShowing()) menuPopupWindow.dismiss();
+    }
+
+    private boolean deferInputMenuAction(View item) {
+        if (fluidInputMenu == null || !fluidInputMenu.isShowing()) return false;
+        fluidInputMenu.dismissWithAction(item);
+        return true;
+    }
 
     private boolean checkMenuPermissions() {
         return checkMenuPermissions(isInVideoMode());
@@ -4969,6 +4981,10 @@ public class ChatActivityEnterView extends FrameLayout implements
 
     @SuppressLint("ClickableViewAccessibility")
     private void onMenuClick(View view) {
+        if (fluidInputMenu != null && fluidInputMenu.isShowing()) {
+            fluidInputMenu.toggle();
+            return;
+        }
         if (parentFragment == null || slowModeTimer > 0 || delegate == null) {
             return;
         }
@@ -5001,9 +5017,8 @@ public class ChatActivityEnterView extends FrameLayout implements
         if (!isInInput) {
             cell.setTextAndIcon(getString(R.string.ChatAttachEnterMenuRecordAudio), R.drawable.input_mic);
             cell.setOnClickListener(v -> {
-                if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                    menuPopupWindow.dismiss();
-                }
+                if (deferInputMenuAction(v)) return;
+                dismissInputMenu();
 
                 if (parentFragment != null) {
                     TLRPC.Chat chat = parentFragment.getCurrentChat();
@@ -5030,9 +5045,8 @@ public class ChatActivityEnterView extends FrameLayout implements
                 cell = new ActionBarMenuSubItem(getContext(), false, true);
                 cell.setTextAndIcon(getString(R.string.ChatAttachEnterMenuRecordVideo), R.drawable.input_video);
                 cell.setOnClickListener(v -> {
-                    if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                        menuPopupWindow.dismiss();
-                    }
+                    if (deferInputMenuAction(v)) return;
+                    dismissInputMenu();
 
                     if (parentFragment != null) {
                         TLRPC.Chat chat = parentFragment.getCurrentChat();
@@ -5078,9 +5092,8 @@ public class ChatActivityEnterView extends FrameLayout implements
                         getString(R.string.ChatAttachEnterMenuDisableLinkPreview), R.drawable.msg_link);
                 final ActionBarMenuSubItem linkPreviewCell = cell;
                 cell.setOnClickListener(v -> {
-                    if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                        menuPopupWindow.dismiss();
-                    }
+                    if (deferInputMenuAction(v)) return;
+                    dismissInputMenu();
                     delegate.toggleDisableLinkPreview();
                     messageWebPageSearch = delegate.getDisableLinkPreviewStatus() == 1;
 
@@ -5097,17 +5110,14 @@ public class ChatActivityEnterView extends FrameLayout implements
             if (LlmConfig.isLLMTranslatorAvailable() && !LlmConfig.llmIsDefaultProvider()) {
                 cell.setTextAndIcon(getString(R.string.TranslateMessageLLM) + " (" + languageText + ")", R.drawable.magic_stick_solar);
                 cell.setOnClickListener(v -> {
-                    if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                        menuPopupWindow.dismiss();
-                    }
+                    if (deferInputMenuAction(v)) return;
+                    dismissInputMenu();
                     translateComment(Translator.getInputTranslateLangLocaleForChat(chatId), Translator.providerLLMTranslator);
                 });
                 final ActionBarMenuSubItem llmTranslateCell = cell;
                 cell.setOnLongClickListener(v -> {
                     Translator.showTargetLangSelect(llmTranslateCell, true, (locale) -> {
-                        if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                            menuPopupWindow.dismiss();
-                        }
+                        dismissInputMenu();
                         translateComment(locale, Translator.providerLLMTranslator);
                         Translator.setInputTranslateLangForChat(chatId, TranslatorKt.getLocale2code(locale));
                         return Unit.INSTANCE;
@@ -5122,17 +5132,14 @@ public class ChatActivityEnterView extends FrameLayout implements
             // Normal Translate
             cell.setTextAndIcon(getString(R.string.TranslateMessage) + " (" + languageText + ")", LlmConfig.llmIsDefaultProvider() ? R.drawable.magic_stick_solar : R.drawable.ic_translate);
             cell.setOnClickListener(v -> {
-                if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                    menuPopupWindow.dismiss();
-                }
+                if (deferInputMenuAction(v)) return;
+                dismissInputMenu();
                 translateComment(Translator.getInputTranslateLangLocaleForChat(chatId));
             });
             final ActionBarMenuSubItem translateCell = cell;
             cell.setOnLongClickListener(v -> {
                 Translator.showTargetLangSelect(translateCell, true, (locale) -> {
-                    if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                        menuPopupWindow.dismiss();
-                    }
+                    dismissInputMenu();
                     translateComment(locale);
                     Translator.setInputTranslateLangForChat(chatId, TranslatorKt.getLocale2code(locale));
                     return Unit.INSTANCE;
@@ -5146,9 +5153,8 @@ public class ChatActivityEnterView extends FrameLayout implements
             cell = new ActionBarMenuSubItem(getContext(), false, false);
             cell.setTextAndIcon(getString(R.string.ReplaceText), R.drawable.msg_edit);
             cell.setOnClickListener(v -> {
-                if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                    menuPopupWindow.dismiss();
-                }
+                if (deferInputMenuAction(v)) return;
+                dismissInputMenu();
                 showReplace();
             });
             cell.setMinimumWidth(AndroidUtilities.dp(196));
@@ -5159,9 +5165,8 @@ public class ChatActivityEnterView extends FrameLayout implements
                 cell = new ActionBarMenuSubItem(getContext(), false, true);
                 cell.setTextAndIcon(getString(R.string.AttachMenu), R.drawable.input_attach);
                 cell.setOnClickListener(v -> {
-                    if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                        menuPopupWindow.dismiss();
-                    }
+                    if (deferInputMenuAction(v)) return;
+                    dismissInputMenu();
                     if (adjustPanLayoutHelper != null && adjustPanLayoutHelper.animationInProgress()) {
                         return;
                     }
@@ -5175,6 +5180,23 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
 
         menuPopupLayout.updateRadialSelectors();
+
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            final xyz.nextalone.nagram.ui.fluid.FluidMenuDialog dialog =
+                new xyz.nextalone.nagram.ui.fluid.FluidMenuDialog(parentActivity, view, menuPopupLayout, () -> {
+                    if (fluidInputMenu != null && !fluidInputMenu.isShowing()) fluidInputMenu = null;
+                });
+            fluidInputMenu = dialog;
+            dialog.setReopenOnOriginTouch(true);
+            dialog.setMenuPlacement(LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT, 0f, 0f, true, false, 0);
+            dialog.setNativeBackdrop(.2f, NekoConfig.forceChatBlur.Bool() ? dp(NekoConfig.blurRadiusGlobal.Int()) : 0);
+            dialog.setOnDismissListener(ignored -> {
+                if (fluidInputMenu == dialog) fluidInputMenu = null;
+            });
+            if (delegate != null) delegate.onSendLongClick();
+            dialog.show();
+            return;
+        }
 
         menuPopupWindow = new ActionBarPopupWindow(menuPopupLayout, LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT);
         menuPopupWindow.setAnimationEnabled(false);
@@ -5311,9 +5333,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                             sendPopupWindow.dismiss();
                         }
                         Translator.showTargetLangSelect(view, true, (locale) -> {
-                            if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                                menuPopupWindow.dismiss();
-                            }
+                            dismissInputMenu();
                             translateComment(locale, Translator.providerLLMTranslator);
                             Translator.setInputTranslateLangForChat(chatId, TranslatorKt.getLocale2code(locale));
                             return Unit.INSTANCE;
@@ -5340,9 +5360,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                             sendPopupWindow.dismiss();
                         }
                         Translator.showTargetLangSelect(view, true, (locale) -> {
-                            if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                                menuPopupWindow.dismiss();
-                            }
+                            dismissInputMenu();
                             translateComment(locale);
                             Translator.setInputTranslateLangForChat(chatId, TranslatorKt.getLocale2code(locale));
                             return Unit.INSTANCE;
@@ -5688,9 +5706,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                             messageSendPreview = null;
                         }
                         Translator.showTargetLangSelect(view, true, (locale) -> {
-                            if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                                menuPopupWindow.dismiss();
-                            }
+                            dismissInputMenu();
                             translateComment(locale, Translator.providerLLMTranslator);
                             Translator.setInputTranslateLangForChat(chatId, TranslatorKt.getLocale2code(locale));
                             return Unit.INSTANCE;
@@ -5715,9 +5731,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                             messageSendPreview = null;
                         }
                        Translator.showTargetLangSelect(view, true, (locale) -> {
-                            if (menuPopupWindow != null && menuPopupWindow.isShowing()) {
-                                menuPopupWindow.dismiss();
-                            }
+                            dismissInputMenu();
                             translateComment(locale);
                             Translator.setInputTranslateLangForChat(chatId, TranslatorKt.getLocale2code(locale));
                             return Unit.INSTANCE;
@@ -7353,6 +7367,10 @@ public class ChatActivityEnterView extends FrameLayout implements
     }
 
     public void onDestroy() {
+        if (fluidInputMenu != null) {
+            fluidInputMenu.dismissImmediately();
+            fluidInputMenu = null;
+        }
         if (audioTimelineView != null) {
             audioTimelineView.destroy();
         }

@@ -21,6 +21,10 @@
  * callback. Menus with subpages, non-dismissing controls or custom top content retain their
  * existing path until those interactions receive a dedicated surface integration.
  *
+ * <p>The shared chat composer routes its three-dot/recording options through FluidMenuDialog,
+ * anchored to the actual pressed button above the input. It preserves the native dim/blur
+ * settings, defers terminal actions until the return completes, and revokes them on owner teardown.
+ *
  * <p>Flat ItemOptions context menus share FluidMenuDialog automatically. Their native action
  * order, dontDismiss(), checked rows and long-press selection remain owned by ItemOptions.
  * Returning menus reverse directly on a fresh origin touch, without rebuilding the menu.
