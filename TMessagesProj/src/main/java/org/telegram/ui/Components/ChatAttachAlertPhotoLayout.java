@@ -184,6 +184,10 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
     public boolean cameraOpened;
     private boolean canSaveCameraPreview;
     private boolean cameraAnimationInProgress;
+    private androidx.dynamicanimation.animation.SpringAnimation fluidCameraSpring;
+    private float fluidCameraTarget, fluidCameraZoomAlpha;
+    private boolean fluidCameraLocked, fluidCameraSeeking, fluidCameraNotifyOpened;
+
     private float cameraOpenProgress;
     private int[] animateCameraValues = new int[5];
     private int videoRecordTime;
@@ -2584,6 +2588,12 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         if (cameraView == null || cameraInitAnimation != null || parentAlert.isDismissed()) {
             return;
         }
+        if (!animated && fluidCameraSpring != null) {
+            fluidCameraSpring.cancel();
+            fluidCameraSeeking = false;
+            unlockFluidCamera();
+        }
+        if (!animated && xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) fluidCameraTarget = 1f;
         cameraView.initTexture();
         if (shouldLoadAllMedia()) {
             tooltipTextView.setVisibility(VISIBLE);
@@ -2616,7 +2626,10 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         AndroidUtilities.hideKeyboard(this);
         AndroidUtilities.setLightNavigationBar(parentAlert, false);
         parentAlert.getWindow().addFlags(FLAG_KEEP_SCREEN_ON);
-        if (animated) {
+        if (animated && xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            fluidCameraNotifyOpened = true;
+            animateFluidCamera(1f);
+        } else if (animated) {
             setCameraOpenProgress(0);
             cameraAnimationInProgress = true;
             if (gridView != null) {
@@ -2992,6 +3005,12 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         if (takingPhoto || cameraView == null) {
             return;
         }
+        if (!animated && fluidCameraSpring != null) {
+            fluidCameraSpring.cancel();
+            fluidCameraSeeking = false;
+            fluidCameraNotifyOpened = false;
+            unlockFluidCamera();
+        }
         animateCameraValues[1] = itemSize;
         animateCameraValues[2] = itemSize * 2 + dp(GAP);
         if (zoomControlHideRunnable != null) {
@@ -2999,7 +3018,11 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             zoomControlHideRunnable = null;
         }
         AndroidUtilities.setLightNavigationBar(parentAlert, AndroidUtilities.computePerceivedBrightness(getThemedColor(Theme.key_windowBackgroundGray)) > 0.721);
-        if (animated) {
+        if (animated && xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            if (cameraOpenProgress >= .999f) additionCloseCameraY = cameraView.getTranslationY();
+            fluidCameraNotifyOpened = false;
+            animateFluidCamera(0f);
+        } else if (animated) {
             additionCloseCameraY = cameraView.getTranslationY();
 
             cameraAnimationInProgress = true;
@@ -3104,6 +3127,105 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         }
         gridView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
     }
+
+    private void ensureFluidCameraSpring() {
+        if (fluidCameraSpring != null) return;
+        fluidCameraSpring = new androidx.dynamicanimation.animation.SpringAnimation(this,
+            new androidx.dynamicanimation.animation.FloatPropertyCompat<ChatAttachAlertPhotoLayout>("fluidCamera") {
+                @Override public float getValue(ChatAttachAlertPhotoLayout view) { return view.cameraOpenProgress; }
+                @Override public void setValue(ChatAttachAlertPhotoLayout view, float value) { view.renderFluidCamera(value); }
+            });
+        fluidCameraSpring.setSpring(xyz.nextalone.nagram.ui.fluid.FluidTiming.springForce(1f));
+        xyz.nextalone.nagram.ui.fluid.FluidTiming.configure(getContext(), fluidCameraSpring);
+        fluidCameraSpring.addEndListener((animation, canceled, value, velocity) -> {
+            if (canceled || fluidCameraSeeking) return;
+            unlockFluidCamera();
+            cameraAnimationInProgress = false;
+            if (fluidCameraTarget == 0f) {
+                closeCamera(false); // Native teardown, focus and preview restoration remain in one place.
+            } else {
+                if (fluidCameraNotifyOpened && cameraOpened && parentAlert.delegate != null) parentAlert.delegate.onCameraOpened();
+                fluidCameraNotifyOpened = false;
+                if (cameraView != null) {
+                    cameraView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_FULLSCREEN);
+                    cameraView.invalidateOutline();
+                    cameraView.invalidate();
+                }
+                if (gridView != null) gridView.invalidate();
+            }
+        });
+    }
+
+    private void renderFluidCamera(float progress) {
+        float p = Math.max(0f, Math.min(1f, progress));
+        setCameraOpenProgress(p);
+        if (cameraPanel != null) cameraPanel.setAlpha(p);
+        if (counterTextView != null) counterTextView.setAlpha(p);
+        if (cameraPhotoRecyclerView != null) cameraPhotoRecyclerView.setAlpha(p);
+        if (cameraLensSelectorView != null) cameraLensSelectorView.setAlpha(p);
+        if (zoomControlView != null) zoomControlView.setAlpha(fluidCameraZoomAlpha * p);
+        for (int i = 0; i < 2; i++) {
+            if (flashModeButton[i] != null && flashModeButton[i].getVisibility() == View.VISIBLE) flashModeButton[i].setAlpha(p);
+        }
+    }
+
+    private void lockFluidCamera() {
+        if (!fluidCameraLocked) { fluidCameraLocked = true; notificationsLocker.lock(); }
+    }
+
+    private void unlockFluidCamera() {
+        if (fluidCameraLocked) { fluidCameraLocked = false; notificationsLocker.unlock(); }
+    }
+
+    private void animateFluidCamera(float target) {
+        ensureFluidCameraSpring();
+        if (!fluidCameraSpring.isRunning() && !fluidCameraSeeking) {
+            fluidCameraZoomAlpha = zoomControlView == null ? 0f : zoomControlView.getAlpha();
+        }
+        fluidCameraTarget = target;
+        fluidCameraSeeking = false;
+        cameraAnimationInProgress = true;
+        lockFluidCamera();
+        xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(getContext(), fluidCameraSpring, target);
+    }
+
+    @Override
+    public xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion getFluidContentBackMotion() {
+        if (!cameraOpened && !cameraAnimationInProgress || takingPhoto
+                || shutterButton != null && shutterButton.getState() == ShutterButton.State.RECORDING) return null;
+        ensureFluidCameraSpring();
+        xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion motion =
+            xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.spring(getContext(), fluidCameraSpring,
+                () -> cameraOpened && !takingPhoto && cameraView != null && fluidCameraSeeking,
+                () -> cameraOpenProgress, value -> renderFluidCamera((float) value), () -> closeCamera(true));
+        return new xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion() {
+            @Override public void start() {
+                if (!cameraOpened || takingPhoto || cameraView == null || fluidCameraTarget == 0f
+                        || shutterButton != null && shutterButton.getState() == ShutterButton.State.RECORDING
+                        || !xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext())) return;
+                fluidCameraZoomAlpha = zoomControlView == null ? 0f : zoomControlView.getAlpha();
+                pressed = zooming = maybeStartDraging = dragging = false;
+                fluidCameraSeeking = true;
+                cameraAnimationInProgress = true;
+                lockFluidCamera();
+                motion.start();
+            }
+            @Override public void update(float progress) {
+                if (fluidCameraSeeking && !xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext())) cancel();
+                else motion.update(progress);
+            }
+            @Override public void cancel() {
+                if (!fluidCameraSeeking) return;
+                fluidCameraTarget = 1f;
+                motion.cancel();
+                fluidCameraSeeking = false;
+            }
+            @Override public void commit() { motion.commit(); }
+        };
+    }
+
+    @Override
+    public boolean canPreviewFluidSheetBack() { return canPreviewFluidBack(); }
 
     float animationClipTop;
     float animationClipBottom;
@@ -3826,6 +3948,10 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
 
     @Override
     public void onDestroy() {
+        if (fluidCameraSpring != null) fluidCameraSpring.cancel();
+        fluidCameraSeeking = false;
+        fluidCameraNotifyOpened = false;
+        unlockFluidCamera();
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.cameraInitied);
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.albumsDidLoad);
     }
@@ -5149,6 +5275,23 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
 
 
     protected class CameraViewInternal extends CameraView {
+        private final int[] touchScreenLocation = new int[2];
+        private boolean rejectThumbnailGesture;
+
+        private boolean isVisibleThumbnailTouch(MotionEvent event) {
+            View bar = parentAlert.buttonsRecyclerViewWrapper;
+            if (bar != null && bar.isShown() && bar.getAlpha() > 0f) {
+                bar.getLocationOnScreen(touchScreenLocation);
+                if (event.getRawX() >= touchScreenLocation[0] && event.getRawX() < touchScreenLocation[0] + bar.getWidth()
+                        && event.getRawY() >= touchScreenLocation[1] && event.getRawY() < touchScreenLocation[1] + bar.getHeight()) return false;
+            }
+            getLocationOnScreen(touchScreenLocation);
+            float x = event.getRawX() - touchScreenLocation[0];
+            float y = event.getRawY() - touchScreenLocation[1];
+            return x >= Math.max(0f, cameraViewOffsetX) && x < getWidth()
+                && y >= Math.max(0f, cameraViewOffsetY) && y < getHeight() - Math.max(0f, cameraViewOffsetBottomY);
+        }
+
         Bulletin.Delegate bulletinDelegate = new Bulletin.Delegate() {
             @Override
             public int getBottomOffset(int tag) {
@@ -5162,6 +5305,19 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
 
         @Override
         public boolean dispatchTouchEvent(MotionEvent event) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && !cameraOpened && !cameraAnimationInProgress) {
+                int action = event.getActionMasked();
+                if (action == MotionEvent.ACTION_DOWN) rejectThumbnailGesture = !isVisibleThumbnailTouch(event);
+                if (rejectThumbnailGesture) return false;
+                if (action == MotionEvent.ACTION_MOVE && !isVisibleThumbnailTouch(event)) {
+                    MotionEvent cancel = MotionEvent.obtain(event);
+                    cancel.setAction(MotionEvent.ACTION_CANCEL);
+                    super.dispatchTouchEvent(cancel);
+                    cancel.recycle();
+                    rejectThumbnailGesture = true;
+                    return false;
+                }
+            }
             if (cameraOpened && !cameraAnimationInProgress) {
                 return processTouchEvent(event);
             }

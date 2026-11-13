@@ -543,7 +543,10 @@ public class ChatAttachAlertDocumentLayout extends ChatAttachAlert.AttachAlertLa
     }
 
     ValueAnimator listAnimation;
+    private androidx.dynamicanimation.animation.SpringAnimation fluidListSpring;
+    private float fluidListProgress;
     private void runAnimation(int animationType) {
+        if (fluidListSpring != null) fluidListSpring.cancel();
         if (listAnimation != null) {
             listAnimation.cancel();
         }
@@ -583,29 +586,32 @@ public class ChatAttachAlertDocumentLayout extends ChatAttachAlert.AttachAlertLa
             listAnimation = ValueAnimator.ofFloat(0f, 1f);
         }
 
-        listAnimation.addUpdateListener(animation -> {
-            float value = (float) animation.getAnimatedValue();
-            if (animationType == ANIMATION_FORWARD) {
-                listView.setTranslationX(xTranslate * value);
-                listView.setAlpha(1f - value);
-                listView.invalidate();
-
-                backgroundListView.setAlpha(value);
-                float s = 0.95f + value * 0.05f;
-                backgroundListView.setScaleX(s);
-                backgroundListView.setScaleY(s);
-            } else {
-                backgroundListView.setTranslationX(xTranslate * value);
-                backgroundListView.setAlpha(Math.max(0, 1f - value));
-                backgroundListView.invalidate();
-
-                listView.setAlpha(value);
-                float s = 0.95f + value * 0.05f;
-                listView.setScaleX(s);
-                listView.setScaleY(s);
-                backgroundListView.invalidate();
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            listAnimation = null;
+            if (fluidListSpring == null) {
+                fluidListSpring = new androidx.dynamicanimation.animation.SpringAnimation(this,
+                    new androidx.dynamicanimation.animation.FloatPropertyCompat<ChatAttachAlertDocumentLayout>("fluidDocumentPage") {
+                        @Override public float getValue(ChatAttachAlertDocumentLayout view) { return view.fluidListProgress; }
+                        @Override public void setValue(ChatAttachAlertDocumentLayout view, float value) {
+                            view.fluidListProgress = Math.max(0f, Math.min(1f, value));
+                            view.renderListAnimation(view.currentAnimationType, view.fluidListProgress, AndroidUtilities.dp(150));
+                        }
+                    });
+                fluidListSpring.setSpring(xyz.nextalone.nagram.ui.fluid.FluidTiming.springForce(1f));
+                xyz.nextalone.nagram.ui.fluid.FluidTiming.configure(getContext(), fluidListSpring);
+                fluidListSpring.addEndListener((animation, canceled, value, velocity) -> {
+                    if (!canceled) finishListAnimation();
+                });
             }
-        });
+            fluidListProgress = animationType == ANIMATION_FORWARD ? 1f : 0f;
+            renderListAnimation(animationType, fluidListProgress, xTranslate);
+            fluidListSpring.setStartValue(fluidListProgress);
+            fluidListSpring.setStartVelocity(0f);
+            xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(getContext(), fluidListSpring,
+                animationType == ANIMATION_FORWARD ? 0f : 1f);
+            return;
+        }
+        listAnimation.addUpdateListener(animation -> renderListAnimation(animationType, (float) animation.getAnimatedValue(), xTranslate));
         listAnimation.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
@@ -628,7 +634,45 @@ public class ChatAttachAlertDocumentLayout extends ChatAttachAlert.AttachAlertLa
         listAnimation.start();
     }
 
+    private void renderListAnimation(int animationType, float value, float xTranslate) {
+        if (animationType == ANIMATION_FORWARD) {
+            listView.setTranslationX(xTranslate * value);
+            listView.setAlpha(1f - value);
+            listView.invalidate();
+
+            backgroundListView.setAlpha(value);
+            float s = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? 1f : 0.95f + value * 0.05f;
+            backgroundListView.setScaleX(s);
+            backgroundListView.setScaleY(s);
+        } else {
+            backgroundListView.setTranslationX(xTranslate * value);
+            backgroundListView.setAlpha(Math.max(0, 1f - value));
+            backgroundListView.invalidate();
+
+            listView.setAlpha(value);
+            float s = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? 1f : 0.95f + value * 0.05f;
+            listView.setScaleX(s);
+            listView.setScaleY(s);
+            backgroundListView.invalidate();
+        }
+    }
+
+
+    private void finishListAnimation() {
+        backgroundListView.setVisibility(View.GONE);
+        currentAnimationType = ANIMATION_NONE;
+        listView.setAlpha(1f);
+        listView.setScaleX(1f);
+        listView.setScaleY(1f);
+        listView.setTranslationX(0f);
+        listView.invalidate();
+    }
+
     private void prepareAnimation() {
+        if (fluidListSpring != null && fluidListSpring.isRunning()) {
+            fluidListSpring.cancel();
+            finishListAnimation();
+        }
         backgroundListAdapter.history.clear();
         backgroundListAdapter.history.addAll(listAdapter.history);
         backgroundListAdapter.items.clear();
@@ -650,6 +694,7 @@ public class ChatAttachAlertDocumentLayout extends ChatAttachAlert.AttachAlertLa
 
     @Override
     public void onDestroy() {
+        if (fluidListSpring != null) fluidListSpring.cancel();
         try {
             if (receiverRegistered) {
                 ApplicationLoader.applicationContext.unregisterReceiver(receiver);
@@ -1163,6 +1208,11 @@ public class ChatAttachAlertDocumentLayout extends ChatAttachAlert.AttachAlertLa
             return false;
         }
         return true;
+    }
+
+    @Override
+    public boolean canPreviewFluidSheetBack() {
+        return !searching && listAdapter.history.isEmpty();
     }
 
     @Override

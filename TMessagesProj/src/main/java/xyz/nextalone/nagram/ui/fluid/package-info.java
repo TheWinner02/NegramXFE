@@ -27,6 +27,15 @@
  * callback. Menus with subpages, non-dismissing controls or custom top content retain their
  * existing path until those interactions receive a dedicated surface integration.
  *
+ * <p>BottomSheet can route Back to an internal native surface before its outer transform.
+ * Chat attachments use this for the expanded camera: its actual texture geometry and controls
+ * follow a single Fluid spring and predictive cancellation, keeping native session teardown.
+ * Documents permit an outer sheet preview only at the root, outside search and selections;
+ * folder navigation retains native history ownership while using the common spring timing.
+ * The opaque attachment bar owns complete touch sequences above the collapsed preview;
+ * thumbnail hit testing excludes clipped pixels, preventing hidden camera content from
+ * consuming File/category taps after the camera returns.
+ *
  * <p>The shared chat composer routes its three-dot/recording options through FluidMenuDialog,
  * anchored to the actual pressed button above the input. It preserves the native dim/blur
  * settings, defers terminal actions until the return completes, and revokes them on owner teardown.

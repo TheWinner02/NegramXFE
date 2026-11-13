@@ -2264,8 +2264,12 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         if (fluidTransform != null && fluidTransform.dispatchTouchEvent(ev)) return true;
         if (dismissed) return false;
         xyz.nextalone.nagram.ui.fluid.FluidOrigins.observe(container, ev);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && dispatchFluidOverlayTouch(ev)) return true;
         return super.dispatchTouchEvent(ev);
     }
+
+    /** Resolve touches on an opaque overlay before native content that extends behind it. */
+    protected boolean dispatchFluidOverlayTouch(MotionEvent event) { return false; }
 
     public void onDismissAnimationStart() {}
 
@@ -2556,17 +2560,25 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion motion =
             fluidTransform.backMotion(this::onBackPressed, () -> !keyboardVisible && canPreviewFluidBack());
         return new xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion() {
-            private boolean keyboardBack;
+            private boolean keyboardBack, backStarted;
+            private xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion contentMotion;
+            private xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion selected() {
+                return contentMotion != null ? contentMotion : motion;
+            }
             @Override public void start() {
+                backStarted = true;
+                contentMotion = getFluidContentBackMotion();
                 keyboardBack = keyboardVisible;
                 fluidBackSeeking = !keyboardBack;
                 container.cancelFluidDragAnimation();
-                if (!keyboardBack) motion.start();
+                if (!keyboardBack) selected().start();
             }
-            @Override public void update(float progress) { if (!keyboardBack) motion.update(progress); }
+            @Override public void update(float progress) { if (!keyboardBack) selected().update(progress); }
             @Override public void cancel() {
                 fluidBackSeeking = false;
-                if (!keyboardBack) motion.cancel();
+                if (!keyboardBack) selected().cancel();
+                contentMotion = null;
+                backStarted = false;
                 keyboardBack = false;
             }
             @Override public void commit() {
@@ -2574,12 +2586,20 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                 fluidBackSeeking = false;
                 keyboardBack = false;
                 if (hideKeyboard) {
-                    motion.cancel();
+                    selected().cancel();
                     AndroidUtilities.hideKeyboard(container);
-                } else motion.commit();
+                } else {
+                    if (!backStarted) contentMotion = getFluidContentBackMotion();
+                    selected().commit();
+                }
+                backStarted = false;
+                contentMotion = null;
             }
         };
     }
+
+    /** An internal surface (for example an expanded camera) handles Back before this sheet. */
+    protected xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion getFluidContentBackMotion() { return null; }
 
     protected boolean canPreviewFluidBack() { return true; }
     protected void onFluidCloseCancelled() {}

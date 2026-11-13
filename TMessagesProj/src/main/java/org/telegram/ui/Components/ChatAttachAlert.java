@@ -1002,6 +1002,11 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             return false;
         }
 
+        public boolean canPreviewFluidSheetBack() { return false; }
+
+        public xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion getFluidContentBackMotion() { return null; }
+
+
         public int getThemedColor(int key) {
             return Theme.getColor(key, resourcesProvider);
         }
@@ -5727,8 +5732,18 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     @Override
     protected boolean canPreviewFluidBack() {
-        return currentAttachLayout == photoLayout && photoLayout.canPreviewFluidBack()
+        return currentAttachLayout != null && currentAttachLayout.canPreviewFluidSheetBack()
+                && passcodeView.getVisibility() != View.VISIBLE && !actionBar.isSearchFieldVisible()
+                && (getCommentView() == null || !getCommentView().isPopupShowing())
                 && (allowPassConfirmationAlert || currentAttachLayout.getSelectedItemsCount() == 0 || isPhotoPicker);
+    }
+
+    @Override
+    protected xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion getFluidContentBackMotion() {
+        if (currentAttachLayout == null || passcodeView.getVisibility() == View.VISIBLE
+                || actionBar.isSearchFieldVisible()
+                || getCommentView() != null && getCommentView().isPopupShowing()) return null;
+        return currentAttachLayout.getFluidContentBackMotion();
     }
 
     @Override
@@ -5773,6 +5788,36 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         AndroidUtilities.setNavigationBarColor(this, navBarColor, false);
         AndroidUtilities.setLightNavigationBar(this, AndroidUtilities.computePerceivedBrightness(navBarColor) > 0.721);
         getContainer().invalidate();
+    }
+
+    private View fluidOverlayTouchTarget;
+    private final int[] fluidOverlayTouchLocation = new int[2];
+
+    @Override
+    protected boolean dispatchFluidOverlayTouch(MotionEvent event) {
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) {
+            fluidOverlayTouchTarget = null;
+            View bar = buttonsRecyclerViewWrapper;
+            if (currentAttachLayout == photoLayout && photoLayout.canPreviewFluidBack()
+                    && bar != null && bar.isShown() && bar.getAlpha() > 0f) {
+                bar.getLocationOnScreen(fluidOverlayTouchLocation);
+                if (event.getRawX() >= fluidOverlayTouchLocation[0] && event.getRawX() < fluidOverlayTouchLocation[0] + bar.getWidth()
+                        && event.getRawY() >= fluidOverlayTouchLocation[1] && event.getRawY() < fluidOverlayTouchLocation[1] + bar.getHeight()) {
+                    fluidOverlayTouchTarget = bar;
+                }
+            }
+        }
+        View target = fluidOverlayTouchTarget;
+        if (target == null) return false;
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) fluidOverlayTouchTarget = null;
+        if (!target.isAttachedToWindow()) { fluidOverlayTouchTarget = null; return true; }
+        target.getLocationOnScreen(fluidOverlayTouchLocation);
+        MotionEvent local = MotionEvent.obtain(event);
+        local.setLocation(event.getRawX() - fluidOverlayTouchLocation[0], event.getRawY() - fluidOverlayTouchLocation[1]);
+        try { target.dispatchTouchEvent(local); }
+        finally { local.recycle(); }
+        return true;
     }
 
     @Override
@@ -7365,7 +7410,8 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                         appearSpringAnimation.addUpdateListener((animation, value, velocity) -> onContainerViewTranslation());
                         appearSpringAnimation.getSpring().setDampingRatio(1.5f);
                         appearSpringAnimation.getSpring().setStiffness(1500.0f);
-                        appearSpringAnimation.start();
+                        xyz.nextalone.nagram.ui.fluid.FluidTiming.configure(getContext(), appearSpringAnimation);
+                        xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(getContext(), appearSpringAnimation, 0f);
                     })
                     .setOnPreDismissListener(di -> {
                         confirmationAlertShown = false;
