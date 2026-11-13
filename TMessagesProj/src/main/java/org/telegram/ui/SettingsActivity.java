@@ -378,6 +378,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         searchItem.setSearchFieldHint(getString(R.string.Search));
 
         otherItem = menu.addItem(1, R.drawable.ic_ab_other);
+        otherItem.setFluidSurfaceMenu(true);
         otherItem.setContentDescription(getString(R.string.AccDescrMoreOptions));
         otherItem.addSubItem(2, R.drawable.msg_leave, getString(R.string.LogOut));
 

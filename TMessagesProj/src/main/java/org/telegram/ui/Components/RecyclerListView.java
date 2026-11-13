@@ -2194,6 +2194,7 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
+        xyz.nextalone.nagram.ui.fluid.FluidOrigins.observe(this, ev);
         final int action = ev.getAction();
         if (action == MotionEvent.ACTION_DOWN) {
             if (activeTouches == 0 && adaptiveOverScroll) {

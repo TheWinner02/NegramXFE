@@ -5732,6 +5732,9 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
     }
 
     @Override
+    protected boolean canReverseFluidDismiss() { return true; }
+
+    @Override
     protected boolean allowFluidDismiss() { return !gramSendDismissalInProgress; }
 
     @Override

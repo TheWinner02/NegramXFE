@@ -277,7 +277,30 @@ public class Switch extends View {
         thumbCheckedColorKey = thumbChecked;
     }
 
+    private androidx.dynamicanimation.animation.SpringAnimation fluidCheckSpring;
+
+    private void animateFluidChecked(boolean checked) {
+        cancelCheckAnimator();
+        if (fluidCheckSpring == null) {
+            fluidCheckSpring = new androidx.dynamicanimation.animation.SpringAnimation(this,
+                    new androidx.dynamicanimation.animation.FloatPropertyCompat<Switch>("fluidChecked") {
+                @Override public float getValue(Switch view) { return view.getProgress(); }
+                @Override public void setValue(Switch view, float value) { view.setProgress(Math.max(0f, Math.min(1f, value))); }
+            });
+            fluidCheckSpring.setSpring(xyz.nextalone.nagram.ui.fluid.FluidTiming.springForce(
+                    xyz.nextalone.nagram.ui.fluid.FluidCapabilities.motionScale(getContext())));
+            fluidCheckSpring.setMinimumVisibleChange(xyz.nextalone.nagram.ui.fluid.FluidTiming.MIN_VISIBLE_CHANGE);
+            xyz.nextalone.nagram.ui.fluid.FluidCapabilities.track(getContext(), fluidCheckSpring);
+        }
+        float scale = xyz.nextalone.nagram.ui.fluid.FluidCapabilities.motionScale(getContext());
+        fluidCheckSpring.getSpring().setStiffness(xyz.nextalone.nagram.ui.fluid.FluidTiming.stiffness(Math.max(.01f, scale)));
+        fluidCheckSpring.animateToFinalPosition(checked ? 1f : 0f);
+        if (scale <= 0f) fluidCheckSpring.skipToEnd();
+    }
+
     private void animateToCheckedState(boolean newCheckedState) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) { animateFluidChecked(newCheckedState); return; }
+        if (fluidCheckSpring != null) fluidCheckSpring.cancel();
         boolean isIos = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
         checkAnimator = ObjectAnimator.ofFloat(this, "progress", newCheckedState ? 1 : 0);
         checkAnimator.setDuration(isIos ? 260 : (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 260 : 200));
@@ -440,6 +463,11 @@ public class Switch extends View {
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
         attachedToWindow = false;
+        if (fluidCheckSpring != null) {
+            fluidCheckSpring.cancel();
+            cancelCheckAnimator();
+            setProgress(isChecked ? 1f : 0f);
+        }
     }
 
     public void setOnCheckedChangeListener(OnCheckedChangeListener listener) {
@@ -458,6 +486,7 @@ public class Switch extends View {
                 animateToCheckedState(checked);
             } else {
                 cancelCheckAnimator();
+                if (fluidCheckSpring != null) fluidCheckSpring.cancel();
                 setProgress(checked ? 1.0f : 0.0f);
             }
             if (onCheckedChangeListener != null) {

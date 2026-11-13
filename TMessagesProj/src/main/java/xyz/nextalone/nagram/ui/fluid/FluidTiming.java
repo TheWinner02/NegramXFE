@@ -14,6 +14,24 @@ public final class FluidTiming {
 
     private FluidTiming() {}
 
+    /** Apply Fluid policy once when an existing shared widget creates its spring. */
+    public static void configure(android.content.Context context, androidx.dynamicanimation.animation.SpringAnimation spring) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) return;
+        spring.getSpring().setDampingRatio(DAMPING_RATIO)
+                .setStiffness(stiffness(FluidCapabilities.motionScale(context)));
+        spring.setMinimumVisibleChange(MIN_VISIBLE_CHANGE);
+        FluidCapabilities.track(context, spring);
+    }
+
+    /** Retarget without replacing the spring or losing its current velocity. */
+    public static void animate(android.content.Context context, androidx.dynamicanimation.animation.SpringAnimation spring, float target) {
+        boolean fluid = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid();
+        float scale = fluid ? FluidCapabilities.motionScale(context) : 1f;
+        if (fluid) spring.getSpring().setStiffness(stiffness(Math.max(.01f, scale)));
+        spring.animateToFinalPosition(target);
+        if (fluid && scale <= 0f) spring.skipToEnd();
+    }
+
     public static float stiffness(float motionScale) {
         float scale = motionScale * TIME_SCALE;
         return BASE_STIFFNESS / Math.max(0.01f, scale * scale);

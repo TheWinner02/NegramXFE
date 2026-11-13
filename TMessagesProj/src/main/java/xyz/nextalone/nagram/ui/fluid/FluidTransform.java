@@ -27,13 +27,10 @@ import java.lang.ref.WeakReference;
  * native-size live View drawing (no bitmap snapshots), interruptible physics and a single spring.
  * The bridge owns rendering/input only during motion; the original hierarchy owns settled content.
  */
-public final class FluidTransform {
-
-    public interface ProgressListener {
-        void onProgress(float progress);
-    }
+public final class FluidTransform implements FluidMotion {
 
     private final WeakReference<View> sourceRef;
+    private final SourceGuard sourceGuard;
     private WeakReference<View> targetRef;
     private final WeakReference<Window> windowRef;
     private final WeakReference<BottomSheet> bottomSheetRef;
@@ -91,6 +88,7 @@ public final class FluidTransform {
         this.windowRef = new WeakReference<>(bottomSheet.getWindow());
         this.targetRef = new WeakReference<>(bottomSheet.getContainerView() != null ? bottomSheet.getContainerView() : bottomSheet.getContainer());
         this.sourceRef = new WeakReference<>(source);
+        this.sourceGuard = new SourceGuard(source);
     }
 
     private FluidTransform(Window window, View target, View source) {
@@ -98,6 +96,7 @@ public final class FluidTransform {
         this.windowRef = new WeakReference<>(window);
         this.targetRef = new WeakReference<>(target);
         this.sourceRef = new WeakReference<>(source);
+        this.sourceGuard = new SourceGuard(source);
     }
 
     public void open(Runnable completion) {
@@ -143,7 +142,7 @@ public final class FluidTransform {
 
             if (disposed) return true;
             View origin = sourceRef.get();
-            if (origin == null || !origin.isAttachedToWindow() || !origin.isShown()) {
+            if (origin == null || !origin.isAttachedToWindow() || !origin.isShown() || !sourceGuard.valid()) {
                 restoreTarget();
                 if (progressListener != null) progressListener.onProgress(1f);
                 runOpenComplete();
@@ -206,7 +205,7 @@ public final class FluidTransform {
         View origin = sourceRef.get();
         View target = targetRef.get();
 
-        if (!started || bridge == null || origin == null || !origin.isAttachedToWindow()
+        if (!started || bridge == null || origin == null || !origin.isAttachedToWindow() || !sourceGuard.valid()
                 || !FluidCapabilities.isMotionEnabled(host != null ? host.getContext() : null)) {
             render(0f);
             dispose();
@@ -326,7 +325,7 @@ public final class FluidTransform {
     /** Consume window coordinates during a morph, without cross-window touch forwarding. */
     public boolean dispatchTouchEvent(MotionEvent event) {
         if (!started || disposed || bridge == null || bridge.getParent() == null) return false;
-        if (event.getActionMasked() == MotionEvent.ACTION_UP && closing) {
+        if (event.getActionMasked() == MotionEvent.ACTION_UP && closing && onCloseCancelled != null) {
             float x = event.getRawX(), y = event.getRawY();
             if (bridge.frame.contains(x, y) || bridge.start.contains(x, y)) reopen();
         }
@@ -341,8 +340,8 @@ public final class FluidTransform {
             public void start() {
                 View origin = sourceRef.get();
                 View target = targetRef.get();
-                if (!canPreview.getAsBoolean() || !started || disposed || bridge == null || origin == null || target == null
-                        || !origin.isAttachedToWindow()
+                if (closing && onCloseCancelled == null || !canPreview.getAsBoolean() || !started || disposed || bridge == null || origin == null || target == null
+                        || !origin.isAttachedToWindow() || !sourceGuard.valid()
                         || !FluidCapabilities.isMotionEnabled(host != null ? host.getContext() : null)) {
                     return;
                 }
@@ -395,6 +394,39 @@ public final class FluidTransform {
                 else committed.run();
             }
         };
+    }
+
+    /** A recycled row must not become the destination of an unrelated item's return. */
+    private static final class SourceGuard {
+        private final WeakReference<androidx.recyclerview.widget.RecyclerView> recycler;
+        private final WeakReference<View> row;
+        private final WeakReference<androidx.recyclerview.widget.RecyclerView.Adapter> adapter;
+        private final long itemId;
+        private final int position;
+        private final boolean stable;
+        SourceGuard(View source) {
+            View child = source;
+            while (child != null && child.getParent() instanceof View
+                    && !(child.getParent() instanceof androidx.recyclerview.widget.RecyclerView)) child = (View) child.getParent();
+            androidx.recyclerview.widget.RecyclerView list = child != null && child.getParent() instanceof androidx.recyclerview.widget.RecyclerView
+                    ? (androidx.recyclerview.widget.RecyclerView) child.getParent() : null;
+            recycler = new WeakReference<>(list); row = new WeakReference<>(list == null ? null : child);
+            androidx.recyclerview.widget.RecyclerView.Adapter data = list == null ? null : list.getAdapter();
+            adapter = new WeakReference<>(data); stable = data != null && data.hasStableIds();
+            androidx.recyclerview.widget.RecyclerView.ViewHolder holder = list == null ? null : list.getChildViewHolder(child);
+            itemId = holder == null ? -1L : holder.getItemId();
+            position = holder == null ? -1 : holder.getAdapterPosition();
+        }
+        boolean valid() {
+            View child = row.get();
+            androidx.recyclerview.widget.RecyclerView list = recycler.get();
+            if (position == -1 && itemId == -1L) return child == null && list == null;
+            if (list == null || child == null || child.getParent() != list || adapter.get() != list.getAdapter()) return false;
+            androidx.recyclerview.widget.RecyclerView.ViewHolder holder = list.getChildViewHolder(child);
+            int currentPosition = holder.getAdapterPosition();
+            return currentPosition != androidx.recyclerview.widget.RecyclerView.NO_POSITION
+                    && (stable ? holder.getItemId() == itemId : currentPosition == position);
+        }
     }
 
     /**

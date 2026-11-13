@@ -67,6 +67,65 @@ public class ActionBarPopupWindow extends PopupWindow {
     private static Method layoutInScreenMethod;
     private static final Field superListenerField;
     private static DecelerateInterpolator decelerateInterpolator = new DecelerateInterpolator();
+    private View.OnTouchListener fluidTouchDelegate;
+
+    @Override public void setTouchInterceptor(View.OnTouchListener listener) {
+        fluidTouchDelegate = listener;
+        installFluidTouchInterceptor();
+    }
+    private void installFluidTouchInterceptor() {
+        super.setTouchInterceptor((view, event) -> {
+            if (interceptFluidOrigin(event)) return true;
+            if (fluidReveal != null && fluidReveal.dispatchTouchEvent(event)) return true;
+            return fluidTouchDelegate != null && fluidTouchDelegate.onTouch(view, event);
+        });
+    }
+
+    private xyz.nextalone.nagram.ui.fluid.FluidReveal fluidReveal;
+    private java.lang.ref.WeakReference<View> fluidAnchor = new java.lang.ref.WeakReference<>(null);
+    private java.lang.ref.WeakReference<View> fluidOrigin = new java.lang.ref.WeakReference<>(null);
+    private boolean fluidOriginGesture;
+    private boolean fluidModalChanged, fluidWasTouchModal;
+
+    private void restoreFluidTouchModal() {
+        if (Build.VERSION.SDK_INT >= 29 && fluidModalChanged) {
+            setTouchModal(fluidWasTouchModal);
+            fluidModalChanged = false;
+        }
+    }
+
+    /** Positioning can be relative to the whole ActionBar; motion belongs to the actual button. */
+    public void setFluidOrigin(View origin) {
+        fluidOrigin = new java.lang.ref.WeakReference<>(origin);
+    }
+
+    public boolean reopenFluidIfClosing() {
+        if (fluidReveal == null || !isClosingAnimated || !isShowing()) return false;
+        if (pauseNotifications) notificationsLocker.unlock();
+        isClosingAnimated = false;
+        setFocusable(true);
+        restoreFluidTouchModal();
+        update();
+        fluidReveal.open(null); // Retarget the existing spring, preserving its velocity.
+        return true;
+    }
+
+    private boolean interceptFluidOrigin(MotionEvent event) {
+        int action = event.getActionMasked();
+        if (fluidOriginGesture) {
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) fluidOriginGesture = false;
+            return true;
+        }
+        if (!isClosingAnimated || action != MotionEvent.ACTION_DOWN) return false;
+        View origin = fluidOrigin.get();
+        if (origin == null || !origin.isAttachedToWindow()) return false;
+        int[] xy = new int[2]; origin.getLocationOnScreen(xy);
+        float x = event.getRawX(), y = event.getRawY();
+        if (x < xy[0] || x >= xy[0] + origin.getWidth() || y < xy[1] || y >= xy[1] + origin.getHeight()) return false;
+        if (!reopenFluidIfClosing()) return false;
+        fluidOriginGesture = true;
+        return true;
+    }
     private AnimatorSet windowAnimatorSet;
     private boolean animationEnabled = true;
     private int dismissAnimationDuration = 150;
@@ -890,6 +949,7 @@ public class ActionBarPopupWindow extends PopupWindow {
     }
 
     private void registerListener(View anchor) {
+        fluidAnchor = new java.lang.ref.WeakReference<>(anchor);
         if (mSuperScrollListener != null) {
             ViewTreeObserver vto = (anchor.getWindowToken() != null) ? anchor.getViewTreeObserver() : null;
             if (vto != mViewTreeObserver) {
@@ -964,6 +1024,7 @@ public class ActionBarPopupWindow extends PopupWindow {
     @Override
     public void showAsDropDown(View anchor, int xoff, int yoff) {
         try {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) setAnimationStyle(0);
             super.showAsDropDown(anchor, xoff, yoff);
             registerListener(anchor);
             if (Build.VERSION.SDK_INT >= 31 && (tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
@@ -1052,7 +1113,46 @@ public class ActionBarPopupWindow extends PopupWindow {
         startAnimation(false);
     }
 
+    private static void prepareFluidContent(View view) {
+        view.setScaleX(1f); view.setScaleY(1f); view.setAlpha(1f); view.setTranslationY(0);
+        if (view instanceof ActionBarPopupWindowLayout) {
+            ActionBarPopupWindowLayout content = (ActionBarPopupWindowLayout) view;
+            content.startAnimationPending = false;
+            content.backAlpha = 255;
+            if (content.itemAnimators != null) {
+                for (AnimatorSet animator : content.itemAnimators) { animator.removeAllListeners(); animator.cancel(); }
+                content.itemAnimators.clear();
+            }
+            for (int i = 0; i < content.getItemsCount(); i++) {
+                View child = content.getItemAt(i);
+                child.setAlpha(child.isEnabled() ? 1f : .5f);
+                child.setTranslationY(0);
+            }
+        } else if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                if (group.getChildAt(i) instanceof ActionBarPopupWindowLayout) prepareFluidContent(group.getChildAt(i));
+            }
+        }
+    }
+
     public void startAnimation(boolean fromStickersAlert) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && animationEnabled && getContentView() instanceof ViewGroup) {
+            if (reopenFluidIfClosing()) return;
+            if (fluidReveal != null) { fluidReveal.abort(); fluidReveal = null; }
+            if (isClosingAnimated && pauseNotifications) notificationsLocker.unlock();
+            ViewGroup root = (ViewGroup) getContentView();
+            prepareFluidContent(root);
+            setAnimationStyle(0);
+            View anchor = fluidOrigin.get();
+            if (anchor == null || !anchor.isAttachedToWindow()) anchor = fluidAnchor.get();
+            if (anchor == null) anchor = xyz.nextalone.nagram.ui.fluid.FluidOrigins.take(root.getContext());
+            fluidReveal = new xyz.nextalone.nagram.ui.fluid.FluidReveal(root, anchor, false);
+            installFluidTouchInterceptor();
+            isClosingAnimated = false;
+            fluidReveal.open(null);
+            return;
+        }
         if (animationEnabled) {
             if (windowAnimatorSet != null) {
                 return;
@@ -1159,6 +1259,8 @@ public class ActionBarPopupWindow extends PopupWindow {
 
     @Override
     public void showAtLocation(View parent, int gravity, int x, int y) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) setAnimationStyle(0);
+        fluidAnchor = new java.lang.ref.WeakReference<>(null);
         super.showAtLocation(parent, gravity, x, y);
         unregisterListener();
         if (Build.VERSION.SDK_INT >= 31 && (tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
@@ -1176,6 +1278,21 @@ public class ActionBarPopupWindow extends PopupWindow {
     }
 
     public void dismiss(boolean animated) {
+        if (fluidReveal != null) {
+            if (isClosingAnimated && animated) return;
+            if (!isClosingAnimated && pauseNotifications) notificationsLocker.lock();
+            isClosingAnimated = true;
+            setFocusable(false);
+            if (animated && Build.VERSION.SDK_INT >= 29 && !fluidModalChanged) {
+                fluidWasTouchModal = isTouchModal();
+                fluidModalChanged = true;
+                setTouchModal(false);
+                update(); // Let the originating button receive a fresh click while closing.
+            }
+            if (animated) fluidReveal.close(this::finishFluidDismiss);
+            else finishFluidDismiss();
+            return;
+        }
         setFocusable(false);
         dismissDim();
         if (windowAnimatorSet != null) {
@@ -1256,6 +1373,17 @@ public class ActionBarPopupWindow extends PopupWindow {
             }
             unregisterListener();
         }
+    }
+
+    private void finishFluidDismiss() {
+        fluidOriginGesture = false;
+        restoreFluidTouchModal();
+        if (fluidReveal != null) { fluidReveal.abort(); fluidReveal = null; }
+        dismissDim();
+        isClosingAnimated = false;
+        try { super.dismiss(); } catch (Exception ignore) {}
+        unregisterListener();
+        if (pauseNotifications) notificationsLocker.unlock();
     }
 
     public void setEmptyOutAnimation(long time) {

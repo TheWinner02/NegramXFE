@@ -21,6 +21,12 @@ public class ScaleStateListAnimator {
             return;
         }
 
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            view.setScaleX(1f); view.setScaleY(1f);
+            xyz.nextalone.nagram.ui.fluid.FluidPressMotion.apply(view, hapticFeedback);
+            return;
+        }
+        xyz.nextalone.nagram.ui.fluid.FluidPressMotion.clear(view);
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             scale = 0.04f;
             tension = 2.0f;
@@ -63,6 +69,7 @@ public class ScaleStateListAnimator {
     }
 
     public static void reset(View view) {
+        xyz.nextalone.nagram.ui.fluid.FluidPressMotion.clear(view);
         view.setStateListAnimator(null);
     }
 

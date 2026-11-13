@@ -43,6 +43,7 @@ public class M3ExpressiveButtonDrawable extends Drawable {
     private boolean externalProgress;
     private float progress;
     private ValueAnimator animator;
+    private androidx.dynamicanimation.animation.SpringAnimation fluidSpring;
     private ColorFilter colorFilter;
 
     private float[] restRadii;
@@ -175,6 +176,7 @@ public class M3ExpressiveButtonDrawable extends Drawable {
     }
 
     public void setMorphProgress(float progress) {
+        if (fluidSpring != null) fluidSpring.cancel();
         externalProgress = true;
         if (animator != null) {
             animator.removeAllListeners();
@@ -214,7 +216,41 @@ public class M3ExpressiveButtonDrawable extends Drawable {
         return true;
     }
 
+    private void animateFluid(float target) {
+        if (animator != null) { animator.removeAllListeners(); animator.cancel(); animator = null; }
+        Drawable.Callback callback = getCallback();
+        while (callback instanceof Drawable) callback = ((Drawable) callback).getCallback();
+        android.content.Context context = callback instanceof android.view.View
+                ? ((android.view.View) callback).getContext() : org.telegram.messenger.ApplicationLoader.applicationContext;
+        if (context == null || callback == null) {
+            if (fluidSpring != null) fluidSpring.cancel();
+            progress = target; invalidateSelf(); return;
+        }
+        if (fluidSpring == null) {
+            fluidSpring = new androidx.dynamicanimation.animation.SpringAnimation(this,
+                    new androidx.dynamicanimation.animation.FloatPropertyCompat<M3ExpressiveButtonDrawable>("fluidCorners") {
+                @Override public float getValue(M3ExpressiveButtonDrawable host) { return host.progress; }
+                @Override public void setValue(M3ExpressiveButtonDrawable host, float value) {
+                    host.progress = Math.max(0f, Math.min(1f, value)); host.invalidateSelf();
+                }
+            });
+            fluidSpring.setSpring(xyz.nextalone.nagram.ui.fluid.FluidTiming.springForce(
+                    xyz.nextalone.nagram.ui.fluid.FluidCapabilities.motionScale(context)));
+            xyz.nextalone.nagram.ui.fluid.FluidTiming.configure(context, fluidSpring);
+        }
+        xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(context, fluidSpring, target);
+    }
+
+    @Override public void jumpToCurrentState() {
+        if (fluidSpring != null && !externalProgress) {
+            fluidSpring.cancel(); progress = pressed ? 1f : 0f; invalidateSelf();
+        }
+        super.jumpToCurrentState();
+    }
+
     private void animateTo(float target) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) { animateFluid(target); return; }
+        if (fluidSpring != null) fluidSpring.cancel();
         if (animator != null) {
             animator.removeAllListeners();
             animator.cancel();

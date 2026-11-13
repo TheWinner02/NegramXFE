@@ -343,6 +343,7 @@ public class ApplicationLoader extends Application {
         }
 
         super.onCreate();
+        xyz.nextalone.nagram.ui.fluid.FluidCapabilities.install(this);
         installCrashReportFilter();
 
         if (BuildVars.LOGS_ENABLED) {

@@ -2032,6 +2032,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 predictiveBackInProgress = false;
                 onSlideAnimationEnd(backAnimation);
             });
+            configureFluidSpring();
             currentSpringAnimation.start();
 
             animationInProgress = true;
@@ -2198,7 +2199,8 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         if (transitionAnimationPreviewMode) {
             return false;
         }
-        if (transitionAnimationInProgress && (transitionAnimationStartTime < System.currentTimeMillis() - 1500 || inPreviewMode)) {
+        if (transitionAnimationInProgress && (transitionAnimationStartTime < System.currentTimeMillis() - 1500
+                && !(xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && currentSpringAnimation != null && currentSpringAnimation.isRunning()) || inPreviewMode)) {
             onAnimationEndCheck(true);
         }
         return transitionAnimationInProgress;
@@ -2276,7 +2278,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     .setSpring(new SpringForce(SPRING_MULTIPLIER)
                             .setStiffness(stiffness)
                             .setDampingRatio(preview ? 0.6f : 1f));
-            if (!open && !preview) {
+            if (!open && !preview && !xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
                 currentSpringAnimation.setStartVelocity(1600f);
             }
             currentSpringAnimation.addUpdateListener((animation, value, velocity) -> {
@@ -2357,6 +2359,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 onAnimationEndCheck(false);
                 setInnerTranslationX(0);
             });
+            configureFluidSpring();
             currentSpringAnimation.start();
             return;
         }
@@ -3103,6 +3106,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 previewOpenAnimationInProgress = false;
                 fragment.onPreviewOpenAnimationEnd();
             });
+            configureFluidSpring();
             currentSpringAnimation.start();
             if (!NekoConfig.disableVibration.Bool()) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
 
@@ -4055,6 +4059,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     private boolean tabsEvents;
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
+        xyz.nextalone.nagram.ui.fluid.FluidOrigins.observe(this, ev);
         final boolean tabs = ev.getY() > getHeight() - getBottomTabsHeight(true) - systemAndDisplayInsets.bottom;
 
         BaseFragment.AttachedSheet lastSheet = null;
@@ -4236,7 +4241,8 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     public static final int BACK_ANIMATION_SPRING = 1;
     public static final int BACK_ANIMATION_PREDICTIVE = 2;
     private boolean useSlideAnimation() {
-        return xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+        return xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()
+                || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
                 || NaConfig.INSTANCE.getBackAnimationStyle().Int() == BACK_ANIMATION_SPRING;
     }
 
@@ -4244,6 +4250,17 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         return !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
                 && useSlideAnimation()
                 && NaConfig.INSTANCE.getSpringAnimationCrossfade().Bool();
+    }
+
+    private void configureFluidSpring() {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() || currentSpringAnimation == null) return;
+        xyz.nextalone.nagram.ui.fluid.FluidCapabilities.refresh();
+        float scale = xyz.nextalone.nagram.ui.fluid.FluidCapabilities.motionScale(getContext());
+        currentSpringAnimation.getSpring()
+                .setStiffness(xyz.nextalone.nagram.ui.fluid.FluidTiming.stiffness(Math.max(.01f, scale)))
+                .setDampingRatio(xyz.nextalone.nagram.ui.fluid.FluidTiming.DAMPING_RATIO);
+        currentSpringAnimation.setMinimumVisibleChange(xyz.nextalone.nagram.ui.fluid.FluidTiming.MIN_VISIBLE_CHANGE * SPRING_MULTIPLIER);
+        xyz.nextalone.nagram.ui.fluid.FluidCapabilities.track(getContext(), currentSpringAnimation);
     }
 
     private static final float SPRING_STIFFNESS = 700f;

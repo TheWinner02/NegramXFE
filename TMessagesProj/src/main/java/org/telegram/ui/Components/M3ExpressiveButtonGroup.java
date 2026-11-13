@@ -53,6 +53,7 @@ public class M3ExpressiveButtonGroup extends FrameLayout {
             force.setDampingRatio(0.82f);
             springAnimation.setSpring(force);
             springAnimation.setMinimumVisibleChange(0.002f);
+            xyz.nextalone.nagram.ui.fluid.FluidTiming.configure(view.getContext(), springAnimation);
             springAnimation.addUpdateListener((animation, value, velocity) -> {
                 progress = value;
                 if (drawable != null) {
@@ -158,6 +159,14 @@ public class M3ExpressiveButtonGroup extends FrameLayout {
         updateChildShapes();
     }
 
+    @Override protected void onDetachedFromWindow() {
+        for (ChildState state : childStates.values()) {
+            state.springAnimation.cancel(); state.progress = 0f; state.pressed = false;
+            if (state.drawable != null) state.drawable.setMorphProgress(0f);
+        }
+        super.onDetachedFromWindow();
+    }
+
     @Override
     public void childDrawableStateChanged(View child) {
         super.childDrawableStateChanged(child);
@@ -169,7 +178,7 @@ public class M3ExpressiveButtonGroup extends FrameLayout {
                 if (isPressed) {
                     com.exteragram.messenger.utils.system.VibratorUtils.vibrateClick(child);
                 }
-                state.springAnimation.animateToFinalPosition(isPressed ? 1f : 0f);
+                xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(getContext(), state.springAnimation, isPressed ? 1f : 0f);
             }
         }
     }

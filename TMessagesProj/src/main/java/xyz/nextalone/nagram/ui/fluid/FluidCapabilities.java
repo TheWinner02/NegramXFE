@@ -33,6 +33,19 @@ public final class FluidCapabilities {
 
     private FluidCapabilities() {}
 
+    /** Refresh after backgrounding too: Android may defer the power-save broadcast. */
+    public static void install(android.app.Application app) {
+        app.registerActivityLifecycleCallbacks(new android.app.Application.ActivityLifecycleCallbacks() {
+            @Override public void onActivityResumed(android.app.Activity activity) { refresh(); }
+            @Override public void onActivityCreated(android.app.Activity activity, android.os.Bundle state) {}
+            @Override public void onActivityStarted(android.app.Activity activity) {}
+            @Override public void onActivityPaused(android.app.Activity activity) {}
+            @Override public void onActivityStopped(android.app.Activity activity) {}
+            @Override public void onActivitySaveInstanceState(android.app.Activity activity, android.os.Bundle state) {}
+            @Override public void onActivityDestroyed(android.app.Activity activity) {}
+        });
+    }
+
     public static float motionScale(Context context) {
         ensureInitialized(context);
         return cachedScale;

@@ -386,14 +386,30 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
         withCancelDialog = progressViewStyle == ALERT_TYPE_SPINNER;
     }
 
+    private xyz.nextalone.nagram.ui.fluid.FluidReveal fluidReveal;
+    private Runnable fluidUnregisterBack;
+    private boolean fluidDismissCommitted;
     private long shownAt;
 
     @Override
     public void show() {
         if (!AndroidUtilities.isSafeToShow(getContext())) return;
         dismissed = false;
+        View fluidOrigin = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()
+                ? xyz.nextalone.nagram.ui.fluid.FluidOrigins.take(getContext()) : null;
         super.show();
-        if (progressViewContainer != null && progressViewStyle == ALERT_TYPE_SPINNER) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && containerView != null) {
+            if (fluidReveal != null) fluidReveal.abort();
+            containerView.animate().cancel();
+            containerView.setScaleX(1f); containerView.setScaleY(1f); containerView.setAlpha(1f);
+            getWindow().setWindowAnimations(0);
+            getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+            fluidReveal = new xyz.nextalone.nagram.ui.fluid.FluidReveal(containerView, fluidOrigin, false);
+            fluidReveal.open(null);
+            if (fluidUnregisterBack != null) fluidUnregisterBack.run();
+            fluidUnregisterBack = xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.installDialog(
+                    getWindow(), fluidReveal.backMotion(this::onBackPressed, () -> isCancelableForFluid()));
+        } else if (progressViewContainer != null && progressViewStyle == ALERT_TYPE_SPINNER) {
             progressViewContainer.setScaleX(0);
             progressViewContainer.setScaleY(0);
             progressViewContainer.animate()
@@ -421,6 +437,26 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                 .start();
         }
         shownAt = System.currentTimeMillis();
+    }
+
+    @Override protected void onStop() {
+        if (fluidUnregisterBack != null) { fluidUnregisterBack.run(); fluidUnregisterBack = null; }
+        if (fluidReveal != null) { fluidReveal.abort(); fluidReveal = null; }
+        super.onStop();
+    }
+
+    private boolean fluidCancelable = true;
+    private boolean isCancelableForFluid() { return fluidCancelable; }
+
+    @Override public void setCancelable(boolean cancelable) {
+        fluidCancelable = cancelable;
+        super.setCancelable(cancelable);
+    }
+
+    @Override public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+        if (fluidReveal != null && fluidReveal.dispatchTouchEvent(event)) return true;
+        if (containerView != null) xyz.nextalone.nagram.ui.fluid.FluidOrigins.observe(containerView, event);
+        return super.dispatchTouchEvent(event);
     }
 
     public void setCancelDialog(boolean enable) {
@@ -601,7 +637,8 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                         params.copyFrom(window.getAttributes());
                         params.width = dialogWidth;
                         try {
-                            window.setAttributes(params);
+                            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) window.setWindowAnimations(0);
+        window.setAttributes(params);
                         } catch (Throwable e) {
                             FileLog.e(e);
                         }
@@ -1654,6 +1691,7 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
             params.setBlurBehindRadius(AndroidUtilities.dp(blurRad > 0 ? blurRad : 20));
         }
 
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) window.setWindowAnimations(0);
         window.setAttributes(params);
 
         return rootView;
@@ -1712,6 +1750,7 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
             params.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING;
             params.flags |= WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM;
         }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) window.setWindowAnimations(0);
         window.setAttributes(params);
     }
 
@@ -1874,6 +1913,15 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
             return;
         }
         if (dismissed) return;
+        if (fluidReveal != null && !fluidDismissCommitted) {
+            fluidReveal.close(() -> {
+                fluidDismissCommitted = true;
+                try { dismiss(); } finally { fluidDismissCommitted = false; }
+            });
+            return;
+        }
+        if (fluidUnregisterBack != null) { fluidUnregisterBack.run(); fluidUnregisterBack = null; }
+        if (fluidReveal != null) { fluidReveal.abort(); fluidReveal = null; }
         dismissed = true;
         try {
             NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.emojiLoaded);

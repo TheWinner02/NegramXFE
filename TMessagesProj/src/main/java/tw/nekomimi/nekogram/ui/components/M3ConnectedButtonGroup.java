@@ -57,6 +57,7 @@ public class M3ConnectedButtonGroup extends View {
         force.setDampingRatio(0.82f);
         pressedAnimation.setSpring(force);
         pressedAnimation.setMinimumVisibleChange(0.002f);
+        xyz.nextalone.nagram.ui.fluid.FluidTiming.configure(context, pressedAnimation);
         pressedAnimation.addUpdateListener((animation, value, velocity) -> {
             pressedProgress = value;
             if (pressedProgress <= 0.002f && pressedIndex < 0) {
@@ -64,6 +65,11 @@ public class M3ConnectedButtonGroup extends View {
             }
             invalidate();
         });
+    }
+
+    @Override protected void onDetachedFromWindow() {
+        pressedAnimation.cancel(); pressedProgress = 0f; pressedIndex = morphIndex = -1;
+        super.onDetachedFromWindow();
     }
 
     public void setResourcesProvider(Theme.ResourcesProvider resourcesProvider) {
@@ -285,7 +291,7 @@ public class M3ConnectedButtonGroup extends View {
                 if (pressedIndex >= 0) {
                     morphIndex = pressedIndex;
                     com.exteragram.messenger.utils.system.VibratorUtils.vibrateClick(this);
-                    pressedAnimation.animateToFinalPosition(1f);
+                    xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(getContext(), pressedAnimation, 1f);
                 }
                 invalidate();
                 return pressedIndex >= 0;
@@ -295,9 +301,9 @@ public class M3ConnectedButtonGroup extends View {
                     pressedIndex = moveIndex;
                     if (pressedIndex >= 0) {
                         morphIndex = pressedIndex;
-                        pressedAnimation.animateToFinalPosition(1f);
+                        xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(getContext(), pressedAnimation, 1f);
                     } else {
-                        pressedAnimation.animateToFinalPosition(0f);
+                        xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(getContext(), pressedAnimation, 0f);
                     }
                     invalidate();
                 }
@@ -306,7 +312,7 @@ public class M3ConnectedButtonGroup extends View {
                 int upIndex = findItemIndex(event.getX(), event.getY());
                 int oldPressedIndex = pressedIndex;
                 pressedIndex = -1;
-                pressedAnimation.animateToFinalPosition(0f);
+                xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(getContext(), pressedAnimation, 0f);
                 invalidate();
                 if (upIndex >= 0 && upIndex == oldPressedIndex) {
                     performClick();
@@ -321,7 +327,7 @@ public class M3ConnectedButtonGroup extends View {
                 return true;
             case MotionEvent.ACTION_CANCEL:
                 pressedIndex = -1;
-                pressedAnimation.animateToFinalPosition(0f);
+                xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(getContext(), pressedAnimation, 0f);
                 invalidate();
                 return true;
         }
