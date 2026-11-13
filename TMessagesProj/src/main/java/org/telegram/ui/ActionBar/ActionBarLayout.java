@@ -96,6 +96,10 @@ import org.telegram.ui.Stories.StoryViewer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.WeakHashMap;
+
+import xyz.nextalone.nagram.ui.fluid.FluidChatTransition;
+import xyz.nextalone.nagram.ui.fluid.FluidOrigins;
 
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.utils.AndroidUtil;
@@ -119,6 +123,35 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     public boolean highlightActionButtons = false;
     private boolean attached;
     private boolean isSheet;
+    private final WeakHashMap<BaseFragment, FluidChatTransition> fluidChatTransitions = new WeakHashMap<>();
+
+    private FluidChatTransition fluidChatTransition() {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() || isSheet || isLayersLayout
+                || isRightLayout || inPreviewMode || transitionAnimationPreviewMode
+                || fragmentsStack == null || fragmentsStack.size() < 2) return null;
+        BaseFragment current = fragmentsStack.get(fragmentsStack.size() - 1);
+        FluidChatTransition motion = fluidChatTransitions.get(current);
+        return motion != null && motion.matches(fragmentsStack.get(fragmentsStack.size() - 2), current) ? motion : null;
+    }
+
+    private void restoreFluidChatHeaders() {
+        for (FluidChatTransition motion : fluidChatTransitions.values()) motion.restore();
+    }
+
+    private float fluidChatCloseStart = -1f, fluidChatBackStart;
+
+    private float interruptFluidChatReturnOrOpening() {
+        if (fluidChatTransition() == null || currentSpringAnimation == null || !currentSpringAnimation.isRunning()) return -1f;
+        boolean opening = transitionAnimationInProgress && onOpenAnimationEndRunnable != null;
+        boolean returning = animationInProgress && startedTracking
+                && currentSpringAnimation.getSpring().getFinalPosition() == 0f;
+        if (!opening && !returning) return -1f;
+        float position = containerView.getTranslationX();
+        // Finish native ownership/callback bookkeeping, then continue from the visible geometry.
+        // A cancelled return keeps the chat; a committed removal is never interrupted here.
+        currentSpringAnimation.cancel();
+        return position;
+    }
     private Window window;
 
     @Override
@@ -1418,6 +1451,28 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
     @Override
     protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
+        FluidChatTransition fluidChat = fluidChatTransition();
+        if (fluidChat != null && (child == containerView || child == containerViewBack)
+                && (transitionAnimationInProgress || startedTracking || animationInProgress || predictiveBackInProgress)) {
+            View chatView = fluidChat.chatView();
+            if (chatView != null && chatView.getParent() instanceof View) {
+                View chatContainer = (View) chatView.getParent();
+                View listContainer = chatContainer == containerView ? containerViewBack : containerView;
+                if (child == chatContainer) {
+                    fluidChat.refreshOrigin(this, listContainer, startedTracking || predictiveBackInProgress
+                            || animationInProgress || onCloseAnimationEndRunnable != null);
+                    float width = getWidth() - getPaddingLeft() - getPaddingRight();
+                    float progress = 1f - chatContainer.getTranslationX() / Math.max(1f, width);
+                    return fluidChat.draw(canvas, this, child, progress, () -> super.drawChild(canvas, child, drawingTime));
+                } else if (child == listContainer) {
+                    int save = canvas.save();
+                    canvas.translate(-child.getTranslationX(), -child.getTranslationY());
+                    boolean result = super.drawChild(canvas, child, drawingTime);
+                    canvas.restoreToCount(save);
+                    return result;
+                }
+            }
+        }
         if (drawerLayoutContainer != null && drawerLayoutContainer.isDrawCurrentPreviewFragmentAbove()) {
             if (inPreviewMode || transitionAnimationPreviewMode || previewOpenAnimationInProgress) {
                 if (child == (oldFragment != null && oldFragment.inPreviewMode ? containerViewBack : containerView)) {
@@ -1636,6 +1691,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     }
 
     private void onSlideAnimationEnd(final boolean backAnimation) {
+        restoreFluidChatHeaders();
         if (!backAnimation) {
             if (fragmentsStack.size() < 2) {
                 checkBlackScreen("onSlideAnimationEnd exit");
@@ -1902,6 +1958,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     private float predictiveBackY;
     private boolean predictiveBackLeft;
     public boolean onBackStarted(float touchX, float touchY) {
+        float fluidResume = interruptFluidChatReturnOrOpening();
         if (animationInProgress) {
             if (backAnimator != null) {
                 backAnimator.end();
@@ -1938,8 +1995,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         prepareForMoving();
         if (useSlideAnimation()) {
             containerViewBack.setTranslationX(-0.35f * containerView.getMeasuredWidth());
-            containerView.setTranslationX(0);
-            setInnerTranslationX(0);
+            fluidChatBackStart = fluidResume >= 0f ? fluidResume : 0f;
+            containerView.setTranslationX(fluidChatBackStart);
+            setInnerTranslationX(fluidChatBackStart);
         }
         if (parentActivity != null && parentActivity.getCurrentFocus() != null) {
             AndroidUtilities.hideKeyboard(parentActivity.getCurrentFocus());
@@ -1952,7 +2010,10 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         if (!predictiveInput) return;
         final float dx;
         if (useSlideAnimation()) {
-            dx = (getWidth() - getPaddingLeft() - getPaddingRight()) * 0.35f * CubicBezierInterpolator.StandardDecelerate.getInterpolation(t);
+            float width = getWidth() - getPaddingLeft() - getPaddingRight();
+            dx = fluidChatTransition() != null
+                    ? fluidChatBackStart + (width - fluidChatBackStart) * .35f * CubicBezierInterpolator.StandardDecelerate.getInterpolation(t)
+                    : width * .35f * CubicBezierInterpolator.StandardDecelerate.getInterpolation(t);
             containerViewBack.setTranslationX(-(containerView.getMeasuredWidth() - dx) * 0.35f);
         } else {
             dx = dp(56) * CubicBezierInterpolator.StandardDecelerate.getInterpolation(t);
@@ -2141,6 +2202,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     }
 
     private void onAnimationEndCheck(boolean byCheck) {
+        restoreFluidChatHeaders();
         onCloseAnimationEnd();
         onOpenAnimationEnd();
         if (waitingForKeyboardCloseRunnable != null) {
@@ -2273,7 +2335,10 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             float stiffness = preview
                     ? (open ? SPRING_STIFFNESS_PREVIEW : SPRING_STIFFNESS_PREVIEW_OUT)
                     : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 520f : SPRING_STIFFNESS);
-            FloatValueHolder valueHolder = new FloatValueHolder(0);
+            float start = !open && !preview && fluidChatTransition() != null && fluidChatCloseStart >= 0f
+                    ? fluidChatCloseStart / Math.max(1f, getWidth() - getPaddingLeft() - getPaddingRight()) * SPRING_MULTIPLIER : 0f;
+            fluidChatCloseStart = -1f;
+            FloatValueHolder valueHolder = new FloatValueHolder(start);
             currentSpringAnimation = new SpringAnimation(valueHolder)
                     .setSpring(new SpringForce(SPRING_MULTIPLIER)
                             .setStiffness(stiffness)
@@ -2551,6 +2616,15 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         boolean needAnimation = preview || !forceWithoutAnimation && MessagesController.getGlobalMainSettings().getBoolean("view_animations", true);
 
         final BaseFragment currentFragment = !fragmentsStack.isEmpty() ? fragmentsStack.get(fragmentsStack.size() - 1) : null;
+
+        if (needAnimation && !preview && !removeLast && !isSheet && !isLayersLayout && !isRightLayout
+                && fragment instanceof ChatActivity && !(currentFragment instanceof ChatActivity)
+                && xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()
+                && xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext())) {
+            FluidChatTransition motion = FluidChatTransition.capture(this, currentFragment,
+                    (ChatActivity) fragment, FluidOrigins.take(getContext()));
+            if (motion != null) fluidChatTransitions.put(fragment, motion);
+        }
 
         fragment.setParentLayout(this);
         View fragmentView = fragment.fragmentView;
@@ -3166,14 +3240,16 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         if (fragment != null && fragment.closeLastFragment()) {
             return;
         }
+        float fluidResume = interruptFluidChatReturnOrOpening();
         if (delegate != null && !delegate.needCloseLastFragment(this) || checkTransitionAnimation() || fragmentsStack.isEmpty()) {
             return;
         }
         if (parentActivity.getCurrentFocus() != null) {
             AndroidUtilities.hideKeyboard(parentActivity.getCurrentFocus());
         }
-        setInnerTranslationX(0);
+        setInnerTranslationX(Math.max(0f, fluidResume));
         boolean needAnimation = !forceNoAnimation && (inPreviewMode || transitionAnimationPreviewMode || animated && MessagesController.getGlobalMainSettings().getBoolean("view_animations", true));
+        fluidChatCloseStart = needAnimation ? fluidResume : -1f;
         final BaseFragment currentFragment = fragmentsStack.get(fragmentsStack.size() - 1);
         BaseFragment previousFragment = null;
         if (fragmentsStack.size() > 1) {
@@ -3204,8 +3280,8 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 if (useSlideAnimation()) {
                     float widthNoPaddings = getWidth() - getPaddingLeft() - getPaddingRight();
                     containerView.setTranslationX(-0.35f * widthNoPaddings);
-                    containerViewBack.setTranslationX(0);
-                    setInnerTranslationX(0);
+                    containerViewBack.setTranslationX(Math.max(0f, fluidResume));
+                    setInnerTranslationX(Math.max(0f, fluidResume));
                 }
                 ViewGroup parent = (ViewGroup) fragmentView.getParent();
                 if (parent != null) {
@@ -4042,6 +4118,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
     @Override
     protected void onDetachedFromWindow() {
+        restoreFluidChatHeaders();
         super.onDetachedFromWindow();
         attached = false;
     }
@@ -4247,7 +4324,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     }
 
     private boolean useActionBarCrossfade() {
-        return !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
+        return fluidChatTransition() == null && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()
                 && useSlideAnimation()
                 && NaConfig.INSTANCE.getSpringAnimationCrossfade().Bool();
     }

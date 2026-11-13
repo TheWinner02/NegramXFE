@@ -77,6 +77,15 @@
  * selection, embedded web players and PiP keep their own Back handling. Return motion can be
  * interrupted by another gesture; attached ViewRoot registrations and timelines stop on teardown.
  *
+ * <p>List-to-chat navigation expands from a validated DialogCell through FluidChatTransition.
+ * ActionBarLayout retains its native stack, lifecycle and common spring; its displacement drives
+ * the rounded surface and shared live avatar/title instead of a lateral page slide. Messages
+ * reveal at their natural layout size. Back and cancellation use the same geometry, including
+ * reversal during opening or a cancelled predictive return. The source is reacquired by dialog
+ * identity; a missing/offscreen source produces an unanchored return rather than targeting a
+ * recycled row. Shared header alpha is restored on completion and detach. Preview, sheet,
+ * replacement, split-pane and unrelated navigation paths retain their existing presentation.
+ *
  * <p>Other UI styles retain their original motion. Gesture displacement, playback timelines,
  * indeterminate loading loops and specialized content transitions are not globally time-warped.
  */
