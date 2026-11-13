@@ -156,6 +156,8 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
             rightShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private float leftAlpha, rightAlpha;
     private float transitionProgress = 1f;
+    private androidx.dynamicanimation.animation.SpringAnimation fluidTransitionSpring;
+    private boolean fluidMenuDriven, fluidTransitionLocked;
     public RectF rect = new RectF();
     private Path mPath = new Path();
     public float radius = dp(72);
@@ -1118,7 +1120,7 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
 
     public void setTransitionProgress(float transitionProgress) {
         this.transitionProgress = transitionProgress;
-        if (parentLayout != null) {
+        if (parentLayout != null && !fluidMenuDriven) {
             parentLayout.setReactionsTransitionProgress(animatePopup && allowSmoothEnterTransition() ? transitionProgress : 1);
         }
         invalidate();
@@ -1569,7 +1571,57 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
         }
     }
 
+    /** A composite menu owns one clock for its contour and reaction strip. */
+    public void setFluidMenuProgress(float progress) {
+        if (!fluidMenuDriven) {
+            if (fluidTransitionSpring != null) fluidTransitionSpring.cancel();
+            unlockFluidTransition();
+            if (parentLayout != null) parentLayout.setReactionsTransitionProgress(1f);
+            fluidMenuDriven = true;
+            animatePopup = false;
+        }
+        setAlpha(1f);
+        setTransitionProgress(Math.max(0f, Math.min(1f, progress)));
+    }
+
+    private void animateFluidTransition(float target) {
+        if (fluidTransitionSpring == null) {
+            if (target == 1f) setTransitionProgress(0f);
+            fluidTransitionSpring = new androidx.dynamicanimation.animation.SpringAnimation(this,
+                new androidx.dynamicanimation.animation.FloatPropertyCompat<ReactionsContainerLayout>("fluidReactions") {
+                    @Override public float getValue(ReactionsContainerLayout view) { return view.transitionProgress; }
+                    @Override public void setValue(ReactionsContainerLayout view, float value) {
+                        view.setTransitionProgress(Math.max(0f, Math.min(1f, value)));
+                    }
+                });
+            fluidTransitionSpring.setSpring(xyz.nextalone.nagram.ui.fluid.FluidTiming.springForce(1f));
+            xyz.nextalone.nagram.ui.fluid.FluidTiming.configure(getContext(), fluidTransitionSpring);
+            fluidTransitionSpring.addEndListener((animation, canceled, value, velocity) -> {
+                if (!canceled) unlockFluidTransition();
+            });
+        }
+        setAlpha(1f);
+        if (!fluidTransitionLocked) {
+            fluidTransitionLocked = true;
+            notificationsLocker.lock();
+        }
+        xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(getContext(), fluidTransitionSpring, target);
+    }
+
+    private void unlockFluidTransition() {
+        if (fluidTransitionLocked) {
+            fluidTransitionLocked = false;
+            notificationsLocker.unlock();
+        }
+    }
+
     public void startEnterAnimation(boolean animatePopup) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            if (fluidMenuDriven) return;
+            this.animatePopup = animatePopup;
+            animateFluidTransition(1f);
+            return;
+        }
         this.animatePopup = animatePopup;
         setTransitionProgress(0);
         setAlpha(1f);
@@ -1593,6 +1645,10 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
     }
 
     public void startCloseAnimation() {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            if (!fluidMenuDriven) animateFluidTransition(0f);
+            return;
+        }
         setTransitionProgress(0);
         setAlpha(1f);
         notificationsLocker.lock();
@@ -2493,6 +2549,12 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
 
     @Override
     protected void onDetachedFromWindow() {
+        if (fluidTransitionSpring != null) {
+            fluidTransitionSpring.cancel();
+            fluidTransitionSpring = null;
+        }
+        unlockFluidTransition();
+        fluidMenuDriven = false;
         super.onDetachedFromWindow();
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.emojiLoaded);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.chatInfoDidLoad);

@@ -20,7 +20,7 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.ui.ActionBar.ActionBarPopupWindow.ActionBarPopupWindowLayout;
 import java.lang.ref.WeakReference;
 
-/** Shared simple toolbar menu: real native content in a full-window, reversible surface. */
+/** Shared simple anchored menu: real native content in a full-window, reversible surface. */
 public final class FluidMenuDialog extends Dialog {
     private final WeakReference<View> origin;
     private final ActionBarPopupWindowLayout menu;
@@ -28,6 +28,25 @@ public final class FluidMenuDialog extends Dialog {
     private final float originAlpha;
     private final Runnable beforeAction;
     private Runnable unregisterBack;
+    private int menuGravity = android.view.Gravity.RIGHT, scrimAlpha = 32;
+    private float offsetX, offsetY, placementOffsetY;
+    private boolean forceAbove, forceBelow;
+    private boolean reopenOnOriginTouch, originReopenGesture;
+
+    /** Context-menu builders create a new instance on every click: reverse this surface directly. */
+    public void setReopenOnOriginTouch(boolean enabled) { reopenOnOriginTouch = enabled; }
+
+    public void setMenuPlacement(int gravity, float x, float y, boolean above, boolean below, int dimAlpha) {
+        menuGravity = gravity; offsetX = x; placementOffsetY = offsetY = y;
+        forceAbove = above; forceBelow = below;
+        scrimAlpha = Math.max(0, Math.min(255, dimAlpha));
+    }
+
+    public void setMenuTranslationY(float translation) {
+        offsetY = placementOffsetY + translation;
+        surface.requestLayout();
+    }
+
     private View touchReceiver;
     private View pendingItem;
     private boolean closing, finishing, awaitingTouchEnd, actionCommitted;
@@ -150,12 +169,21 @@ public final class FluidMenuDialog extends Dialog {
 
     @Override public boolean dispatchTouchEvent(MotionEvent event) {
         int action = event.getActionMasked();
+        if (originReopenGesture) {
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) originReopenGesture = false;
+            return true;
+        }
         View source = origin.get();
         if (touchReceiver == null && closing && action == MotionEvent.ACTION_DOWN && source != null) {
             int[] xy = new int[2]; source.getLocationOnScreen(xy);
             if (event.getRawX() >= xy[0] && event.getRawX() < xy[0] + source.getWidth()
                     && event.getRawY() >= xy[1] && event.getRawY() < xy[1] + source.getHeight()) {
                 pendingItem = null; // A fresh gesture revokes an action queued by the returning menu.
+                if (reopenOnOriginTouch) {
+                    originReopenGesture = true;
+                    toggle();
+                    return true;
+                }
                 touchReceiver = source.getRootView();
             }
         }
@@ -227,8 +255,19 @@ public final class FluidMenuDialog extends Dialog {
             android.view.WindowInsets insets = getRootWindowInsets();
             int safeTop = insets == null ? margin : insets.getSystemWindowInsetTop() + margin;
             int safeBottom = insets == null ? margin : insets.getSystemWindowInsetBottom() + margin;
-            float left = Math.max(margin, Math.min(getWidth() - margin - menu.getMeasuredWidth(), source.right - menu.getMeasuredWidth()));
-            float top = Math.max(safeTop, Math.min(getHeight() - safeBottom - menu.getMeasuredHeight(), source.bottom + AndroidUtilities.dp(8)));
+            float left = source.right - menu.getMeasuredWidth();
+            if (menuGravity == android.view.Gravity.LEFT) left = source.left;
+            else if (menuGravity == android.view.Gravity.CENTER_HORIZONTAL) left = source.centerX() - menu.getMeasuredWidth() / 2f;
+            left = Math.max(margin, Math.min(getWidth() - margin - menu.getMeasuredWidth(), left + offsetX));
+            float top = source.bottom + AndroidUtilities.dp(8);
+            if (forceBelow) {
+                // ItemOptions.forceBottom aligns the menu's bottom with the source's bottom.
+                top = source.bottom - menu.getMeasuredHeight();
+            } else if (forceAbove || top + menu.getMeasuredHeight() > getHeight() - safeBottom
+                    && source.top - safeTop > getHeight() - safeBottom - source.bottom) {
+                top = source.top - AndroidUtilities.dp(8) - menu.getMeasuredHeight();
+            }
+            top = Math.max(safeTop, Math.min(getHeight() - safeBottom - menu.getMeasuredHeight(), top + offsetY));
             target.set(left, top, left + menu.getMeasuredWidth(), top + menu.getMeasuredHeight());
             menu.layout(Math.round(target.left), Math.round(target.top), Math.round(target.right), Math.round(target.bottom));
             if (!started) {
@@ -304,8 +343,8 @@ public final class FluidMenuDialog extends Dialog {
                 }
                 return;
             }
-            canvas.drawColor(android.graphics.Color.argb(Math.round(32 * p), 0, 0, 0));
-            paint.setColor(menu.getBackgroundColor());
+            canvas.drawColor(android.graphics.Color.argb(Math.round(scrimAlpha * p), 0, 0, 0));
+            paint.setColor(menu.getFluidSurfaceColor());
             canvas.drawPath(contour, paint);
             int save = canvas.save(); canvas.clipPath(contour);
             View button = origin.get();
@@ -364,7 +403,7 @@ public final class FluidMenuDialog extends Dialog {
                 View selected = pressedItem; cancelPress();
                 if (action == MotionEvent.ACTION_CANCEL || gestureCanceled) return true;
                 if (Math.hypot(event.getX() - downX, event.getY() - downY) > ViewConfiguration.get(getContext()).getScaledTouchSlop()) return true;
-                if (selected != null) dismissWithAction(selected);
+                if (selected != null && selected.hasOnClickListeners()) selected.performClick();
                 else if (!body.contains(event.getX(), event.getY())) dismiss();
             }
             return true;

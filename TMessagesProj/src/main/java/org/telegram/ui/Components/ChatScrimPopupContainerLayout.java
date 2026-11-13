@@ -148,6 +148,10 @@ public class ChatScrimPopupContainerLayout extends LinearLayout {
         this.bottomView = bottomView;
     }
 
+    public void setFluidMenuProgress(float progress) {
+        if (reactionsLayout != null) reactionsLayout.setFluidMenuProgress(progress);
+    }
+
     public void setReactionsLayout(ReactionsContainerLayout reactionsLayout) {
         this.reactionsLayout = reactionsLayout;
         if (reactionsLayout != null) {

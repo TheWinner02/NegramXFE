@@ -20,6 +20,10 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
+import androidx.dynamicanimation.animation.FloatPropertyCompat;
+import androidx.dynamicanimation.animation.SpringAnimation;
+import xyz.nextalone.nagram.ui.UIStyleEngine;
+import xyz.nextalone.nagram.ui.fluid.FluidTiming;
 import androidx.core.view.GestureDetectorCompat;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -53,6 +57,9 @@ public class PopupSwipeBackLayout extends FrameLayout {
 
     private float overrideForegroundHeight;
     private ValueAnimator foregroundAnimator;
+    private SpringAnimation fluidTransition, fluidHeight;
+    private float fluidTarget, fluidDragStart, fluidDragX;
+    private boolean fluidNotificationsLocked, fluidBackSeeking, fluidBackReturning;
 
     private int currentForegroundIndex = -1;
     private AnimationNotificationsLocker notificationsLocker = new AnimationNotificationsLocker();
@@ -77,8 +84,13 @@ public class PopupSwipeBackLayout extends FrameLayout {
             @Override
             public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
                 if (!isProcessingSwipe && !isSwipeDisallowed) {
-                    if (!isSwipeBackDisallowed && transitionProgress == 1 && distanceX <= -touchSlop && Math.abs(distanceX) >= Math.abs(distanceY * 1.5f) && !isDisallowedView(e2, getChildAt(transitionProgress > 0.5f ? 1 : 0))) {
+                    if (!isSwipeBackDisallowed && (UIStyleEngine.isFluid() ? transitionProgress > 0 : transitionProgress == 1) && distanceX <= -touchSlop && Math.abs(distanceX) >= Math.abs(distanceY * 1.5f) && !isDisallowedView(e2, getChildAt(transitionProgress > 0.5f ? Math.max(0, currentForegroundIndex) : 0))) {
                         isProcessingSwipe = true;
+                        if (UIStyleEngine.isFluid()) {
+                            fluidDragStart = transitionProgress;
+                            fluidDragX = e2.getX();
+                            if (fluidTransition != null) fluidTransition.cancel();
+                        }
 
                         MotionEvent c = MotionEvent.obtain(0, 0, MotionEvent.ACTION_CANCEL, 0, 0, 0);
                         for (int i = 0; i < getChildCount(); i++)
@@ -89,7 +101,9 @@ public class PopupSwipeBackLayout extends FrameLayout {
 
                 if (isProcessingSwipe) {
                     toProgress = -1;
-                    transitionProgress = 1f - Math.max(0, Math.min(1, (e2.getX() - e1.getX()) / getWidth()));
+                    transitionProgress = UIStyleEngine.isFluid()
+                        ? Math.max(0f, Math.min(1f, fluidDragStart - (e2.getX() - fluidDragX) / Math.max(1, getWidth())))
+                        : 1f - Math.max(0, Math.min(1, (e2.getX() - e1.getX()) / getWidth()));
                     invalidateTransforms();
                 }
 
@@ -98,10 +112,14 @@ public class PopupSwipeBackLayout extends FrameLayout {
 
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-                if (isAnimationInProgress || isSwipeDisallowed)
+                if ((!UIStyleEngine.isFluid() && isAnimationInProgress) || isSwipeDisallowed
+                        || UIStyleEngine.isFluid() && !isProcessingSwipe)
                     return false;
 
-                if (velocityX >= 600) {
+                if (UIStyleEngine.isFluid() && Math.abs(velocityX) >= 600 && Math.abs(velocityX) > Math.abs(velocityY)) {
+                    clearFlags();
+                    animateToState(velocityX > 0f ? 0f : 1f, velocityX / 6000f);
+                } else if (velocityX >= 600) {
                     clearFlags();
                     animateToState(0, velocityX / 6000f);
                 }
@@ -175,7 +193,7 @@ public class PopupSwipeBackLayout extends FrameLayout {
             foregroundView = getChildAt(currentForegroundIndex);
         }
         backgroundView.setTranslationX(-transitionProgress * getWidth() * 0.5f);
-        float bSc = 0.95f + (1f - transitionProgress) * 0.05f;
+        float bSc = UIStyleEngine.isFluid() ? 1f : 0.95f + (1f - transitionProgress) * 0.05f;
         backgroundView.setScaleX(bSc);
         backgroundView.setScaleY(bSc);
         if (foregroundView != null) {
@@ -261,8 +279,9 @@ public class PopupSwipeBackLayout extends FrameLayout {
      * @return If event is processed
      */
     private boolean processTouchEvent(MotionEvent ev) {
+        if (fluidBackSeeking) return true;
         int act = ev.getAction() & MotionEvent.ACTION_MASK;
-        if (isAnimationInProgress)
+        if (isAnimationInProgress && !UIStyleEngine.isFluid())
             return true;
 
         if (!detector.onTouchEvent(ev)) {
@@ -273,7 +292,8 @@ public class PopupSwipeBackLayout extends FrameLayout {
                 case MotionEvent.ACTION_UP:
                     if (isProcessingSwipe) {
                         clearFlags();
-                        animateToState(transitionProgress >= 0.5f ? 1 : 0, 0);
+                        animateToState(UIStyleEngine.isFluid() && act == MotionEvent.ACTION_CANCEL
+                            ? fluidTarget : transitionProgress >= 0.5f ? 1 : 0, 0);
                     } else if (isSwipeDisallowed) {
                         clearFlags();
                     }
@@ -290,6 +310,10 @@ public class PopupSwipeBackLayout extends FrameLayout {
      * @param flingVal Fling value(If from fling, zero otherwise)
      */
     private void animateToState(float f, float flingVal) {
+        if (UIStyleEngine.isFluid()) {
+            animateFluidState(f, flingVal);
+            return;
+        }
         ValueAnimator val = ValueAnimator.ofFloat(transitionProgress, f).setDuration((long) (DURATION * Math.max(0.5f, Math.abs(transitionProgress - f) - Math.min(0.2f, flingVal))));
         val.setInterpolator(CubicBezierInterpolator.DEFAULT);
         int selectedAccount = UserConfig.selectedAccount;
@@ -323,6 +347,122 @@ public class PopupSwipeBackLayout extends FrameLayout {
         val.start();
     }
 
+    private void animateFluidState(float target, float fling) {
+        fluidBackSeeking = false;
+        fluidBackReturning = false;
+        if (fluidTransition == null) {
+            fluidTransition = new SpringAnimation(this, new FloatPropertyCompat<PopupSwipeBackLayout>("fluidSubmenu") {
+                @Override public float getValue(PopupSwipeBackLayout view) { return view.transitionProgress; }
+                @Override public void setValue(PopupSwipeBackLayout view, float value) {
+                    view.transitionProgress = Math.max(0f, Math.min(1f, value));
+                    view.invalidateTransforms();
+                }
+            });
+            fluidTransition.setSpring(FluidTiming.springForce(1f));
+            FluidTiming.configure(getContext(), fluidTransition);
+            fluidTransition.addEndListener((animation, canceled, value, velocity) -> {
+                if (canceled) return;
+                float completed = fluidTarget;
+                boolean notifyOpen = completed == 1f && !fluidBackReturning;
+                fluidBackReturning = false;
+                transitionProgress = completed;
+                if (completed == 0f) currentForegroundIndex = -1;
+                invalidateTransforms();
+                finishFluidMotion();
+                if (notifyOpen && onForegroundOpen != null) onForegroundOpen.run();
+            });
+        }
+        fluidTarget = toProgress = target;
+        isAnimationInProgress = true;
+        lockFluidMotion();
+        // Retargeting a running spring preserves velocity. A released swipe supplies its own.
+        if (!fluidTransition.isRunning() && fling != 0f) {
+            fluidTransition.setStartVelocity(-fling * 6000f / Math.max(1, getWidth()));
+        }
+        FluidTiming.animate(getContext(), fluidTransition, target);
+    }
+
+    public boolean hasFluidBackTarget() {
+        return currentForegroundIndex > 0 && fluidTarget > 0f;
+    }
+
+    /** Predictive Back returns one subpage; it does not dismiss the containing popup. */
+    public xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion fluidBackMotion() {
+        if (fluidTransition == null) {
+            return new xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion() {
+                @Override public void start() {}
+                @Override public void update(float progress) {}
+                @Override public void cancel() {}
+                @Override public void commit() { closeForeground(); }
+            };
+        }
+        xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion motion =
+            xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.spring(getContext(), fluidTransition,
+                () -> fluidBackSeeking && currentForegroundIndex > 0 && fluidTarget > 0f && isAttachedToWindow(),
+                () -> transitionProgress, value -> {
+                    transitionProgress = (float) value;
+                    invalidateTransforms();
+                }, () -> closeForeground());
+        return new xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion() {
+            @Override public void start() {
+                if (currentForegroundIndex <= 0 || fluidTarget <= 0f || isProcessingSwipe
+                        || !isAttachedToWindow()
+                        || !xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext())) return;
+                fluidBackSeeking = fluidBackReturning = true;
+                toProgress = 0f;
+                isAnimationInProgress = true;
+                lockFluidMotion();
+                motion.start();
+                invalidateTransforms();
+            }
+            @Override public void update(float progress) {
+                if (fluidBackSeeking && !xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext())) cancel();
+                else motion.update(progress);
+            }
+            @Override public void cancel() {
+                if (!fluidBackSeeking) return;
+                toProgress = 1f;
+                motion.cancel();
+                fluidBackSeeking = false;
+                invalidateTransforms();
+                finishFluidMotion();
+            }
+            @Override public void commit() { motion.commit(); }
+        };
+    }
+
+    private void lockFluidMotion() {
+        if (!fluidNotificationsLocked) {
+            fluidNotificationsLocked = true;
+            notificationsLocker.lock();
+        }
+    }
+
+    private void finishFluidMotion() {
+        isAnimationInProgress = fluidBackSeeking || isProcessingSwipe || fluidTransition != null && fluidTransition.isRunning()
+            || fluidHeight != null && fluidHeight.isRunning();
+        if (!isAnimationInProgress && fluidNotificationsLocked) {
+            fluidNotificationsLocked = false;
+            notificationsLocker.unlock();
+        }
+    }
+
+    @Override protected void onDetachedFromWindow() {
+        fluidBackSeeking = fluidBackReturning = false;
+        if (fluidTransition != null) {
+            fluidTransition.cancel();
+            transitionProgress = fluidTarget;
+            if (fluidTarget == 0f) currentForegroundIndex = -1;
+        }
+        if (fluidHeight != null) {
+            fluidHeight.cancel();
+            overrideForegroundHeight = overrideHeightIndex.get(currentForegroundIndex);
+        }
+        clearFlags();
+        if (fluidTransition != null || fluidHeight != null) finishFluidMotion();
+        super.onDetachedFromWindow();
+    }
+
     private Runnable onForegroundOpen;
     public void setOnForegroundOpenFinished(Runnable listener) {
         onForegroundOpen = listener;
@@ -340,9 +480,12 @@ public class PopupSwipeBackLayout extends FrameLayout {
      * Opens up foreground
      */
     public void openForeground(int viewIndex) {
-        if (isAnimationInProgress) {
-            return;
-        }
+        if (viewIndex <= 0 || viewIndex >= getChildCount()) return;
+        if (isAnimationInProgress && !UIStyleEngine.isFluid()) return;
+        // Reverse the current subpage; switching to another subpage needs a separate return.
+        if (UIStyleEngine.isFluid() && currentForegroundIndex > 0
+                && currentForegroundIndex != viewIndex && transitionProgress > 0f) return;
+        if (UIStyleEngine.isFluid() && currentForegroundIndex != viewIndex && fluidHeight != null) fluidHeight.cancel();
         currentForegroundIndex = viewIndex;
         overrideForegroundHeight = overrideHeightIndex.get(viewIndex);
         animateToState(1, 0);
@@ -353,10 +496,16 @@ public class PopupSwipeBackLayout extends FrameLayout {
     }
 
     public void closeForeground(boolean animated) {
-        if (isAnimationInProgress) {
-            return;
-        }
+        if (isAnimationInProgress && !UIStyleEngine.isFluid()) return;
         if (!animated) {
+            if (UIStyleEngine.isFluid()) {
+                clearFlags();
+                fluidBackSeeking = fluidBackReturning = false;
+            }
+            if (fluidTransition != null) fluidTransition.cancel();
+            if (fluidHeight != null) fluidHeight.cancel();
+            fluidTarget = toProgress = 0f;
+            finishFluidMotion();
             currentForegroundIndex = -1;
             transitionProgress = 0;
             invalidateTransforms();
@@ -458,6 +607,7 @@ public class PopupSwipeBackLayout extends FrameLayout {
      * @return If we should ignore view
      */
     private boolean isDisallowedView(MotionEvent e, View v) {
+        if (v == null) return false;
         v.getHitRect(hitRect);
         if (hitRect.contains((int) e.getX(), (int) e.getY()) && (v.canScrollHorizontally(-1) || v instanceof ActionBarMenuSlider))
             return true;
@@ -505,6 +655,35 @@ public class PopupSwipeBackLayout extends FrameLayout {
         if (foregroundAnimator != null) {
             foregroundAnimator.cancel();
             foregroundAnimator = null;
+        }
+        if (UIStyleEngine.isFluid()) {
+            if (overrideForegroundHeight == 0f) overrideForegroundHeight = getChildAt(index).getMeasuredHeight();
+            if (fluidHeight == null) {
+                fluidHeight = new SpringAnimation(this, new FloatPropertyCompat<PopupSwipeBackLayout>("fluidSubmenuHeight") {
+                    @Override public float getValue(PopupSwipeBackLayout view) { return view.overrideForegroundHeight; }
+                    @Override public void setValue(PopupSwipeBackLayout view, float value) {
+                        view.overrideForegroundHeight = Math.max(0f, value);
+                        view.invalidateTransforms();
+                    }
+                });
+                fluidHeight.setSpring(FluidTiming.springForce(1f));
+                FluidTiming.configure(getContext(), fluidHeight);
+                fluidHeight.setMinimumVisibleChange(.5f); // This property is measured in pixels.
+                fluidHeight.addEndListener((animation, canceled, value, velocity) -> {
+                    if (!canceled) finishFluidMotion();
+                });
+            }
+            if (animated) {
+                isAnimationInProgress = true;
+                lockFluidMotion();
+                FluidTiming.animate(getContext(), fluidHeight, height);
+            } else {
+                fluidHeight.cancel();
+                overrideForegroundHeight = height;
+                invalidateTransforms();
+                finishFluidMotion();
+            }
+            return;
         }
         if (animated) {
             View fg = getChildAt(currentForegroundIndex);

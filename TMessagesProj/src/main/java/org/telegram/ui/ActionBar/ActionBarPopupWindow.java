@@ -82,6 +82,7 @@ public class ActionBarPopupWindow extends PopupWindow {
     }
 
     private xyz.nextalone.nagram.ui.fluid.FluidReveal fluidReveal;
+    private Runnable unregisterFluidBack;
     private java.lang.ref.WeakReference<View> fluidAnchor = new java.lang.ref.WeakReference<>(null);
     private java.lang.ref.WeakReference<View> fluidOrigin = new java.lang.ref.WeakReference<>(null);
     private boolean fluidOriginGesture;
@@ -356,6 +357,13 @@ public class ActionBarPopupWindow extends PopupWindow {
 
         public int getBackgroundColor() {
             return backgroundColor;
+        }
+
+        /** The drawable's white multiplication tint is not an opaque surface colour. */
+        public int getFluidSurfaceColor() {
+            return backgroundColor == Color.WHITE
+                ? getThemedColor(Theme.key_actionBarDefaultSubmenuBackground)
+                : backgroundColor;
         }
 
         public void setBackgroundColor(int color) {
@@ -1027,6 +1035,7 @@ public class ActionBarPopupWindow extends PopupWindow {
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) setAnimationStyle(0);
             super.showAsDropDown(anchor, xoff, yoff);
             registerListener(anchor);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) startAnimation();
             if (Build.VERSION.SDK_INT >= 31 && (tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
                 dimBehind(0.2f);
             }
@@ -1035,8 +1044,24 @@ public class ActionBarPopupWindow extends PopupWindow {
         }
     }
 
+    @Override
+    public void showAsDropDown(View anchor, int xoff, int yoff, int gravity) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) setAnimationStyle(0);
+        super.showAsDropDown(anchor, xoff, yoff, gravity);
+        registerListener(anchor);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) startAnimation();
+    }
+
     public static AnimatorSet startAnimation(ActionBarPopupWindowLayout content) {
         com.exteragram.messenger.utils.system.VibratorUtils.vibrateGesture(content, true);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            // Popup entrances are owned by showAtLocation/showAsDropDown. Standalone preview
+            // containers own their outer motion too; do not overlay the old row stagger.
+            prepareFluidContent(content);
+            AnimatorSet completed = new AnimatorSet();
+            completed.start();
+            return completed;
+        }
         content.startAnimationPending = true;
         content.setTranslationY(0);
         content.setAlpha(1.0f);
@@ -1139,7 +1164,7 @@ public class ActionBarPopupWindow extends PopupWindow {
     public void startAnimation(boolean fromStickersAlert) {
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && animationEnabled && getContentView() instanceof ViewGroup) {
             if (reopenFluidIfClosing()) return;
-            if (fluidReveal != null) { fluidReveal.abort(); fluidReveal = null; }
+            if (fluidReveal != null) return; // showAtLocation and owners may both request entrance.
             if (isClosingAnimated && pauseNotifications) notificationsLocker.unlock();
             ViewGroup root = (ViewGroup) getContentView();
             prepareFluidContent(root);
@@ -1148,9 +1173,17 @@ public class ActionBarPopupWindow extends PopupWindow {
             if (anchor == null || !anchor.isAttachedToWindow()) anchor = fluidAnchor.get();
             if (anchor == null) anchor = xyz.nextalone.nagram.ui.fluid.FluidOrigins.take(root.getContext());
             fluidReveal = new xyz.nextalone.nagram.ui.fluid.FluidReveal(root, anchor, false);
+            if (root instanceof org.telegram.ui.Components.ChatScrimPopupContainerLayout) {
+                org.telegram.ui.Components.ChatScrimPopupContainerLayout composite =
+                    (org.telegram.ui.Components.ChatScrimPopupContainerLayout) root;
+                composite.setFluidMenuProgress(0f);
+                fluidReveal.setProgressListener(composite::setFluidMenuProgress);
+            }
             installFluidTouchInterceptor();
             isClosingAnimated = false;
             fluidReveal.open(null);
+            if (unregisterFluidBack != null) unregisterFluidBack.run();
+            unregisterFluidBack = xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.installPopup(root, fluidPopupBackMotion());
             return;
         }
         if (animationEnabled) {
@@ -1263,6 +1296,7 @@ public class ActionBarPopupWindow extends PopupWindow {
         fluidAnchor = new java.lang.ref.WeakReference<>(null);
         super.showAtLocation(parent, gravity, x, y);
         unregisterListener();
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) startAnimation();
         if (Build.VERSION.SDK_INT >= 31 && (tw.nekomimi.nekogram.NekoConfig.forceChatBlur.Bool() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass())) {
             dimBehind(0.2f);
         }
@@ -1375,7 +1409,46 @@ public class ActionBarPopupWindow extends PopupWindow {
         }
     }
 
+    private PopupSwipeBackLayout findFluidSubmenu(View view) {
+        if (view == null || view.getVisibility() != View.VISIBLE) return null;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = group.getChildCount() - 1; i >= 0; i--) {
+                PopupSwipeBackLayout child = findFluidSubmenu(group.getChildAt(i));
+                if (child != null) return child;
+            }
+        }
+        return view instanceof PopupSwipeBackLayout && ((PopupSwipeBackLayout) view).hasFluidBackTarget()
+            ? (PopupSwipeBackLayout) view : null;
+    }
+
+    private xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion fluidPopupBackMotion() {
+        xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion surface =
+            fluidReveal.backMotion(this::dismiss, () -> isShowing() && isFocusable());
+        return new xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion() {
+            private xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion active;
+            private xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion select() {
+                PopupSwipeBackLayout submenu = findFluidSubmenu(getContentView());
+                return submenu == null ? surface : submenu.fluidBackMotion();
+            }
+            @Override public void start() { active = select(); active.start(); }
+            @Override public void update(float progress) { if (active != null) active.update(progress); }
+            @Override public void cancel() {
+                xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion motion = active;
+                active = null;
+                if (motion != null) motion.cancel();
+            }
+            @Override public void commit() {
+                xyz.nextalone.nagram.ui.fluid.FluidPredictiveBack.Motion motion = active;
+                active = null;
+                if (motion == null) motion = select(); // Hardware Back / Android 13 has no preview.
+                motion.commit();
+            }
+        };
+    }
+
     private void finishFluidDismiss() {
+        if (unregisterFluidBack != null) { unregisterFluidBack.run(); unregisterFluidBack = null; }
         fluidOriginGesture = false;
         restoreFluidTouchModal();
         if (fluidReveal != null) { fluidReveal.abort(); fluidReveal = null; }

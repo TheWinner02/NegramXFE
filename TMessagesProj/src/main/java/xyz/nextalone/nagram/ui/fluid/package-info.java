@@ -21,10 +21,28 @@
  * callback. Menus with subpages, non-dismissing controls or custom top content retain their
  * existing path until those interactions receive a dedicated surface integration.
  *
+ * <p>Flat ItemOptions context menus share FluidMenuDialog automatically. Their native action
+ * order, dontDismiss(), checked rows and long-press selection remain owned by ItemOptions.
+ * Returning menus reverse directly on a fresh origin touch, without rebuilding the menu.
+ * Placement follows the requested gravity, offsets and above/below preference. Composite,
+ * moving, blurred and keyboard-focused menus retain their native popup path with an explicit
+ * source for FluidReveal.
+ *
  * <p>AlertDialog and other ActionBarPopupWindow paths use native-size surface reveals. Popup item animations
  * and platform window entrance animations do not compete with the Fluid surface. Dialog Back
  * previews retain cancellation and non-cancelable behavior. Pending layouts, outlines and Back
  * registrations are restored at teardown.
+ *
+ * <p>PopupWindow entrances start in the shared show methods and are idempotent when owners
+ * also request an entrance. Composite chat menus drive their reaction strip from the same
+ * FluidReveal progress; the old popup scaling and independent reaction timer do not compete.
+ * Popup windows register predictive Back on their own attached ViewRoot with overlay priority;
+ * a gesture snapshots the innermost open subpage, otherwise it drives the outer FluidReveal.
+ * Cancellation returns through the same spring without repeating subpage-open callbacks.
+ * Registration is removed on detach/dismiss and late platform callbacks are ignored.
+ * PopupSwipeBackLayout uses retargetable Fluid springs for subpage progress and changing height.
+ * Swipes track the finger directly, resume from the current position and release into the
+ * common spring. Detachment cancels work and releases notification locks without stale callbacks.
  *
  * <p>Switches and both Expressive button groups use tracked, retargetable springs. Standalone
  * Expressive drawables morph through the same policy. ScaleStateListAnimator delegates Fluid

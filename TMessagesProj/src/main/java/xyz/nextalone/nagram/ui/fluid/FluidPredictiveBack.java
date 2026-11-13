@@ -3,6 +3,7 @@ package xyz.nextalone.nagram.ui.fluid;
 import android.content.Context;
 import android.os.Build;
 import android.view.Window;
+import android.view.View;
 import android.window.BackEvent;
 import android.window.OnBackAnimationCallback;
 import android.window.OnBackInvokedCallback;
@@ -95,28 +96,83 @@ public final class FluidPredictiveBack {
         return Build.VERSION.SDK_INT >= 34 ? Api34.install(window, motion) : Api33.install(window, motion);
     }
 
+    /** Register on the popup's own ViewRoot, after the platform installs its dismiss callback. */
+    public static Runnable installPopup(View content, Motion motion) {
+        if (content == null || Build.VERSION.SDK_INT < 33 || motion == null) return () -> {};
+        class Binding implements View.OnAttachStateChangeListener, Runnable {
+            Runnable unregister;
+            boolean disposed;
+            @Override public void run() {
+                if (disposed || !content.isAttachedToWindow() || unregister != null) return;
+                unregister = Build.VERSION.SDK_INT >= 34
+                    ? Api34.installPopup(content, motion) : Api33.installPopup(content, motion);
+            }
+            @Override public void onViewAttachedToWindow(View view) { view.post(this); }
+            @Override public void onViewDetachedFromWindow(View view) {
+                view.removeCallbacks(this);
+                unregister();
+            }
+            void unregister() {
+                if (unregister != null) { unregister.run(); unregister = null; }
+            }
+            void dispose() {
+                if (disposed) return;
+                disposed = true;
+                content.removeCallbacks(this);
+                content.removeOnAttachStateChangeListener(this);
+                unregister();
+            }
+        }
+        Binding binding = new Binding();
+        content.addOnAttachStateChangeListener(binding);
+        if (content.isAttachedToWindow()) content.post(binding);
+        return binding::dispose;
+    }
+
     @RequiresApi(34)
     private static final class Api34 {
         static Runnable install(Window window, Motion motion) {
-            OnBackInvokedDispatcher dispatcher = window.getOnBackInvokedDispatcher();
+            return install(window.getOnBackInvokedDispatcher(), OnBackInvokedDispatcher.PRIORITY_DEFAULT, motion);
+        }
+        static Runnable installPopup(View view, Motion motion) {
+            return install(view.findOnBackInvokedDispatcher(), OnBackInvokedDispatcher.PRIORITY_OVERLAY, motion);
+        }
+        static Runnable install(OnBackInvokedDispatcher dispatcher, int priority, Motion motion) {
+            if (dispatcher == null) return null;
+            boolean[] active = {true};
             OnBackAnimationCallback callback = new OnBackAnimationCallback() {
-                @Override public void onBackStarted(@NonNull BackEvent event) { motion.start(); }
-                @Override public void onBackProgressed(@NonNull BackEvent event) { motion.update(event.getProgress()); }
-                @Override public void onBackCancelled() { motion.cancel(); }
-                @Override public void onBackInvoked() { motion.commit(); }
+                @Override public void onBackStarted(@NonNull BackEvent event) { if (active[0]) motion.start(); }
+                @Override public void onBackProgressed(@NonNull BackEvent event) { if (active[0]) motion.update(event.getProgress()); }
+                @Override public void onBackCancelled() { if (active[0]) motion.cancel(); }
+                @Override public void onBackInvoked() { if (active[0]) motion.commit(); }
             };
-            dispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback);
-            return () -> dispatcher.unregisterOnBackInvokedCallback(callback);
+            dispatcher.registerOnBackInvokedCallback(priority, callback);
+            return () -> {
+                if (!active[0]) return;
+                active[0] = false;
+                dispatcher.unregisterOnBackInvokedCallback(callback);
+            };
         }
     }
 
     @RequiresApi(33)
     private static final class Api33 {
         static Runnable install(Window window, Motion motion) {
-            OnBackInvokedDispatcher dispatcher = window.getOnBackInvokedDispatcher();
-            OnBackInvokedCallback callback = motion::commit;
-            dispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback);
-            return () -> dispatcher.unregisterOnBackInvokedCallback(callback);
+            return install(window.getOnBackInvokedDispatcher(), OnBackInvokedDispatcher.PRIORITY_DEFAULT, motion);
+        }
+        static Runnable installPopup(View view, Motion motion) {
+            return install(view.findOnBackInvokedDispatcher(), OnBackInvokedDispatcher.PRIORITY_OVERLAY, motion);
+        }
+        static Runnable install(OnBackInvokedDispatcher dispatcher, int priority, Motion motion) {
+            if (dispatcher == null) return null;
+            boolean[] active = {true};
+            OnBackInvokedCallback callback = () -> { if (active[0]) motion.commit(); };
+            dispatcher.registerOnBackInvokedCallback(priority, callback);
+            return () -> {
+                if (!active[0]) return;
+                active[0] = false;
+                dispatcher.unregisterOnBackInvokedCallback(callback);
+            };
         }
     }
 }

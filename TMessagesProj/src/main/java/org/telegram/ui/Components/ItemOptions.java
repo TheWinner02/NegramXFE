@@ -145,6 +145,7 @@ public class ItemOptions {
     }
 
     public ActionBarPopupWindow actionBarPopupWindow;
+    private xyz.nextalone.nagram.ui.fluid.FluidMenuDialog fluidMenu;
     private BlurredBackgroundSourceBitmap scrimBlur3SourceBitmap;
     private final float[] point = new float[2];
 
@@ -1280,6 +1281,10 @@ public class ItemOptions {
         return this;
     }
     public ItemOptions show() {
+        if (fluidMenu != null) {
+            if (fluidMenu.isReturning()) fluidMenu.toggle();
+            return this;
+        }
         if (actionBarPopupWindow != null || linearLayout != null) {
             return this;
         }
@@ -1311,6 +1316,28 @@ public class ItemOptions {
                     }
                 }
             }
+        }
+
+        if (supportsFluidMenu()) {
+            // Keep ItemOptions' native callback order: callbacks may call dontDismiss(),
+            // change a checked row, or open another surface. Only the surface motion changes.
+            final xyz.nextalone.nagram.ui.fluid.FluidMenuDialog dialog =
+                new xyz.nextalone.nagram.ui.fluid.FluidMenuDialog(context, scrimView, lastLayout, () -> {});
+            fluidMenu = dialog;
+            dialog.setReopenOnOriginTouch(true);
+            dialog.setMenuPlacement(gravity, translateX, translateY, forceTop, forceBottom, dimAlpha);
+            dialog.setOnDismissListener(ignored -> {
+                if (fluidMenu != dialog) return;
+                fluidMenu = null;
+                lastLayout.setAnimationEnabled(true);
+                clearHoverListener();
+                Runnable listener = dismissListener;
+                dismissListener = null;
+                if (listener != null) listener.run();
+            });
+            dialog.show();
+            if (longPressSelectionEnabled) installHoverReleaseListener();
+            return this;
         }
 
         if ((blur || blurForMenu) && scrimBlur3SourceBitmap == null) {
@@ -1434,6 +1461,7 @@ public class ItemOptions {
                 }
             }
         });
+        actionBarPopupWindow.setFluidOrigin(scrimView);
         actionBarPopupWindow.setOutsideTouchable(true);
         actionBarPopupWindow.setFocusable(!dontFocus);
         actionBarPopupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
@@ -1613,6 +1641,7 @@ public class ItemOptions {
     }
 
     public void setTranslationY(float ty) {
+        if (fluidMenu != null) fluidMenu.setMenuTranslationY(ty);
         if (actionBarPopupWindow != null) {
             actionBarPopupWindow.update((int) offsetX, (int) (offsetY + ty), -1, -1);
         }
@@ -1896,8 +1925,32 @@ public class ItemOptions {
         // TODO
     }
 
+    private boolean supportsFluidMenu() {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() || context == null
+                || scrimView == null || !scrimView.isAttachedToWindow()
+                || layout != lastLayout || swipeback || followScrim || allowMoveScrim
+                || blur || blurForMenu || needsFocus || dontFocus || ignoreX
+                || allowCenter || offsetByContainer || maxHeight > 0 || onTopOfScrim
+                || animateToWidth != 0 || animateToHeight != 0 || scrimView instanceof ScrimView
+                || hideScrimUnder || scrimViewBackground != null || scrimViewPadding != 0) return false;
+        if (lastLayout.getSwipeBack() != null && lastLayout.getSwipeBack().getChildCount() > 1) return false;
+        boolean hasAction = false;
+        for (int i = 0; i < lastLayout.getItemsCount(); i++) {
+            View item = lastLayout.getItemAt(i);
+            if (item.getVisibility() != View.VISIBLE) continue;
+            if (item instanceof ActionBarMenuSubItem) {
+                hasAction |= item.hasOnClickListeners();
+            } else if (!(item instanceof ActionBarPopupWindow.GapView)
+                    && (item instanceof ViewGroup || item.isClickable() || item.hasOnClickListeners())) {
+                return false;
+            }
+        }
+        return hasAction;
+    }
+
     public boolean isShown() {
-        return actionBarPopupWindow != null && actionBarPopupWindow.isShowing();
+        return fluidMenu != null && fluidMenu.isShowing()
+            || actionBarPopupWindow != null && actionBarPopupWindow.isShowing();
     }
 
     public ItemOptions setOnDismiss(Runnable dismissListener) {
@@ -1910,7 +1963,9 @@ public class ItemOptions {
             dontDismiss = false;
             return;
         }
-        if (actionBarPopupWindow != null) {
+        if (fluidMenu != null) {
+            fluidMenu.dismiss();
+        } else if (actionBarPopupWindow != null) {
             actionBarPopupWindow.dismiss();
         } else if (dismissListener != null) {
             dismissListener.run();
@@ -1934,7 +1989,7 @@ public class ItemOptions {
         final WeakReference<ItemOptions> weakSelf = new WeakReference<>(this);
         scrimView.setOnTouchListener(hoverReleaseListener = (v, event) -> {
             final ItemOptions self = weakSelf.get();
-            if (self == null || self.actionBarPopupWindow == null || !self.actionBarPopupWindow.isShowing()) {
+            if (self == null || !self.isShown()) {
                 v.setOnTouchListener(null);
                 return false;
             }
