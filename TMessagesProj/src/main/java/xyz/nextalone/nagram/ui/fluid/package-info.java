@@ -14,6 +14,12 @@
  * hierarchy. FluidOrigins only consumes a recent touch from the same Activity and drops scrolls;
  * FluidTransform rejects recycled list origins. Subclasses that release resources in dismiss()
  * cannot reverse dismissal unless they explicitly opt in and defer that cleanup.
+ * Vertical sheet pulls retain the real native hierarchy and use the common spring to return
+ * to rest or dismiss downwards. Predictive Back separately seeks the anchored transformation.
+ * Scroll containers and page-sized groups cannot become automatic origins. Embedded sheets register with the attached ViewRoot,
+ * with keyboard dismissal preceding a sheet return. Native reveals respect the sheet's visible
+ * surface bounds. Menu actions hand off their live opener after the return completes so delayed
+ * sheets do not lose the origin solely because the original touch expired.
  *
  * <p>Simple ActionBarMenuItem menus automatically use FluidMenuDialog: a full-window surface
  * hosting the actual menu hierarchy. Native rows retain scrolling and input; terminal actions

@@ -15,7 +15,8 @@ import xyz.nextalone.nagram.ui.UIStyleEngine;
 /** Reveals the actual native surface; neither children nor text are scaled or copied. */
 public final class FluidReveal implements FluidMotion {
     private final View view;
-    private final RectF source = new RectF(), frame = new RectF();
+    private final RectF source = new RectF(), frame = new RectF(), surface = new RectF();
+    private final java.util.function.Consumer<RectF> surfaceBounds;
     private final ViewOutlineProvider originalOutline;
     private final boolean originalClip;
     private final SpringAnimation spring;
@@ -28,9 +29,9 @@ public final class FluidReveal implements FluidMotion {
     private final ViewOutlineProvider outline = new ViewOutlineProvider() {
         @Override public void getOutline(View target, Outline out) {
             float p = Math.max(0f, Math.min(1f, progress));
-            float w = target.getWidth(), h = target.getHeight();
-            frame.set(mix(source.left, 0f, p), mix(source.top, 0f, p),
-                    mix(source.right, w, p), mix(source.bottom, h, p));
+            resolveSurfaceBounds();
+            frame.set(mix(source.left, surface.left, p), mix(source.top, surface.top, p),
+                    mix(source.right, surface.right, p), mix(source.bottom, surface.bottom, p));
             float radius = mix(Math.min(source.width(), source.height()) / 2f,
                     UIStyleEngine.getDialogCornerRadius(), p);
             out.setRoundRect(Math.round(frame.left), Math.round(frame.top), Math.round(frame.right),
@@ -43,7 +44,11 @@ public final class FluidReveal implements FluidMotion {
     };
 
     public FluidReveal(View view, View origin, boolean fromBottom) {
-        this.view = view; this.fromBottom = fromBottom;
+        this(view, origin, fromBottom, null);
+    }
+
+    public FluidReveal(View view, View origin, boolean fromBottom, java.util.function.Consumer<RectF> surfaceBounds) {
+        this.view = view; this.fromBottom = fromBottom; this.surfaceBounds = surfaceBounds;
         originalOutline = view.getOutlineProvider(); originalClip = view.getClipToOutline();
         if (origin != null && origin.isAttachedToWindow()) {
             int[] xy = new int[2]; origin.getLocationOnScreen(xy);
@@ -62,6 +67,14 @@ public final class FluidReveal implements FluidMotion {
             else { restoreOutline(); runOpened(); }
         });
         view.addOnAttachStateChangeListener(detach);
+    }
+
+    private void resolveSurfaceBounds() {
+        surface.set(0, 0, view.getWidth(), view.getHeight());
+        if (surfaceBounds != null) surfaceBounds.accept(surface);
+        if (!surface.intersect(0, 0, view.getWidth(), view.getHeight()) || surface.isEmpty()) {
+            surface.set(0, 0, view.getWidth(), view.getHeight());
+        }
     }
 
     /** Live video surfaces must remain in their native hierarchy, never drawn into a bridge. */
@@ -89,12 +102,13 @@ public final class FluidReveal implements FluidMotion {
             if (view.getWidth() == 0 || view.getHeight() == 0) return true;
             removePending();
             int[] xy = new int[2]; view.getLocationOnScreen(xy);
-            float diameter = Math.min(AndroidUtilities.dp(56), Math.min(view.getWidth(), view.getHeight()));
-            float cx = source.isEmpty() ? view.getWidth() / 2f : source.centerX() - xy[0];
-            float cy = source.isEmpty() ? (fromBottom ? view.getHeight() - diameter / 2f : view.getHeight() / 2f)
+            resolveSurfaceBounds();
+            float diameter = Math.min(AndroidUtilities.dp(56), Math.min(surface.width(), surface.height()));
+            float cx = source.isEmpty() ? surface.centerX() : source.centerX() - xy[0];
+            float cy = source.isEmpty() ? (fromBottom ? surface.bottom - diameter / 2f : surface.centerY())
                     : source.centerY() - xy[1];
-            cx = Math.max(diameter / 2f, Math.min(view.getWidth() - diameter / 2f, cx));
-            cy = Math.max(diameter / 2f, Math.min(view.getHeight() - diameter / 2f, cy));
+            cx = Math.max(surface.left + diameter / 2f, Math.min(surface.right - diameter / 2f, cx));
+            cy = Math.max(surface.top + diameter / 2f, Math.min(surface.bottom - diameter / 2f, cy));
             source.set(cx - diameter / 2f, cy - diameter / 2f, cx + diameter / 2f, cy + diameter / 2f);
             started = true;
             if (!FluidCapabilities.isMotionEnabled(view.getContext())) {

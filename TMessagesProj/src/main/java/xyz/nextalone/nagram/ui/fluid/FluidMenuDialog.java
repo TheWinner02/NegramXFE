@@ -178,7 +178,11 @@ public final class FluidMenuDialog extends Dialog {
         surface.removeView(menu);
         super.dismiss();
         // The original menu item's click listener remains the sole owner of its Telegram action.
-        if (selected != null) { beforeAction.run(); selected.performClick(); }
+        if (selected != null) {
+            FluidOrigins.handoff(source);
+            beforeAction.run();
+            selected.performClick();
+        }
     }
 
     private void restoreOrigin() {

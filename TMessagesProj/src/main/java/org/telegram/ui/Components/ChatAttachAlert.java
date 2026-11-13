@@ -5591,7 +5591,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         mediaPreviewView.setAlpha(0);
         selectedView.setAlpha(1);
 
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidAnchorView != null && fluidAnchorView.isAttachedToWindow()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
             if (buttonsAnimation != null) buttonsAnimation.cancel();
             currentSheetAnimationType = 0;
             super.containerView.setTranslationY(0);

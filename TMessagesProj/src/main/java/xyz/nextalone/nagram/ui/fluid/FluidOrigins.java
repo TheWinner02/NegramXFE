@@ -32,10 +32,29 @@ public final class FluidOrigins {
         }
     }
 
+    /** A menu action can open a sheet after the return spring outlives the original touch. */
+    public static void handoff(View source) {
+        if (!UIStyleEngine.isFluid() || source == null || !source.isAttachedToWindow()
+                || !source.isShown() || !source.isEnabled() || source.getAlpha() <= 0f || !usable(source)) return;
+        origin = new WeakReference<>(source);
+        recorded = SystemClock.uptimeMillis();
+    }
+
+    private static boolean usable(View view) {
+        if (view instanceof androidx.recyclerview.widget.RecyclerView
+                || view instanceof android.widget.AbsListView
+                || view instanceof android.widget.ScrollView
+                || view instanceof android.widget.HorizontalScrollView) return false;
+        View root = view.getRootView();
+        // Empty space / custom touch dispatch must never select the entire chat or page.
+        return !(view instanceof ViewGroup && !(view.getParent() instanceof androidx.recyclerview.widget.RecyclerView)
+            && view.getWidth() > root.getWidth() * .75f && view.getHeight() > root.getHeight() * .55f);
+    }
+
     public static View take(Context context) {
         View view = origin.get();
         origin.clear();
-        if (view == null || !view.isAttachedToWindow() || !view.isShown()
+        if (view == null || !view.isAttachedToWindow() || !view.isShown() || !usable(view)
                 || SystemClock.uptimeMillis() - recorded > 1800L
                 || activity(context) == null || activity(context) != activity(view.getContext())) return null;
         return view;
@@ -66,7 +85,7 @@ public final class FluidOrigins {
                 if (found != null) return found;
             }
         }
-        return view.isClickable() || view.isLongClickable()
-                || view.getParent() instanceof androidx.recyclerview.widget.RecyclerView ? view : null;
+        return usable(view) && (view.isClickable() || view.isLongClickable()
+                || view.getParent() instanceof androidx.recyclerview.widget.RecyclerView) ? view : null;
     }
 }
