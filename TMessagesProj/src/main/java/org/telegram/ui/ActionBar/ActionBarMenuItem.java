@@ -183,12 +183,30 @@ public class ActionBarMenuItem extends FrameLayout {
     private ActionBarPopupWindow.ActionBarPopupWindowLayout popupLayout;
     private ActionBarMenu parentMenu;
     private ActionBarPopupWindow popupWindow;
-    private boolean fluidSurfaceMenu;
+    private final java.util.Set<View> fluidTerminalItems = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<View, Boolean>());
     private xyz.nextalone.nagram.ui.fluid.FluidMenuDialog fluidMenuDialog;
-    private Utilities.Callback<Boolean> fluidMenuDismissCallback;
 
-    /** Pilot opt-in: keep complex swipe-back/custom menus on their existing path. */
-    public void setFluidSurfaceMenu(boolean enabled) { fluidSurfaceMenu = enabled; }
+    /** Simple menus share one Fluid path; custom controls and subpages retain their own input. */
+    private boolean supportsFluidSurfaceMenu() {
+        if (popupLayout == null) return false;
+        if (popupLayout.getSwipeBack() != null && popupLayout.getSwipeBack().getChildCount() > 1) return false;
+        boolean action = false;
+        for (int i = 0; i < popupLayout.getItemsCount(); i++) {
+            View item = popupLayout.getItemAt(i);
+            if (item.getVisibility() != VISIBLE) continue;
+            if (fluidTerminalItems.contains(item)) { action = true; continue; }
+            if (!item.isClickable() && !item.hasOnClickListeners()
+                    && (!(item instanceof ViewGroup) || item instanceof ActionBarPopupWindow.GapView)) continue;
+            return false;
+        }
+        return action;
+    }
+
+    private boolean deferFluidMenuAction(View item) {
+        if (fluidMenuDialog == null || !fluidMenuDialog.isShowing()) return false;
+        fluidMenuDialog.dismissWithAction(item);
+        return true;
+    }
     private EditTextBoldCursor searchField;
     private LinearLayout searchFilterLayout;
     private ArrayList<SearchFilterView> searchFilterViews = new ArrayList<>();
@@ -359,7 +377,7 @@ public class ActionBarMenuItem extends FrameLayout {
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                 com.exteragram.messenger.utils.system.VibratorUtils.vibrateClick(this);
             }
-            if (longClickEnabled && hasSubMenu() && (popupWindow == null || !popupWindow.isShowing())) {
+            if (longClickEnabled && hasSubMenu() && !isSubMenuShowing()) {
                 showMenuRunnable = () -> {
                     if (getParent() != null) {
                         getParent().requestDisallowInterceptTouchEvent(true);
@@ -369,7 +387,7 @@ public class ActionBarMenuItem extends FrameLayout {
                 AndroidUtilities.runOnUIThread(showMenuRunnable, 200);
             }
         } else if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
-            if (showSubmenuByMove && hasSubMenu() && (popupWindow == null || !popupWindow.isShowing())) {
+            if (showSubmenuByMove && hasSubMenu() && !isSubMenuShowing()) {
                 if (event.getY() > getHeight()) {
                     if (getParent() != null) {
                         getParent().requestDisallowInterceptTouchEvent(true);
@@ -539,6 +557,7 @@ public class ActionBarMenuItem extends FrameLayout {
         popupLayout.addView(view);
         view.setTag(id);
         view.setOnClickListener(view1 -> {
+            if (deferFluidMenuAction(view1)) return;
             if (popupWindow != null && popupWindow.isShowing()) {
                 if (processedPopupClick) {
                     return;
@@ -581,7 +600,9 @@ public class ActionBarMenuItem extends FrameLayout {
         layoutParams.height = AndroidUtilities.dp(48);
         textView.setLayoutParams(layoutParams);
 
+        fluidTerminalItems.add(textView);
         textView.setOnClickListener(view -> {
+            if (deferFluidMenuAction(view)) return;
             if (popupWindow != null && popupWindow.isShowing()) {
                 if (processedPopupClick) {
                     return;
@@ -670,10 +691,9 @@ public class ActionBarMenuItem extends FrameLayout {
         layoutParams.width = LayoutHelper.MATCH_PARENT;
         layoutParams.height = AndroidUtilities.dp(48);
         cell.setLayoutParams(layoutParams);
+        if (dismiss) fluidTerminalItems.add(cell);
         cell.setOnClickListener(view -> {
-            if (fluidMenuDialog != null && fluidMenuDialog.isShowing()) {
-                fluidMenuDialog.dismissWithAction(view); return;
-            }
+            if (dismiss && deferFluidMenuAction(view)) return;
 
             if (popupWindow != null && popupWindow.isShowing()) {
                 if (dismiss) {
@@ -869,52 +889,40 @@ public class ActionBarMenuItem extends FrameLayout {
     }
 
     public void toggleSubMenu(View topView, View fromView, boolean fromStickersAlert) {
-        if (fluidSurfaceMenu && xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && topView == null && fromView == null) {
-            if (fluidMenuDialog != null && fluidMenuDialog.isShowing()) { fluidMenuDialog.toggle(); return; }
-            if (popupWindow != null && popupWindow.isShowing()) { popupWindow.dismiss(false); return; }
-            layoutLazyItems();
-            if (popupLayout == null || !isAttachedToWindow()) return;
-            if (showMenuRunnable != null) {
-                AndroidUtilities.cancelRunOnUIThread(showMenuRunnable); showMenuRunnable = null;
-            }
-            if (subMenuDelegate != null) subMenuDelegate.onShowSubMenu();
+        if (!isSubMenuShowing()) layoutLazyItems();
+        if (popupLayout == null || parentMenu != null && parentMenu.isActionMode
+                && parentMenu.parentActionBar != null && !parentMenu.parentActionBar.isActionModeShowed()) return;
+        if (showMenuRunnable != null) {
+            AndroidUtilities.cancelRunOnUIThread(showMenuRunnable); showMenuRunnable = null;
+        }
+        if (fluidMenuDialog != null && fluidMenuDialog.isShowing()) { fluidMenuDialog.toggle(); return; }
+        if (popupWindow != null && popupWindow.isShowing()) {
+            if (popupWindow.reopenFluidIfClosing()) return;
+            popupWindow.dismiss(); return;
+        }
+        showSubMenuFrom = fromView;
+        if (subMenuDelegate != null) subMenuDelegate.onShowSubMenu();
+
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && topView == null && !fromStickersAlert
+                && isAttachedToWindow() && supportsFluidSurfaceMenu()) {
             processedPopupClick = false;
             xyz.nextalone.nagram.ui.fluid.FluidMenuDialog dialog = new xyz.nextalone.nagram.ui.fluid.FluidMenuDialog(
-                    getContext(), this, popupLayout, () -> processedPopupClick = true);
+                    getContext(), fromView == null ? this : fromView, popupLayout, () -> processedPopupClick = true);
             fluidMenuDialog = dialog;
             dialog.setOnDismissListener(ignored -> {
-                popupLayout.setAnimationEnabled(animationEnabled);
-                if (fluidMenuDialog == dialog) fluidMenuDialog = null;
-                onDismiss();
-                if (subMenuDelegate != null) subMenuDelegate.onHideSubMenu();
-                Utilities.Callback<Boolean> callback = fluidMenuDismissCallback; fluidMenuDismissCallback = null;
-                if (callback != null) callback.run(processedPopupClick);
+                // An old window's posted callback must not reset a newer menu session.
+                if (fluidMenuDialog == dialog) {
+                    popupLayout.setAnimationEnabled(animationEnabled);
+                    fluidMenuDialog = null;
+                    onDismiss();
+                    if (subMenuDelegate != null) subMenuDelegate.onHideSubMenu();
+                }
+                dialog.notifyMenuClosed();
             });
             dialog.show();
             return;
         }
 
-        if (popupWindow == null || !popupWindow.isShowing()) {
-            layoutLazyItems();
-        }
-        if (popupLayout == null || parentMenu != null && parentMenu.isActionMode && parentMenu.parentActionBar != null && !parentMenu.parentActionBar.isActionModeShowed()) {
-            return;
-        }
-        if (showMenuRunnable != null) {
-            AndroidUtilities.cancelRunOnUIThread(showMenuRunnable);
-            showMenuRunnable = null;
-        }
-        if (popupWindow != null && popupWindow.isShowing()) {
-            if (popupWindow.reopenFluidIfClosing()) return;
-            popupWindow.dismiss();
-            return;
-        }
-
-        showSubMenuFrom = fromView;
-
-        if (subMenuDelegate != null) {
-            subMenuDelegate.onShowSubMenu();
-        }
         if (popupLayout.getParent() != null) {
             ((ViewGroup) popupLayout.getParent()).removeView(popupLayout);
         }
@@ -1055,7 +1063,10 @@ public class ActionBarMenuItem extends FrameLayout {
     }
 
     public void setOnMenuDismiss(Utilities.Callback<Boolean> onMenuDismiss) {
-        if (fluidMenuDialog != null && fluidMenuDialog.isShowing()) { fluidMenuDismissCallback = onMenuDismiss; return; }
+        if (fluidMenuDialog != null && fluidMenuDialog.isShowing()) {
+            fluidMenuDialog.setOnMenuClosed(onMenuDismiss == null ? null : value -> onMenuDismiss.run(value));
+            return;
+        }
         if (popupWindow != null) {
             popupWindow.setOnDismissListener(() -> {
                 if (onMenuDismiss != null) {

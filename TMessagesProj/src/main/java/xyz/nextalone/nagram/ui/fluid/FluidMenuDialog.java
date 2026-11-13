@@ -20,7 +20,7 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.ui.ActionBar.ActionBarPopupWindow.ActionBarPopupWindowLayout;
 import java.lang.ref.WeakReference;
 
-/** Opt-in toolbar menu: one real content hierarchy in a full-window, reversible surface. */
+/** Shared simple toolbar menu: real native content in a full-window, reversible surface. */
 public final class FluidMenuDialog extends Dialog {
     private final WeakReference<View> origin;
     private final ActionBarPopupWindowLayout menu;
@@ -30,7 +30,21 @@ public final class FluidMenuDialog extends Dialog {
     private Runnable unregisterBack;
     private View touchReceiver;
     private View pendingItem;
-    private boolean closing, finishing, awaitingTouchEnd;
+    private boolean closing, finishing, awaitingTouchEnd, actionCommitted;
+    private java.util.function.Consumer<Boolean> menuClosed;
+    private final View.OnAttachStateChangeListener originLifecycle = new View.OnAttachStateChangeListener() {
+        @Override public void onViewAttachedToWindow(View view) {}
+        @Override public void onViewDetachedFromWindow(View view) {
+            pendingItem = null; touchReceiver = null; view.setPressed(false);
+            closing = true; finishClose();
+        }
+    };
+
+    public void setOnMenuClosed(java.util.function.Consumer<Boolean> callback) { menuClosed = callback; }
+    public void notifyMenuClosed() {
+        java.util.function.Consumer<Boolean> callback = menuClosed; menuClosed = null;
+        if (callback != null) callback.accept(actionCommitted);
+    }
 
     public FluidMenuDialog(Context context, View source, ActionBarPopupWindowLayout menu, Runnable beforeAction) {
         super(context);
@@ -38,6 +52,7 @@ public final class FluidMenuDialog extends Dialog {
         originAlpha = source.getAlpha();
         this.beforeAction = beforeAction;
         this.menu = menu;
+        source.addOnAttachStateChangeListener(originLifecycle);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         surface = new Surface(context);
         if (menu.getParent() instanceof ViewGroup) ((ViewGroup) menu.getParent()).removeView(menu);
@@ -109,7 +124,9 @@ public final class FluidMenuDialog extends Dialog {
         if (finishing) return;
         finishing = true;
         View selected = pendingItem; pendingItem = null;
+        actionCommitted = selected != null;
         surface.spring.cancel();
+        View source = origin.get(); if (source != null) source.removeOnAttachStateChangeListener(originLifecycle);
         restoreOrigin();
         if (unregisterBack != null) { unregisterBack.run(); unregisterBack = null; }
         surface.removeView(menu);
@@ -126,6 +143,7 @@ public final class FluidMenuDialog extends Dialog {
     @Override protected void onStop() {
         surface.cancelPress();
         surface.spring.cancel(); restoreOrigin(); pendingItem = null;
+        View source = origin.get(); if (source != null) source.removeOnAttachStateChangeListener(originLifecycle);
         if (unregisterBack != null) { unregisterBack.run(); unregisterBack = null; }
         super.onStop();
     }
@@ -166,6 +184,7 @@ public final class FluidMenuDialog extends Dialog {
         private final Rect hitBounds = new Rect();
         private final SpringAnimation spring;
         private float progress, flow, downX, downY;
+        private long previewFrameTime;
         private boolean started, reversalGesture, handoffPosted, gestureCanceled;
         private View pressedItem;
 
@@ -238,20 +257,35 @@ public final class FluidMenuDialog extends Dialog {
             body.set(mix(source.left, target.left, p), mix(source.top, target.top, p),
                     mix(source.right, target.right, p), mix(source.bottom, target.bottom, p));
             float radius = mix(Math.min(source.width(), source.height()) / 2f, AndroidUtilities.dp(24), p);
-            float bend = Math.min(AndroidUtilities.dp(10), body.height() * .08f) * (float) Math.sin(Math.PI * p) * flow;
+            float displacement = Math.min(AndroidUtilities.dp(10), Math.min(body.width(), body.height()) * .08f)
+                    * (float) Math.sin(Math.PI * p) * flow;
+            float directionX = (target.centerX() - source.centerX()) / Math.max(1f, getWidth());
+            float directionY = (target.centerY() - source.centerY()) / Math.max(1f, getHeight());
+            float pullX = Math.max(-body.width() * .025f, Math.min(body.width() * .025f, directionX * displacement));
+            float pullY = Math.max(-body.height() * .025f, Math.min(body.height() * .025f, directionY * displacement));
             float k = .55228475f;
             float x = body.left, y = body.top, right = body.right, bottom = body.bottom;
             radius = Math.max(0f, Math.min(radius, Math.min(body.width(), body.height()) / 2f));
-            float edge = Math.max(0f, body.width() - 2f * radius);
             contour.rewind(); contour.moveTo(x + radius, y);
-            contour.cubicTo(x + radius + edge * .35f, y - bend, right - radius - edge * .35f, y - bend, right - radius, y);
+            edge(x + radius, y, right - radius, y, 0f, pullY);
             contour.cubicTo(right - radius + k * radius, y, right, y + radius - k * radius, right, y + radius);
-            contour.lineTo(right, bottom - radius);
+            edge(right, y + radius, right, bottom - radius, pullX, 0f);
             contour.cubicTo(right, bottom - radius + k * radius, right - radius + k * radius, bottom, right - radius, bottom);
-            contour.cubicTo(right - radius - edge * .35f, bottom + bend, x + radius + edge * .35f, bottom + bend, x + radius, bottom);
+            edge(right - radius, bottom, x + radius, bottom, 0f, pullY);
             contour.cubicTo(x + radius - k * radius, bottom, x, bottom - radius + k * radius, x, bottom - radius);
-            contour.lineTo(x, y + radius);
+            edge(x, bottom - radius, x, y + radius, pullX, 0f);
             contour.cubicTo(x, y + radius - k * radius, x + radius - k * radius, y, x + radius, y); contour.close();
+        }
+
+        /** Bend the edge locally while keeping its endpoints tangent to the original corners. */
+        private void edge(float x0, float y0, float x1, float y1, float pullX, float pullY) {
+            float dx = x1 - x0, dy = y1 - y0;
+            if (Math.abs(dx) + Math.abs(dy) < .01f) { contour.lineTo(x1, y1); return; }
+            float mx = (x0 + x1) * .5f, my = (y0 + y1) * .5f;
+            contour.cubicTo(x0 + dx * .2f, y0 + dy * .2f,
+                    x0 + dx * .3f + pullX, y0 + dy * .3f + pullY, mx + pullX, my + pullY);
+            contour.cubicTo(mx + dx * .2f + pullX, my + dy * .2f + pullY,
+                    mx + dx * .3f, my + dy * .3f, x1, y1);
         }
 
         private boolean atOrigin() {
@@ -287,7 +321,15 @@ public final class FluidMenuDialog extends Dialog {
             canvas.restoreToCount(save);
         }
 
-        @Override public boolean onInterceptTouchEvent(MotionEvent event) { return true; }
+        @Override public boolean onInterceptTouchEvent(MotionEvent event) {
+            // Once open, native menu children own scrolling, ripple/press and accessibility.
+            // Their shared click listeners defer terminal actions until the return completes.
+            if (closing || progress < .99f) return true;
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                return !target.contains(event.getX(), event.getY());
+            }
+            return false;
+        }
 
         private void cancelPress() {
             if (pressedItem != null) pressedItem.setPressed(false);
@@ -330,13 +372,23 @@ public final class FluidMenuDialog extends Dialog {
 
         FluidPredictiveBack.Motion backMotion() {
             FluidPredictiveBack.Motion motion = FluidPredictiveBack.spring(getContext(), spring, () -> started && !finishing,
-                    () -> progress, value -> { progress = (float) value; invalidate(); }, FluidMenuDialog.this::dismiss);
+                    () -> progress, value -> {
+                        long now = android.os.SystemClock.uptimeMillis();
+                        float next = (float) value;
+                        if (now > previewFrameTime) {
+                            float velocity = Math.max(-3f, Math.min(3f, (next - progress) * 1000f / (now - previewFrameTime)));
+                            flow = Math.max(-1f, Math.min(1f, velocity * .5f));
+                        }
+                        previewFrameTime = now;
+                        progress = next; invalidate();
+                    }, FluidMenuDialog.this::dismiss);
             return new FluidPredictiveBack.Motion() {
                 @Override public void start() {
                     if (!started || finishing || FluidCapabilities.motionScale(getContext()) <= 0f) return;
                     cancelPress();
                     closing = false; pendingItem = null; awaitingTouchEnd = false;
                     View button = origin.get(); if (button != null) button.setAlpha(0f);
+                    previewFrameTime = android.os.SystemClock.uptimeMillis();
                     refreshOrigin(); motion.start();
                 }
                 @Override public void update(float value) { motion.update(value); }
