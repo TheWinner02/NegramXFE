@@ -783,7 +783,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         BackupAgent.requestBackup();
 
         RestrictedLanguagesSelectActivity.checkRestrictedLanguages(false);
-        if (Build.VERSION.SDK_INT >= 34 && (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || NaConfig.INSTANCE.getBackAnimationStyle().Int() == ActionBarLayout.BACK_ANIMATION_PREDICTIVE)) {
+        if (Build.VERSION.SDK_INT >= 34 && (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() || NaConfig.INSTANCE.getBackAnimationStyle().Int() == ActionBarLayout.BACK_ANIMATION_PREDICTIVE)) {
             if (onBackAnimationCallback == null) {
                 onBackAnimationCallback =  new OnBackAnimationCallback() {
                     private AnimationNotificationsLocker locker = new AnimationNotificationsLocker();
@@ -804,6 +804,10 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                             onBackPressed();
                             return;
                         }
+                        if (drawerLayoutContainer != null && drawerLayoutContainer.isPredictiveBackInProgress()) {
+                            drawerLayoutContainer.onPredictiveBackInvoked();
+                            return;
+                        }
                         if (!onBackPressed(true))
                             return;
                         if (actionBarLayout != null) {
@@ -822,6 +826,14 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
 
                     private void onBackStartedInternal(BackEvent backEvent) {
                         if (AndroidUtilities.isTablet()) return;
+                        if (drawerLayoutContainer != null && (drawerLayoutContainer.isDrawerOpened() || drawerLayoutContainer.getDrawerPosition() > 0)) {
+                            drawerLayoutContainer.onPredictiveBackStarted();
+                            if (!locked) {
+                                locker.lock();
+                                locked = true;
+                            }
+                            return;
+                        }
                         if (!onBackPressed(false)) return;
                         if (actionBarLayout != null) {
                             boolean started = actionBarLayout.onBackStarted(backEvent.getTouchX(), backEvent.getTouchY());
@@ -849,6 +861,10 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                         final float fixedProgress = Math.max(0, progress - LAZY_START) / (1 - LAZY_START);
 
                         if (AndroidUtilities.isTablet()) return;
+                        if (drawerLayoutContainer != null && drawerLayoutContainer.isPredictiveBackInProgress()) {
+                            drawerLayoutContainer.onPredictiveBackProgress(fixedProgress);
+                            return;
+                        }
                         if (actionBarLayout != null) {
                             actionBarLayout.onBackProgress(fixedProgress);
                         }
@@ -864,6 +880,10 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                         }
 
                         if (AndroidUtilities.isTablet()) return;
+                        if (drawerLayoutContainer != null && drawerLayoutContainer.isPredictiveBackInProgress()) {
+                            drawerLayoutContainer.onPredictiveBackCancelled();
+                            return;
+                        }
                         if (actionBarLayout != null) {
                             actionBarLayout.onBackCancelled();
                         }
@@ -1173,6 +1193,9 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
             sideMenuContainer.setLayoutParams(layoutParams);
         }
         sideMenu.setOnItemClickListener((view, position, x, y) -> {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && view != null) {
+                xyz.nextalone.nagram.ui.fluid.FluidOrigins.handoff(view);
+            }
             if (drawerLayoutAdapter.click(view, position)) {
                 drawerLayoutContainer.closeDrawer(false);
                 return;
