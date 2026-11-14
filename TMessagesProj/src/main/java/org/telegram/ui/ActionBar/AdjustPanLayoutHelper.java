@@ -148,7 +148,7 @@ public class AdjustPanLayoutHelper {
             }
         });
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-            animator.setDuration(280);
+            animator.setDuration(320);
             animator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
         } else {
             animator.setDuration(keyboardDuration);

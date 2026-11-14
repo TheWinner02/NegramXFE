@@ -744,8 +744,8 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
                     selectT = AndroidUtilities.lerp(from, to, selectAnimationT);
                     contentView.invalidate();
                 });
-                selectAnimator.setDuration(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 320 : 350);
-                selectAnimator.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : CubicBezierInterpolator.EASE_OUT_QUINT);
+                selectAnimator.setDuration(xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? 360 : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 320 : 350));
+                selectAnimator.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator() : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : CubicBezierInterpolator.EASE_OUT_QUINT));
                 selectAnimator.start();
             } else {
                 selectAnimationT = 1f;

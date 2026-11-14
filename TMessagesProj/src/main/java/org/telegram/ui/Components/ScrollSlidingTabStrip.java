@@ -88,8 +88,8 @@ public class ScrollSlidingTabStrip extends HorizontalScrollView {
 
     private int currentPosition;
     private AnimatedFloat currentPositionAnimated = new AnimatedFloat(this,
-            xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 320 : 350,
-            xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : CubicBezierInterpolator.EASE_OUT_QUINT);
+            xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? 360 : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 320 : 350),
+            xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator() : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : CubicBezierInterpolator.EASE_OUT_QUINT));
     private RectF leftTabBounds = new RectF();
     private RectF rightTabBounds = new RectF();
     private RectF tabBounds = new RectF();

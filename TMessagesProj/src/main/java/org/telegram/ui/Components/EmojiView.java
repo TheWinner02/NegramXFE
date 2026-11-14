@@ -2647,6 +2647,21 @@ public class EmojiView extends FrameLayout implements
         glassEngine.addScrolledView(pager);
         pager.setOverScrollMode(OVER_SCROLL_NEVER);
         pager.setAdapter(emojiPagerAdapter = new EmojiPagesAdapter());
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            try {
+                java.lang.reflect.Field scrollerField = ViewPager.class.getDeclaredField("mScroller");
+                scrollerField.setAccessible(true);
+                android.widget.Scroller fluidScroller = new android.widget.Scroller(context, CubicBezierInterpolator.EASE_OUT_QUINT) {
+                    @Override
+                    public void startScroll(int startX, int startY, int dx, int dy, int duration) {
+                        super.startScroll(startX, startY, dx, dy, 350);
+                    }
+                };
+                scrollerField.set(pager, fluidScroller);
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        }
 
         backspaceButton = new ImageView(context) {
             @Override
@@ -5649,7 +5664,7 @@ public class EmojiView extends FrameLayout implements
     public void switchToGifRecent() {
         showBackspaceButton(false, false);
         showStickerSettingsButton(false, false);
-        pager.setCurrentItem(1, false);
+        pager.setCurrentItem(1, xyz.nextalone.nagram.ui.UIStyleEngine.isFluid());
     }
 
     private void updateEmojiHeaders() {
@@ -6202,7 +6217,7 @@ public class EmojiView extends FrameLayout implements
             showBackspaceButton(true, false);
             showStickerSettingsButton(false, false);
             if (pager.getCurrentItem() != 0) {
-                pager.setCurrentItem(0, !forceEmoji);
+                pager.setCurrentItem(0, xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() || !forceEmoji);
             }
             if (groupEmojiHintWasVisible) {
                 AndroidUtilities.runOnUIThread(() -> {
@@ -6223,7 +6238,7 @@ public class EmojiView extends FrameLayout implements
             showBackspaceButton(false, false);
             showStickerSettingsButton(shouldDrawBackground || shouldDrawStickerSettings, false);
             if (pager.getCurrentItem() != 2) {
-                pager.setCurrentItem(2, false);
+                pager.setCurrentItem(2, xyz.nextalone.nagram.ui.UIStyleEngine.isFluid());
             }
             if (stickersTab != null) {
                 firstTabUpdate = true;
@@ -6241,7 +6256,7 @@ public class EmojiView extends FrameLayout implements
             showBackspaceButton(false, false);
             showStickerSettingsButton(false, false);
             if (pager.getCurrentItem() != 1) {
-                pager.setCurrentItem(1, false);
+                pager.setCurrentItem(1, xyz.nextalone.nagram.ui.UIStyleEngine.isFluid());
             }
             if (gifTabs != null) {
                 gifTabs.selectTab(0);

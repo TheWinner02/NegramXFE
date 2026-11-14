@@ -14032,7 +14032,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                         }
                         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
                             panelAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
-                            panelAnimation.setDuration(280);
+                            panelAnimation.setDuration(320);
                         } else {
                             panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
                             panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
@@ -14096,8 +14096,13 @@ public class ChatActivityEnterView extends FrameLayout implements
                             } else {
                                 panelAnimation.playTogether(ObjectAnimator.ofFloat(emojiView, View.TRANSLATION_Y, emojiView.getMeasuredHeight()));
                             }
-                            panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
-                            panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
+                            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                                panelAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                                panelAnimation.setDuration(320);
+                            } else {
+                                panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
+                                panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
+                            }
                             notificationsLocker.lock();
                             panelAnimation.addListener(new AnimatorListenerAdapter() {
                                 @Override
@@ -14145,7 +14150,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                         }
                         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
                             panelAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
-                            panelAnimation.setDuration(280);
+                            panelAnimation.setDuration(320);
                         } else {
                             panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
                             panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
@@ -14545,8 +14550,13 @@ public class ChatActivityEnterView extends FrameLayout implements
                             } else {
                                 panelAnimation.playTogether(ObjectAnimator.ofFloat(currentView, View.TRANSLATION_Y, emojiPadding - oldHeight, 0));
                             }
-                            panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
-                            panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
+                            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                                panelAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                                panelAnimation.setDuration(320);
+                            } else {
+                                panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
+                                panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
+                            }
                             panelAnimation.addListener(new AnimatorListenerAdapter() {
                                 @Override
                                 public void onAnimationEnd(Animator animation) {
