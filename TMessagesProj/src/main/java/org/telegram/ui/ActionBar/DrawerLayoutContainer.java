@@ -12,11 +12,14 @@ import android.graphics.Canvas;
 import android.os.Build;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.Outline;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewOutlineProvider;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
@@ -25,8 +28,11 @@ import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.Insets;
+import androidx.core.math.MathUtils;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+
+import java.lang.ref.WeakReference;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.BuildVars;
@@ -73,6 +79,44 @@ public class DrawerLayoutContainer extends FrameLayout {
     private @NonNull Insets systemAndCutoutInsets = Insets.NONE;
     private @NonNull Insets systemAndCutoutAndImeInsets = Insets.NONE;
 
+    private final RectF drawerOrigin = new RectF();
+    private WeakReference<View> drawerHomeButtonRef;
+    private float drawerHomeButtonAlpha = 1f;
+    private boolean drawerFromButton = false;
+    private float drawerLastProgress = 0f;
+
+    private final ViewOutlineProvider drawerOutlineProvider = new ViewOutlineProvider() {
+        @Override
+        public void getOutline(View view, Outline outline) {
+            float progress = MathUtils.clamp(drawerLastProgress, 0f, 1f);
+            float t = 1f - progress;
+            if (drawerFromButton) {
+                int l = (int) (drawerOrigin.left * t);
+                int top = (int) (drawerOrigin.top * t);
+                int r = (int) (drawerOrigin.right * t + view.getWidth() * progress);
+                int b = (int) (drawerOrigin.bottom * t + view.getHeight() * progress);
+                float radius = (drawerOrigin.height() / 2f) * t + AndroidUtilities.dp(28) * progress;
+                radius = Math.min(radius, Math.min(r - l, b - top) / 2f);
+                outline.setRoundRect(l, top, Math.max(l + 1, r), Math.max(top + 1, b), Math.max(0f, radius));
+            } else {
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), AndroidUtilities.dp(28));
+            }
+        }
+    };
+
+    private View findHomeButton() {
+        if (parentActionBarLayout != null) {
+            BaseFragment fragment = parentActionBarLayout.getLastFragment();
+            if (fragment != null && fragment.getActionBar() != null) {
+                View backButton = fragment.getActionBar().getBackButton();
+                if (backButton != null && backButton.isAttachedToWindow() && backButton.isShown()) {
+                    return backButton;
+                }
+            }
+        }
+        return xyz.nextalone.nagram.ui.fluid.FluidOrigins.take(getContext());
+    }
+
     public DrawerLayoutContainer(Context context) {
         super(context);
 
@@ -109,12 +153,42 @@ public class DrawerLayoutContainer extends FrameLayout {
             return;
         }
         drawerPosition = value;
-        if (drawerPosition > drawerLayout.getMeasuredWidth()) {
-            drawerPosition = drawerLayout.getMeasuredWidth();
+        int drawerW = drawerLayout.getMeasuredWidth();
+        int drawerH = drawerLayout.getMeasuredHeight() > 0 ? drawerLayout.getMeasuredHeight() : getHeight();
+        if (drawerPosition > drawerW) {
+            drawerPosition = drawerW;
         } else if (drawerPosition < 0) {
             drawerPosition = 0;
         }
-        drawerLayout.setTranslationX(drawerPosition);
+        float progress = drawerW > 0 ? (drawerPosition / (float) drawerW) : 0f;
+        drawerLastProgress = progress;
+
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && drawerFromButton && drawerW > 0 && drawerH > 0) {
+            drawerLayout.setTranslationX(drawerW);
+            drawerLayout.setTranslationY(0f);
+            float reveal = MathUtils.clamp(progress / 0.12f, 0f, 1f);
+            drawerLayout.setAlpha(reveal);
+
+            View homeBtn = drawerHomeButtonRef != null ? drawerHomeButtonRef.get() : null;
+            if (homeBtn != null) {
+                homeBtn.setAlpha(drawerHomeButtonAlpha * (1f - MathUtils.clamp(progress / 0.18f, 0f, 1f)));
+            }
+
+            drawerLayout.setOutlineProvider(drawerOutlineProvider);
+            drawerLayout.setClipToOutline(true);
+            drawerLayout.setElevation(AndroidUtilities.dp(16) * progress);
+            drawerLayout.invalidateOutline();
+        } else {
+            drawerLayout.setTranslationX(drawerPosition);
+            drawerLayout.setAlpha(1f);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                drawerLayout.setOutlineProvider(drawerOutlineProvider);
+                drawerLayout.setClipToOutline(true);
+                drawerLayout.setElevation(AndroidUtilities.dp(16) * progress);
+                drawerLayout.invalidateOutline();
+            }
+        }
+
         if (drawerPosition > 0 && drawerListView != null && drawerListView.getVisibility() != View.VISIBLE) {
             drawerListView.setVisibility(View.VISIBLE);
         }
@@ -123,16 +197,7 @@ public class DrawerLayoutContainer extends FrameLayout {
         if (drawerLayout.getVisibility() != newVisibility) {
             drawerLayout.setVisibility(newVisibility);
         }
-        setScrimOpacity(drawerLayout.getMeasuredWidth() > 0 ? (drawerPosition / (float) drawerLayout.getMeasuredWidth()) : 0);
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && parentActionBarLayout != null && parentActionBarLayout.getView() != null) {
-            float progress = drawerLayout.getMeasuredWidth() > 0 ? (drawerPosition / (float) drawerLayout.getMeasuredWidth()) : 0;
-            float contentScale = 1.0f - progress * 0.05f;
-            View contentView = parentActionBarLayout.getView();
-            contentView.setScaleX(contentScale);
-            contentView.setScaleY(contentScale);
-            contentView.setPivotX(contentView.getWidth());
-            contentView.setPivotY(contentView.getHeight() / 2f);
-        }
+        setScrimOpacity(drawerW > 0 ? (drawerPosition / (float) drawerW) : 0);
     }
 
     @Keep
@@ -156,18 +221,33 @@ public class DrawerLayoutContainer extends FrameLayout {
             AndroidUtilities.hideKeyboard(parentActionBarLayout.getParentActivity().getCurrentFocus());
         }
         cancelCurrentAnimation();
-        if (drawerListView instanceof androidx.recyclerview.widget.RecyclerView) {
-            androidx.recyclerview.widget.RecyclerView.Adapter<?> adapter = ((androidx.recyclerview.widget.RecyclerView) drawerListView).getAdapter();
-            if (adapter != null) {
-                adapter.notifyDataSetChanged();
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            View homeBtn = findHomeButton();
+            if (homeBtn != null && homeBtn.isAttachedToWindow() && homeBtn.isShown()) {
+                int[] hostLoc = new int[2];
+                getLocationOnScreen(hostLoc);
+                Rect visible = new Rect();
+                if (homeBtn.getGlobalVisibleRect(visible)) {
+                    drawerOrigin.set(visible.left - hostLoc[0], visible.top - hostLoc[1],
+                            visible.right - hostLoc[0], visible.bottom - hostLoc[1]);
+                    drawerHomeButtonRef = new WeakReference<>(homeBtn);
+                    drawerHomeButtonAlpha = homeBtn.getAlpha();
+                    drawerFromButton = true;
+                } else {
+                    drawerFromButton = false;
+                }
+            } else {
+                drawerFromButton = false;
             }
+        } else {
+            drawerFromButton = false;
         }
 
         AnimatorSet animatorSet = new AnimatorSet();
         animatorSet.playTogether(ObjectAnimator.ofFloat(this, "drawerPosition", drawerLayout.getMeasuredWidth()));
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
             animatorSet.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
-            animatorSet.setDuration(fast ? 200 : 320);
+            animatorSet.setDuration(fast ? 240 : 380);
         } else {
             animatorSet.setInterpolator(new DecelerateInterpolator());
             if (fast) {
@@ -196,7 +276,7 @@ public class DrawerLayoutContainer extends FrameLayout {
         animatorSet.playTogether(ObjectAnimator.ofFloat(this, "drawerPosition", 0));
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
             animatorSet.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
-            animatorSet.setDuration(fast ? 200 : 280);
+            animatorSet.setDuration(fast ? 220 : 340);
         } else {
             animatorSet.setInterpolator(new DecelerateInterpolator());
             if (fast) {
@@ -219,6 +299,19 @@ public class DrawerLayoutContainer extends FrameLayout {
         startedTracking = false;
         currentAnimation = null;
         drawerOpened = opened;
+        if (!opened) {
+            if (drawerLayout != null) {
+                drawerLayout.setTranslationY(0f);
+                drawerLayout.setAlpha(1f);
+                drawerLayout.setClipToOutline(false);
+                drawerLayout.setElevation(0);
+            }
+            View homeBtn = drawerHomeButtonRef != null ? drawerHomeButtonRef.get() : null;
+            if (homeBtn != null) {
+                homeBtn.setAlpha(drawerHomeButtonAlpha);
+            }
+            drawerFromButton = false;
+        }
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && parentActionBarLayout != null && parentActionBarLayout.getView() != null) {
             if (!opened) {
                 View contentView = parentActionBarLayout.getView();
@@ -314,6 +407,7 @@ public class DrawerLayoutContainer extends FrameLayout {
     private void prepareForDrawerOpen(MotionEvent ev) {
         maybeStartTracking = false;
         startedTracking = true;
+        drawerFromButton = false;
         if (ev != null) {
             startedTrackingX = (int) ev.getX();
         }
@@ -528,6 +622,15 @@ public class DrawerLayoutContainer extends FrameLayout {
     protected boolean drawChild(@NonNull Canvas canvas, View child, long drawingTime) {
         if (!allowDrawContent) {
             return false;
+        }
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            final boolean drawingContent = child != drawerLayout;
+            final boolean result = super.drawChild(canvas, child, drawingTime);
+            if (drawingContent && scrimOpacity > 0) {
+                scrimPaint.setColor((int) (((0x99000000 & 0xff000000) >>> 24) * scrimOpacity) << 24);
+                canvas.drawRect(0, 0, getWidth(), getHeight(), scrimPaint);
+            }
+            return result;
         }
         final int height = getHeight();
         final boolean drawingContent = child != drawerLayout;

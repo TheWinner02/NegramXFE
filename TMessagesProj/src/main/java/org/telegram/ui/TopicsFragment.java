@@ -1070,6 +1070,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
             }
             final TLRPC.TL_forumTopic topic;
             if (view instanceof TopicDialogCell) {
+                xyz.nextalone.nagram.ui.fluid.FluidOrigins.handoff(view);
                 topic = ((TopicDialogCell) view).forumTopic;
             } else {
                 return;
@@ -3575,6 +3576,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
                     ForumUtilities.openTopic(TopicsFragment.this, chatId, cell.getTopic(), 0);
                 } else if (view instanceof TopicDialogCell) {
                     TopicDialogCell cell = (TopicDialogCell) view;
+                    xyz.nextalone.nagram.ui.fluid.FluidOrigins.handoff(view);
                     ForumUtilities.openTopic(TopicsFragment.this, chatId, cell.forumTopic, cell.getMessageId());
                 }
             });

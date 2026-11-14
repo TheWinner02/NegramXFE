@@ -149,7 +149,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     private float fluidChatCloseStart = -1f, fluidChatBackStart;
 
     private float interruptFluidChatReturnOrOpening() {
-        if (fluidChatTransition() == null || currentSpringAnimation == null || !currentSpringAnimation.isRunning()) return -1f;
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() || currentSpringAnimation == null || !currentSpringAnimation.isRunning()) return -1f;
         boolean opening = transitionAnimationInProgress && onOpenAnimationEndRunnable != null;
         boolean returning = animationInProgress && startedTracking
                 && currentSpringAnimation.getSpring().getFinalPosition() == 0f;
@@ -158,6 +158,8 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         // Finish native ownership/callback bookkeeping, then continue from the visible geometry.
         // A cancelled return keeps the chat; a committed removal is never interrupted here.
         currentSpringAnimation.cancel();
+        transitionAnimationInProgress = false;
+        animationInProgress = false;
         return position;
     }
     private Window window;
@@ -1415,6 +1417,15 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            if (ev != null && ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                if (currentSpringAnimation != null && currentSpringAnimation.isRunning()) {
+                    if (animationProgress >= 0.70f) {
+                        currentSpringAnimation.skipToEnd();
+                    }
+                }
+            }
+        }
         return animationInProgress || checkTransitionAnimation() || onTouchEvent(ev);
     }
 
