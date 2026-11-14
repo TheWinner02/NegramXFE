@@ -56,6 +56,10 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Stories.recorder.HintView2;
 
+import xyz.nextalone.nagram.ui.UIStyleEngine;
+import xyz.nextalone.nagram.ui.fluid.FluidAnimator;
+import xyz.nextalone.nagram.ui.fluid.FluidCapabilities;
+
 import java.util.ArrayList;
 
 public class ViewPagerFixed extends FrameLayout {
@@ -76,6 +80,7 @@ public class ViewPagerFixed extends FrameLayout {
     private VelocityTracker velocityTracker;
 
     private AnimatorSet tabsAnimation;
+    private FluidAnimator fluidTabsAnimation;
     private boolean tabsAnimationInProgress;
     private boolean animatingForward;
     private float additionalOffset;
@@ -616,6 +621,10 @@ public class ViewPagerFixed extends FrameLayout {
                     additionalOffset = viewPages[0].getTranslationX();
                 }
             }
+            if (fluidTabsAnimation != null) {
+                fluidTabsAnimation.abort();
+                fluidTabsAnimation = null;
+            }
             tabsAnimation.removeAllListeners();
             tabsAnimation.cancel();
             tabsAnimationInProgress = false;
@@ -776,6 +785,7 @@ public class ViewPagerFixed extends FrameLayout {
                     @Override
                     public void onAnimationEnd(Animator animator) {
                         tabsAnimation = null;
+                        fluidTabsAnimation = null;
                         if (nextPosition < 0) {
                             onBack();
                         }
@@ -800,7 +810,11 @@ public class ViewPagerFixed extends FrameLayout {
                         notificationsLocker.unlock();
                     }
                 });
-                tabsAnimation.start();
+                if (UIStyleEngine.isFluid() && FluidCapabilities.isMotionEnabled(getContext())) {
+                    fluidTabsAnimation = FluidAnimator.start(getContext(), tabsAnimation);
+                } else {
+                    tabsAnimation.start();
+                }
                 tabsAnimationInProgress = true;
                 startedTracking = false;
 
@@ -860,6 +874,10 @@ public class ViewPagerFixed extends FrameLayout {
             onTabAnimationUpdate(true);
             if (cancel) {
                 //showScrollbars(true);
+                if (fluidTabsAnimation != null) {
+                    fluidTabsAnimation.abort();
+                    fluidTabsAnimation = null;
+                }
                 if (tabsAnimation != null) {
                     tabsAnimation.cancel();
                     tabsAnimation = null;
@@ -882,8 +900,17 @@ public class ViewPagerFixed extends FrameLayout {
             currentPosition = position;
             onTabAnimationUpdate(false);
         }
+        if (fluidTabsAnimation != null) {
+            fluidTabsAnimation.abort();
+            fluidTabsAnimation = null;
+        }
+        if (fluidTabsAnimation != null) {
+            fluidTabsAnimation.abort();
+            fluidTabsAnimation = null;
+        }
         if (tabsAnimation != null) {
             tabsAnimation.cancel();
+            tabsAnimation = null;
         }
         if (viewPages[1] != null) {
             viewsByType.put(viewTypes[1], viewPages[1]);
@@ -940,6 +967,10 @@ public class ViewPagerFixed extends FrameLayout {
         onTouchEvent(null);
         if (!adapter.hasStableId()) {
             animated = false;
+        }
+        if (fluidTabsAnimation != null) {
+            fluidTabsAnimation.abort();
+            fluidTabsAnimation = null;
         }
         if (tabsAnimation != null) {
             tabsAnimation.cancel();
@@ -1028,6 +1059,7 @@ public class ViewPagerFixed extends FrameLayout {
                 @Override
                 public void onAnimationEnd(Animator animator) {
                     tabsAnimation = null;
+                    fluidTabsAnimation = null;
                     if (viewPages[1] != null) {
                         removeView(viewPages[1]);
                         viewPages[1] = null;
@@ -1044,7 +1076,11 @@ public class ViewPagerFixed extends FrameLayout {
             });
             tabsView.setEnabled(false);
             tabsAnimationInProgress = true;
-            tabsAnimation.start();
+            if (UIStyleEngine.isFluid() && FluidCapabilities.isMotionEnabled(getContext())) {
+                fluidTabsAnimation = FluidAnimator.start(getContext(), tabsAnimation);
+            } else {
+                tabsAnimation.start();
+            }
 
         } else {
             if (viewPages[1] != null) {
@@ -1205,6 +1241,7 @@ public class ViewPagerFixed extends FrameLayout {
                 @Override
                 public void onAnimationEnd(Animator animator) {
                     tabsAnimation = null;
+                    fluidTabsAnimation = null;
                     if (nextPosition < 0) {
                         onBack();
                     }
@@ -1229,7 +1266,11 @@ public class ViewPagerFixed extends FrameLayout {
                     notificationsLocker.unlock();
                 }
             });
-            tabsAnimation.start();
+            if (UIStyleEngine.isFluid() && FluidCapabilities.isMotionEnabled(getContext())) {
+                fluidTabsAnimation = FluidAnimator.start(getContext(), tabsAnimation);
+            } else {
+                tabsAnimation.start();
+            }
             tabsAnimationInProgress = true;
             startedTracking = false;
 
@@ -2398,4 +2439,12 @@ public class ViewPagerFixed extends FrameLayout {
         this.allowDisallowInterceptTouch = allowDisallowInterceptTouch;
     }
 
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if (fluidTabsAnimation != null) {
+            fluidTabsAnimation.abort();
+            fluidTabsAnimation = null;
+        }
+    }
 }

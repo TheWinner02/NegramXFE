@@ -77,6 +77,7 @@ import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.utils.ViewOutlineProviderImpl;
 import org.telegram.ui.ChatActivity;
+import org.telegram.ui.TopicsFragment;
 import org.telegram.ui.Components.AnimatedFloat;
 import org.telegram.ui.Components.BackButtonMenu;
 import org.telegram.ui.EmptyBaseFragment;
@@ -1452,6 +1453,11 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     @Override
     protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
         FluidChatTransition fluidChat = fluidChatTransition();
+        if (transitionAnimationInProgress || startedTracking || animationInProgress || predictiveBackInProgress) {
+            android.util.Log.d("FluidMotion", "drawChild: child=" + (child == containerView ? "containerView" : (child == containerViewBack ? "containerViewBack" : child.getClass().getSimpleName()))
+                    + " fluidChat=" + (fluidChat != null)
+                    + " transX=" + child.getTranslationX());
+        }
         if (fluidChat != null && (child == containerView || child == containerViewBack)
                 && (transitionAnimationInProgress || startedTracking || animationInProgress || predictiveBackInProgress)) {
             View chatView = fluidChat.chatView();
@@ -2617,12 +2623,22 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
         final BaseFragment currentFragment = !fragmentsStack.isEmpty() ? fragmentsStack.get(fragmentsStack.size() - 1) : null;
 
+        boolean isFluidTarget = (fragment instanceof ChatActivity || fragment instanceof TopicsFragment);
+        android.util.Log.d("FluidMotion", "presentFragment isFluidTarget=" + isFluidTarget
+                + " needAnimation=" + needAnimation
+                + " preview=" + preview
+                + " isSheet=" + isSheet
+                + " isLayersLayout=" + isLayersLayout
+                + " currentFragment=" + (currentFragment != null ? currentFragment.getClass().getSimpleName() : "null")
+                + " isFluid=" + xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()
+                + " isMotionEnabled=" + xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext()));
         if (needAnimation && !preview && !removeLast && !isSheet && !isLayersLayout && !isRightLayout
-                && fragment instanceof ChatActivity && !(currentFragment instanceof ChatActivity)
+                && isFluidTarget && !(currentFragment instanceof ChatActivity)
                 && xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()
                 && xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext())) {
             FluidChatTransition motion = FluidChatTransition.capture(this, currentFragment,
-                    (ChatActivity) fragment, FluidOrigins.take(getContext()));
+                    fragment, FluidOrigins.take(getContext()));
+            android.util.Log.d("FluidMotion", "capture returned motion=" + motion);
             if (motion != null) fluidChatTransitions.put(fragment, motion);
         }
 
@@ -2832,7 +2848,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     fragment.onBecomeFullyVisible();
                 };
                 boolean noDelay;
-                if (noDelay = !fragment.needDelayOpenAnimation()) {
+                if (noDelay = !fragment.needDelayOpenAnimation() || (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() != null)) {
                     if (currentFragment != null) {
                         currentFragment.onTransitionAnimationStart(false, false);
                     }
@@ -2914,7 +2930,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                             };
                         }
                         AndroidUtilities.runOnUIThread(waitingForKeyboardCloseRunnable, 250);
-                    } else if (fragment.needDelayOpenAnimation()) {
+                    } else if (fragment.needDelayOpenAnimation() && !noDelay) {
                         delayedOpenAnimationRunnable = new Runnable() {
                             @Override
                             public void run() {

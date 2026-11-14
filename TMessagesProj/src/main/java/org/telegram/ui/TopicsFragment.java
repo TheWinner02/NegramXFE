@@ -151,6 +151,10 @@ import tw.nekomimi.nekogram.BackButtonMenuRecent;
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.helpers.MainTabsHelper;
 import xyz.nextalone.nagram.NaConfig;
+import android.animation.AnimatorSet;
+import xyz.nextalone.nagram.ui.UIStyleEngine;
+import xyz.nextalone.nagram.ui.fluid.FluidAnimator;
+import xyz.nextalone.nagram.ui.fluid.FluidCapabilities;
 
 public class TopicsFragment extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, ChatActivityInterface, RightSlidingDialogContainer.BaseFragmentWithFullscreen, MainTabsActivity.TabFragmentDelegate {
 
@@ -2205,11 +2209,16 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
 
     ValueAnimator searchAnimator;
     ValueAnimator searchAnimator2;
+    private FluidAnimator fluidSearchAnimator;
     boolean animateSearchWithScale;
     private ViewPagerFixed.TabsView searchTabsView;
 
     private void animateToSearchView(boolean showSearch) {
         searching = showSearch;
+        if (fluidSearchAnimator != null) {
+            fluidSearchAnimator.abort();
+            fluidSearchAnimator = null;
+        }
         if (searchAnimator != null) {
             searchAnimator.removeAllListeners();
             searchAnimator.cancel();
@@ -2240,6 +2249,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
             @Override
             public void onAnimationEnd(Animator animation) {
                 super.onAnimationEnd(animation);
+                fluidSearchAnimator = null;
                 updateSearchProgress(showSearch ? 1f : 0);
                 if (showSearch) {
                     other.setVisibility(View.GONE);
@@ -2252,7 +2262,13 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
         });
         searchAnimator.setDuration(200);
         searchAnimator.setInterpolator(CubicBezierInterpolator.DEFAULT);
-        searchAnimator.start();
+        if (UIStyleEngine.isFluid() && FluidCapabilities.isMotionEnabled(getParentActivity())) {
+            AnimatorSet set = new AnimatorSet();
+            set.play(searchAnimator);
+            fluidSearchAnimator = FluidAnimator.start(getParentActivity(), set);
+        } else {
+            searchAnimator.start();
+        }
 
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.needCheckSystemBarColors, true);
     }
@@ -2850,6 +2866,10 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
 
     @Override
     public void onFragmentDestroy() {
+        if (fluidSearchAnimator != null) {
+            fluidSearchAnimator.abort();
+            fluidSearchAnimator = null;
+        }
         notificationsLocker.unlock();
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.storiesUpdated);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.chatWasBoostedByUser);

@@ -46582,7 +46582,7 @@ public class ChatActivity extends BaseFragment implements
                 return fragmentTransition;
             }
         }
-        if (switchFromTopics && getParentLayout() != null && getParentLayout().getFragmentStack().size() > 1) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && switchFromTopics && getParentLayout() != null && getParentLayout().getFragmentStack().size() > 1) {
             BaseFragment previousFragment = getParentLayout().getFragmentStack().get(getParentLayout().getFragmentStack().size() - 2);
             if (!(previousFragment instanceof TopicsFragment)) {
                 return null;

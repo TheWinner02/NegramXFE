@@ -16,6 +16,7 @@ import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.DialogCell;
 import org.telegram.ui.ChatActivity;
+import org.telegram.ui.Components.ChatActivityInterface;
 import org.telegram.ui.Components.ChatAvatarContainer;
 import org.telegram.ui.TopicsFragment;
 
@@ -28,7 +29,7 @@ public final class FluidChatTransition {
     public interface Renderer { boolean draw(); }
 
     private final WeakReference<BaseFragment> list;
-    private final WeakReference<ChatActivity> chat;
+    private final WeakReference<BaseFragment> target;
     private final long dialogId;
     private final long topicId;
     private final boolean isTopic;
@@ -45,39 +46,64 @@ public final class FluidChatTransition {
     private float avatarAlpha, titleAlpha;
     private boolean unanchoredReturn;
 
-    private FluidChatTransition(BaseFragment list, ChatActivity chat) {
+    private FluidChatTransition(BaseFragment list, BaseFragment target, long dialogId, long topicId, boolean isTopic) {
         this.list = new WeakReference<>(list);
-        this.chat = new WeakReference<>(chat);
-        dialogId = chat.getDialogId();
-        topicId = chat.getTopicId();
-        isTopic = chat.isTopic || topicId != 0;
+        this.target = new WeakReference<>(target);
+        this.dialogId = dialogId;
+        this.topicId = topicId;
+        this.isTopic = isTopic;
     }
 
-    public static FluidChatTransition capture(ViewGroup host, BaseFragment list, ChatActivity chat, View touched) {
-        if (!UIStyleEngine.isFluid() || list == null || list.getCurrentAccount() != chat.getCurrentAccount()) return null;
+    public static FluidChatTransition capture(ViewGroup host, BaseFragment list, BaseFragment target, View touched) {
+        if (!UIStyleEngine.isFluid() || list == null || target == null || list.getCurrentAccount() != target.getCurrentAccount()) {
+            android.util.Log.d("FluidMotion", "capture rejected early: isFluid=" + UIStyleEngine.isFluid()
+                    + " list=" + list + " target=" + target);
+            return null;
+        }
+        long dialogId;
+        long topicId = 0;
+        boolean isTopic = false;
+        if (target instanceof ChatActivity) {
+            ChatActivity chat = (ChatActivity) target;
+            dialogId = chat.getDialogId();
+            topicId = chat.getTopicId();
+            isTopic = chat.isTopic || topicId != 0;
+        } else if (target instanceof TopicsFragment) {
+            TopicsFragment topics = (TopicsFragment) target;
+            dialogId = topics.getDialogId();
+            topicId = 0;
+            isTopic = false;
+        } else {
+            return null;
+        }
         View row = touched;
         while (row != null && !(row instanceof DialogCell)) {
             row = row.getParent() instanceof View ? (View) row.getParent() : null;
         }
-        long topicId = chat.getTopicId();
-        boolean isTopic = chat.isTopic || topicId != 0;
         if (!(row instanceof DialogCell) && list.getFragmentView() != null) {
-            row = findRow(list.getFragmentView(), chat.getDialogId(), topicId, isTopic, 0);
+            row = findRow(list.getFragmentView(), dialogId, topicId, isTopic, 0);
         }
+        android.util.Log.d("FluidMotion", "capture: dialogId=" + dialogId + " topicId=" + topicId
+                + " isTopic=" + isTopic + " touched=" + touched + " row=" + row);
         if (!(row instanceof DialogCell) || row.getWidth() <= 0 || row.getHeight() <= 0) return null;
         DialogCell cell = (DialogCell) row;
-        if (cell.getDialogId() != chat.getDialogId()) return null;
+        if (cell.getDialogId() != dialogId) {
+            android.util.Log.d("FluidMotion", "capture cell dialogId mismatch: cell=" + cell.getDialogId() + " != " + dialogId);
+            return null;
+        }
         if (isTopic && (cell.forumTopic == null || cell.forumTopic.id != topicId)) return null;
-        FluidChatTransition result = new FluidChatTransition(list, chat);
-        return result.captureRow(host, cell, 0f, 0f) ? result : null;
+        FluidChatTransition result = new FluidChatTransition(list, target, dialogId, topicId, isTopic);
+        boolean captured = result.captureRow(host, cell, 0f, 0f);
+        android.util.Log.d("FluidMotion", "captureRow returned: " + captured);
+        return captured ? result : null;
     }
 
     public boolean matches(BaseFragment previous, BaseFragment current) {
-        return previous != null && previous == list.get() && current != null && current == chat.get();
+        return previous != null && previous == list.get() && current != null && current == target.get();
     }
 
     public View chatView() {
-        ChatActivity owner = chat.get();
+        BaseFragment owner = target.get();
         return owner == null ? null : owner.getFragmentView();
     }
 
@@ -148,12 +174,18 @@ public final class FluidChatTransition {
 
     public boolean draw(Canvas canvas, ViewGroup host, View child, float progress, Renderer renderer) {
         float p = Math.max(0f, Math.min(1f, progress));
-        ChatActivity owner = chat.get();
+        BaseFragment owner = target.get();
         if (owner == null) return renderer.draw();
-        ChatAvatarContainer header = owner.getAvatarContainer();
+        ChatAvatarContainer header = null;
+        if (owner instanceof ChatActivityInterface) {
+            header = ((ChatActivityInterface) owner).getAvatarContainer();
+        }
         View avatar = header == null ? null : header.getAvatarImageView();
         View title = header == null ? null : header.getTitleTextView();
         boolean sharedHeader = avatar != null && title != null && avatar.getWidth() > 0 && title.getWidth() > 0;
+        android.util.Log.d("FluidMotion", "FluidChatTransition.draw: p=" + p + " sharedHeader=" + sharedHeader
+                + " avatar=" + (avatar != null ? avatar.getWidth() + "x" + avatar.getHeight() : "null")
+                + " title=" + (title != null ? title.getWidth() + "x" + title.getHeight() : "null"));
         if (sharedHeader) {
             bounds(host, child, avatar, targetAvatar);
             bounds(host, child, title, targetTitle);
@@ -186,7 +218,9 @@ public final class FluidChatTransition {
             int av = canvas.save();
             canvas.translate(avatarBounds.left, avatarBounds.top);
             canvas.scale(avatarBounds.width() / avatar.getWidth(), avatarBounds.height() / avatar.getHeight());
+            avatar.setAlpha(1f);
             avatar.draw(canvas);
+            avatar.setAlpha(0f);
             canvas.restoreToCount(av);
             float tx = mix(unanchoredReturn ? targetTitle.left : titleX, targetTitle.left, p);
             float ty = mix(unanchoredReturn ? targetTitle.top : titleY, targetTitle.top, p);
@@ -198,7 +232,9 @@ public final class FluidChatTransition {
             }
             int text = canvas.saveLayerAlpha(tx, ty, tx + title.getWidth(), ty + title.getHeight(), (int) (255f * (unanchoredReturn ? 1f : p)));
             canvas.translate(tx, ty);
+            title.setAlpha(1f);
             title.draw(canvas);
+            title.setAlpha(0f);
             canvas.restoreToCount(text);
         }
         canvas.restoreToCount(save);

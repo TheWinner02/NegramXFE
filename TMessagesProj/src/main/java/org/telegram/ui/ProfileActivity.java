@@ -388,6 +388,9 @@ import tw.nekomimi.nekogram.utils.AndroidUtil;
 import tw.nekomimi.nekogram.utils.FileUtil;
 import tw.nekomimi.nekogram.utils.ShareUtil;
 import xyz.nextalone.nagram.NaConfig;
+import xyz.nextalone.nagram.ui.UIStyleEngine;
+import xyz.nextalone.nagram.ui.fluid.FluidAnimator;
+import xyz.nextalone.nagram.ui.fluid.FluidCapabilities;
 
 public class ProfileActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, DialogsActivity.DialogsActivityDelegate, SharedMediaLayout.SharedMediaPreloaderDelegate, ImageUpdater.ImageUpdaterDelegate, SharedMediaLayout.Delegate, MainTabsActivity.TabFragmentDelegate {
     private RecyclerListView listView;
@@ -547,6 +550,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private boolean disableProfileAnimation = false;
     private boolean justFullyExpanded = false;
     private boolean ignoreScrollOnFullExpand = false;
+    private FluidAnimator fluidTransition;
 
     private float extraHeight;
     private float initialAnimationExtraHeight;
@@ -2441,6 +2445,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        if (fluidTransition != null) {
+            fluidTransition.abort();
+            fluidTransition = null;
+        }
         if (topAvatarContainer != null) {
             topAvatarContainer.onDestroy();
         }
@@ -7379,9 +7387,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     }
 
     private boolean finishFragmentIfPreviousIsChatActivity() {
-        if (playProfileAnimation != 0 && parentLayout != null && parentLayout.getFragmentStack() != null && parentLayout.getFragmentStack().size() >= 2 && parentLayout.getFragmentStack().get(parentLayout.getFragmentStack().size() - 2) instanceof ChatActivity) {
-            finishFragment();
-            return true;
+        if (playProfileAnimation != 0 && parentLayout != null && parentLayout.getFragmentStack() != null && parentLayout.getFragmentStack().size() >= 2) {
+            BaseFragment prev = parentLayout.getFragmentStack().get(parentLayout.getFragmentStack().size() - 2);
+            if (prev instanceof ChatActivity || prev instanceof TopicsFragment) {
+                finishFragment();
+                return true;
+            }
         }
         return false;
     }
@@ -10424,9 +10435,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
 
         final ActionBar previousActionBar;
-        if (previousTransitionFragment instanceof ChatActivity) {
-            previousActionBar = previousTransitionFragment.getActionBar();
-            previousActionBar.setSkipDrawChild(true);
+        if (previousTransitionFragment instanceof BaseFragment) {
+            previousActionBar = ((BaseFragment) previousTransitionFragment).getActionBar();
+            if (previousActionBar != null) {
+                previousActionBar.setSkipDrawChild(true);
+            }
         } else {
             previousActionBar = null;
         }
@@ -10750,7 +10763,17 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         });
         animatorSet.setInterpolator(playProfileAnimation == 2 ? CubicBezierInterpolator.DEFAULT : new DecelerateInterpolator());
 
-        AndroidUtilities.runOnUIThread(animatorSet::start, 50);
+        if (UIStyleEngine.isFluid() && FluidCapabilities.isMotionEnabled(getParentActivity())) {
+            AndroidUtilities.runOnUIThread(() -> {
+                if (getParentActivity() != null) {
+                    fluidTransition = FluidAnimator.start(getParentActivity(), animatorSet);
+                } else {
+                    animatorSet.start();
+                }
+            }, 50);
+        } else {
+            AndroidUtilities.runOnUIThread(animatorSet::start, 50);
+        }
         return animatorSet;
     }
 

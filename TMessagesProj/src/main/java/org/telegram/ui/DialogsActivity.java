@@ -299,6 +299,9 @@ import tw.nekomimi.nekogram.helpers.remote.EmojiHelper;
 import tw.nekomimi.nekogram.settings.GhostModeActivity;
 import tw.nekomimi.nekogram.ui.BookmarkManagerActivity;
 import xyz.nextalone.nagram.NaConfig;
+import xyz.nextalone.nagram.ui.UIStyleEngine;
+import xyz.nextalone.nagram.ui.fluid.FluidAnimator;
+import xyz.nextalone.nagram.ui.fluid.FluidCapabilities;
 
 public class DialogsActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, FloatingDebugProvider, FactorAnimator.Target, MainTabsActivity.TabFragmentDelegate {
     private final int ADDITIONAL_LIST_HEIGHT_DP = Build.VERSION.SDK_INT >= 31 ? 48 : 0;
@@ -619,6 +622,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private float floatingButtonPanOffset;
 
     private AnimatorSet searchAnimator;
+    private FluidAnimator fluidSearchAnimator;
     private float searchAnimationProgress;
 
     private ChatInputViewsContainer chatInputViewsContainer;
@@ -747,6 +751,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private boolean canShowHiddenArchive;
 
     private AnimatorSet tabsAnimation;
+    private FluidAnimator fluidTabsAnimator;
     private boolean tabsAnimationInProgress;
     private boolean animatingForward;
     private float additionalOffset;
@@ -872,6 +877,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
                 if (cancel) {
                     showScrollbars(true);
+                    if (fluidTabsAnimator != null) {
+                        fluidTabsAnimator.abort();
+                        fluidTabsAnimator = null;
+                    }
                     if (tabsAnimation != null) {
                         tabsAnimation.cancel();
                         tabsAnimation = null;
@@ -1437,6 +1446,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                             additionalOffset = viewPages[0].getTranslationX();
                         }
                     }
+                    if (fluidTabsAnimator != null) {
+                        fluidTabsAnimator.abort();
+                        fluidTabsAnimator = null;
+                    }
                     tabsAnimation.removeAllListeners();
                     tabsAnimation.cancel();
                     tabsAnimationInProgress = false;
@@ -1573,6 +1586,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                             @Override
                             public void onAnimationEnd(Animator animator) {
                                 tabsAnimation = null;
+                                fluidTabsAnimator = null;
                                 if (!backAnimation) {
                                     ViewPage tempPage = viewPages[0];
                                     viewPages[0] = viewPages[1];
@@ -1591,7 +1605,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                                 checkListLoad(viewPages[0]);
                             }
                         });
-                        tabsAnimation.start();
+                        if (UIStyleEngine.isFluid() && FluidCapabilities.isMotionEnabled(getParentActivity())) {
+                            fluidTabsAnimator = FluidAnimator.start(getParentActivity(), tabsAnimation);
+                        } else {
+                            tabsAnimation.start();
+                        }
                         tabsAnimationInProgress = true;
                         startedTracking = false;
                     } else {
@@ -3189,6 +3207,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        if (fluidSearchAnimator != null) {
+            fluidSearchAnimator.abort();
+            fluidSearchAnimator = null;
+        }
+        if (fluidTabsAnimator != null) {
+            fluidTabsAnimator.abort();
+            fluidTabsAnimator = null;
+        }
         if (observersGroup != null) {
             observersGroup.removeAllObservers();
             observersGroup = null;
@@ -7855,6 +7881,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (initialDialogsType != 0 && initialDialogsType != 3) {
             animated = false;
         }
+        if (fluidSearchAnimator != null) {
+            fluidSearchAnimator.abort();
+            fluidSearchAnimator = null;
+        }
         if (searchAnimator != null) {
             searchAnimator.cancel();
             searchAnimator = null;
@@ -8020,6 +8050,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     if (searchViewPager != null) {
                         searchViewPager.setBackground(null);
                     }
+                    if (fluidSearchAnimator != null) {
+                        fluidSearchAnimator = null;
+                    }
                     searchAnimator = null;
                 }
 
@@ -8032,12 +8065,20 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         } else {
                             viewPages[0].listView.show();
                         }
+                        if (fluidSearchAnimator != null) {
+                            fluidSearchAnimator.abort();
+                            fluidSearchAnimator = null;
+                        }
                         searchAnimator = null;
                     }
                 }
             });
             notificationsLocker.lock();
-            searchAnimator.start();
+            if (UIStyleEngine.isFluid() && FluidCapabilities.isMotionEnabled(getParentActivity())) {
+                fluidSearchAnimator = FluidAnimator.start(getParentActivity(), searchAnimator);
+            } else {
+                searchAnimator.start();
+            }
         } else {
             setDialogsListFrozen(false);
             if (show) {
