@@ -33,6 +33,7 @@ import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.CubicBezierInterpolator;
 
 public class DrawerLayoutContainer extends FrameLayout {
 
@@ -123,6 +124,15 @@ public class DrawerLayoutContainer extends FrameLayout {
             drawerLayout.setVisibility(newVisibility);
         }
         setScrimOpacity(drawerLayout.getMeasuredWidth() > 0 ? (drawerPosition / (float) drawerLayout.getMeasuredWidth()) : 0);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && parentActionBarLayout != null && parentActionBarLayout.getView() != null) {
+            float progress = drawerLayout.getMeasuredWidth() > 0 ? (drawerPosition / (float) drawerLayout.getMeasuredWidth()) : 0;
+            float contentScale = 1.0f - progress * 0.05f;
+            View contentView = parentActionBarLayout.getView();
+            contentView.setScaleX(contentScale);
+            contentView.setScaleY(contentScale);
+            contentView.setPivotX(contentView.getWidth());
+            contentView.setPivotY(contentView.getHeight() / 2f);
+        }
     }
 
     @Keep
@@ -155,11 +165,16 @@ public class DrawerLayoutContainer extends FrameLayout {
 
         AnimatorSet animatorSet = new AnimatorSet();
         animatorSet.playTogether(ObjectAnimator.ofFloat(this, "drawerPosition", drawerLayout.getMeasuredWidth()));
-        animatorSet.setInterpolator(new DecelerateInterpolator());
-        if (fast) {
-            animatorSet.setDuration(Math.max((int) (200.0f / Math.max(1, drawerLayout.getMeasuredWidth()) * (drawerLayout.getMeasuredWidth() - drawerPosition)), 50));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            animatorSet.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            animatorSet.setDuration(fast ? 200 : 320);
         } else {
-            animatorSet.setDuration(250);
+            animatorSet.setInterpolator(new DecelerateInterpolator());
+            if (fast) {
+                animatorSet.setDuration(Math.max((int) (200.0f / Math.max(1, drawerLayout.getMeasuredWidth()) * (drawerLayout.getMeasuredWidth() - drawerPosition)), 50));
+            } else {
+                animatorSet.setDuration(250);
+            }
         }
         animatorSet.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -179,11 +194,16 @@ public class DrawerLayoutContainer extends FrameLayout {
 
         AnimatorSet animatorSet = new AnimatorSet();
         animatorSet.playTogether(ObjectAnimator.ofFloat(this, "drawerPosition", 0));
-        animatorSet.setInterpolator(new DecelerateInterpolator());
-        if (fast) {
-            animatorSet.setDuration(Math.max((int) (200.0f / Math.max(1, drawerLayout.getMeasuredWidth()) * drawerPosition), 50));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            animatorSet.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            animatorSet.setDuration(fast ? 200 : 280);
         } else {
-            animatorSet.setDuration(250);
+            animatorSet.setInterpolator(new DecelerateInterpolator());
+            if (fast) {
+                animatorSet.setDuration(Math.max((int) (200.0f / Math.max(1, drawerLayout.getMeasuredWidth()) * drawerPosition), 50));
+            } else {
+                animatorSet.setDuration(250);
+            }
         }
         animatorSet.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -199,6 +219,13 @@ public class DrawerLayoutContainer extends FrameLayout {
         startedTracking = false;
         currentAnimation = null;
         drawerOpened = opened;
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && parentActionBarLayout != null && parentActionBarLayout.getView() != null) {
+            if (!opened) {
+                View contentView = parentActionBarLayout.getView();
+                contentView.setScaleX(1.0f);
+                contentView.setScaleY(1.0f);
+            }
+        }
         if (!opened && Build.VERSION.SDK_INT >= 31 && parentActionBarLayout != null && parentActionBarLayout.getView() != null) {
             parentActionBarLayout.getView().setRenderEffect(null);
         }

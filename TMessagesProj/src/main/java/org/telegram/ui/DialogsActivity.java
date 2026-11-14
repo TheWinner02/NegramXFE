@@ -7978,8 +7978,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     animators.add(ObjectAnimator.ofFloat(searchViewPager, SEARCH_TRANSLATION_Y, show ? translationY : 0, show ? 0 : translationY));
                 }
                 if (!budget) {
-                    animators.add(ObjectAnimator.ofFloat(searchViewPager, View.SCALE_X, show ? 1.0f : 1.05f));
-                    animators.add(ObjectAnimator.ofFloat(searchViewPager, View.SCALE_Y, show ? 1.0f : 1.05f));
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                        searchViewPager.setScaleX(show ? 0.96f : 1.0f);
+                        searchViewPager.setScaleY(show ? 0.96f : 1.0f);
+                        animators.add(ObjectAnimator.ofFloat(searchViewPager, View.SCALE_X, show ? 1.0f : 0.96f));
+                        animators.add(ObjectAnimator.ofFloat(searchViewPager, View.SCALE_Y, show ? 1.0f : 0.96f));
+                    } else {
+                        animators.add(ObjectAnimator.ofFloat(searchViewPager, View.SCALE_X, show ? 1.0f : 1.05f));
+                        animators.add(ObjectAnimator.ofFloat(searchViewPager, View.SCALE_Y, show ? 1.0f : 1.05f));
+                    }
                 } else {
                     searchViewPager.setScaleX(1);
                     searchViewPager.setScaleY(1);
@@ -7995,8 +8002,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
             animators.add(valueAnimator);
             searchAnimator.playTogether(animators);
-            searchAnimator.setDuration(show ? 200 : 180);
-            searchAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                searchAnimator.setDuration(show ? 280 : 220);
+                searchAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            } else {
+                searchAnimator.setDuration(show ? 200 : 180);
+                searchAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT);
+            }
 
             if (!show) {
                 searchAnimator.setStartDelay(20);

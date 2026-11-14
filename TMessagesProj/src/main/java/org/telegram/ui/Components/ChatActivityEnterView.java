@@ -14030,8 +14030,13 @@ public class ChatActivityEnterView extends FrameLayout implements
                             currentView.setTranslationY(currentHeight - previousHeight);
                             panelAnimation.playTogether(ObjectAnimator.ofFloat(currentView, View.TRANSLATION_Y, currentHeight - previousHeight, 0));
                         }
-                        panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
-                        panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
+                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                            panelAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                            panelAnimation.setDuration(280);
+                        } else {
+                            panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
+                            panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
+                        }
                         panelAnimation.addListener(new AnimatorListenerAdapter() {
                             @Override
                             public void onAnimationEnd(Animator animation) {
@@ -14138,8 +14143,13 @@ public class ChatActivityEnterView extends FrameLayout implements
                         } else {
                             panelAnimation.playTogether(ObjectAnimator.ofFloat(botKeyboardView, View.TRANSLATION_Y, botKeyboardView.getMeasuredHeight()));
                         }
-                        panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
-                        panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
+                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                            panelAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                            panelAnimation.setDuration(280);
+                        } else {
+                            panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
+                            panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
+                        }
                         panelAnimation.addListener(new AnimatorListenerAdapter() {
                             @Override
                             public void onAnimationEnd(Animator animation) {

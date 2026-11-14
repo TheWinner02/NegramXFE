@@ -28,6 +28,7 @@ import org.telegram.ui.recyclerview.ChatListItemAnimator;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.AnimationNotificationsLocker;
 import org.telegram.messenger.UserConfig;
+import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.LaunchActivity;
 
 import java.util.ArrayList;
@@ -146,8 +147,13 @@ public class AdjustPanLayoutHelper {
                 }
             }
         });
-        animator.setDuration(keyboardDuration);
-        animator.setInterpolator(keyboardInterpolator);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            animator.setDuration(280);
+            animator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+        } else {
+            animator.setDuration(keyboardDuration);
+            animator.setInterpolator(keyboardInterpolator);
+        }
 
         notificationsLocker.lock();
         if (needDelay) {

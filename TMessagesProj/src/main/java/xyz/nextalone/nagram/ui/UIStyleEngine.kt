@@ -20,6 +20,12 @@ object UIStyleEngine {
         PathInterpolatorCompat.create(0.25f, 1.0f, 0.5f, 1.0f)
     }
 
+    // Fluid Spring Interpolator (Natural Easing, 0.82 Damping)
+    @JvmStatic
+    val fluidSpringInterpolator: Interpolator by lazy {
+        PathInterpolatorCompat.create(0.22f, 1.0f, 0.36f, 1.0f)
+    }
+
     // Overshoot bouncy for small badges / switches
     @JvmStatic
     val bouncyInterpolator: Interpolator by lazy {
