@@ -10,12 +10,14 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.DialogCell;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.ChatAvatarContainer;
+import org.telegram.ui.TopicsFragment;
 
 import java.lang.ref.WeakReference;
 
@@ -28,6 +30,8 @@ public final class FluidChatTransition {
     private final WeakReference<BaseFragment> list;
     private final WeakReference<ChatActivity> chat;
     private final long dialogId;
+    private final long topicId;
+    private final boolean isTopic;
     private final RectF origin = new RectF(), originAvatar = new RectF();
     private final RectF surface = new RectF(), avatarBounds = new RectF();
     private final RectF targetAvatar = new RectF(), targetTitle = new RectF();
@@ -45,6 +49,8 @@ public final class FluidChatTransition {
         this.list = new WeakReference<>(list);
         this.chat = new WeakReference<>(chat);
         dialogId = chat.getDialogId();
+        topicId = chat.getTopicId();
+        isTopic = chat.isTopic || topicId != 0;
     }
 
     public static FluidChatTransition capture(ViewGroup host, BaseFragment list, ChatActivity chat, View touched) {
@@ -53,10 +59,17 @@ public final class FluidChatTransition {
         while (row != null && !(row instanceof DialogCell)) {
             row = row.getParent() instanceof View ? (View) row.getParent() : null;
         }
-        if (!(row instanceof DialogCell) || ((DialogCell) row).getDialogId() != chat.getDialogId()
-                || row.getWidth() <= 0 || row.getHeight() <= 0) return null;
+        long topicId = chat.getTopicId();
+        boolean isTopic = chat.isTopic || topicId != 0;
+        if (!(row instanceof DialogCell) && list.getFragmentView() != null) {
+            row = findRow(list.getFragmentView(), chat.getDialogId(), topicId, isTopic, 0);
+        }
+        if (!(row instanceof DialogCell) || row.getWidth() <= 0 || row.getHeight() <= 0) return null;
+        DialogCell cell = (DialogCell) row;
+        if (cell.getDialogId() != chat.getDialogId()) return null;
+        if (isTopic && (cell.forumTopic == null || cell.forumTopic.id != topicId)) return null;
         FluidChatTransition result = new FluidChatTransition(list, chat);
-        return result.captureRow(host, (DialogCell) row, 0f, 0f) ? result : null;
+        return result.captureRow(host, cell, 0f, 0f) ? result : null;
     }
 
     public boolean matches(BaseFragment previous, BaseFragment current) {
@@ -78,12 +91,25 @@ public final class FluidChatTransition {
     }
 
     private DialogCell findRow(View view, int depth) {
-        if (depth > 18 || view.getVisibility() != View.VISIBLE) return null;
-        if (view instanceof DialogCell) return ((DialogCell) view).getDialogId() == dialogId ? (DialogCell) view : null;
+        return findRow(view, dialogId, topicId, isTopic, depth);
+    }
+
+    private static DialogCell findRow(View view, long dialogId, long topicId, boolean isTopic, int depth) {
+        if (depth > 18 || view == null || view.getVisibility() != View.VISIBLE) return null;
+        if (view instanceof DialogCell) {
+            DialogCell cell = (DialogCell) view;
+            if (isTopic) {
+                if (cell.getDialogId() == dialogId && cell.forumTopic != null && cell.forumTopic.id == topicId) {
+                    return cell;
+                }
+            } else if (cell.getDialogId() == dialogId) {
+                return cell;
+            }
+        }
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {
-                DialogCell found = findRow(group.getChildAt(i), depth + 1);
+                DialogCell found = findRow(group.getChildAt(i), dialogId, topicId, isTopic, depth + 1);
                 if (found != null) return found;
             }
         }
@@ -96,12 +122,27 @@ public final class FluidChatTransition {
         row.getLocationOnScreen(location);
         float x = location[0] - hostLocation[0] - dx, y = location[1] - hostLocation[1] - dy;
         origin.set(x, y, x + row.getWidth(), y + row.getHeight());
-        originAvatar.set(x + row.avatarImage.getImageX(), y + row.avatarImage.getImageY(),
-                x + row.avatarImage.getImageX() + row.avatarImage.getImageWidth(),
-                y + row.avatarImage.getImageY() + row.avatarImage.getImageHeight());
-        sourceTitle = row.nameLayout;
-        titleX = x + row.nameLeft + row.nameLayoutTranslateX;
-        titleY = y + AndroidUtilities.dp(row.useForceThreeLines || SharedConfig.useThreeLinesLayout ? 10 : 14);
+
+        boolean isTopicCell = isTopic || row instanceof TopicsFragment.TopicDialogCell || (row.forumTopic != null && !row.drawAvatar);
+        if (isTopicCell && !row.drawAvatar) {
+            int padding = AndroidUtilities.dp(10);
+            int paddingTop = AndroidUtilities.dp(10);
+            int size = AndroidUtilities.dp(28);
+            float iconLeft = LocaleController.isRTL ? (x + row.getWidth() - padding - size) : (x + padding);
+            float iconTop = y + paddingTop;
+            originAvatar.set(iconLeft, iconTop, iconLeft + size, iconTop + size);
+
+            sourceTitle = row.nameLayout;
+            titleX = x + row.nameLeft + row.nameLayoutTranslateX;
+            titleY = y + AndroidUtilities.dp(row.useForceThreeLines || SharedConfig.useThreeLinesLayout ? 10 : 14) - AndroidUtilities.dp(4);
+        } else {
+            originAvatar.set(x + row.avatarImage.getImageX(), y + row.avatarImage.getImageY(),
+                    x + row.avatarImage.getImageX() + row.avatarImage.getImageWidth(),
+                    y + row.avatarImage.getImageY() + row.avatarImage.getImageHeight());
+            sourceTitle = row.nameLayout;
+            titleX = x + row.nameLeft + row.nameLayoutTranslateX;
+            titleY = y + AndroidUtilities.dp(row.useForceThreeLines || SharedConfig.useThreeLinesLayout ? 10 : 14);
+        }
         return true;
     }
 
