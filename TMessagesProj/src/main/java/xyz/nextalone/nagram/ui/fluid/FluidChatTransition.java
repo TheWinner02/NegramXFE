@@ -5,6 +5,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.drawable.ColorDrawable;
 import android.text.StaticLayout;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,9 +31,11 @@ public final class FluidChatTransition {
 
     private final WeakReference<BaseFragment> list;
     private final WeakReference<BaseFragment> target;
+    private final WeakReference<View> sourceView;
     private final long dialogId;
     private final long topicId;
     private final boolean isTopic;
+    private final boolean isChatOrTopic;
     private final RectF origin = new RectF(), originAvatar = new RectF();
     private final RectF surface = new RectF(), avatarBounds = new RectF();
     private final RectF targetAvatar = new RectF(), targetTitle = new RectF();
@@ -46,12 +49,14 @@ public final class FluidChatTransition {
     private float avatarAlpha, titleAlpha;
     private boolean unanchoredReturn;
 
-    private FluidChatTransition(BaseFragment list, BaseFragment target, long dialogId, long topicId, boolean isTopic) {
+    private FluidChatTransition(BaseFragment list, BaseFragment target, View sourceView, long dialogId, long topicId, boolean isTopic, boolean isChatOrTopic) {
         this.list = new WeakReference<>(list);
         this.target = new WeakReference<>(target);
+        this.sourceView = sourceView != null ? new WeakReference<>(sourceView) : null;
         this.dialogId = dialogId;
         this.topicId = topicId;
         this.isTopic = isTopic;
+        this.isChatOrTopic = isChatOrTopic;
     }
 
     public static FluidChatTransition capture(ViewGroup host, BaseFragment list, BaseFragment target, View touched) {
@@ -60,42 +65,56 @@ public final class FluidChatTransition {
                     + " list=" + list + " target=" + target);
             return null;
         }
-        long dialogId;
+        long dialogId = 0;
         long topicId = 0;
         boolean isTopic = false;
+        boolean isChatOrTopic = false;
         if (target instanceof ChatActivity) {
             ChatActivity chat = (ChatActivity) target;
             dialogId = chat.getDialogId();
             topicId = chat.getTopicId();
             isTopic = chat.isTopic || topicId != 0;
+            isChatOrTopic = true;
         } else if (target instanceof TopicsFragment) {
             TopicsFragment topics = (TopicsFragment) target;
             dialogId = topics.getDialogId();
             topicId = 0;
             isTopic = false;
-        } else {
-            return null;
+            isChatOrTopic = true;
         }
-        View row = touched;
-        while (row != null && !(row instanceof DialogCell)) {
-            row = row.getParent() instanceof View ? (View) row.getParent() : null;
+
+        if (isChatOrTopic) {
+            View row = touched;
+            while (row != null && !(row instanceof DialogCell)) {
+                row = row.getParent() instanceof View ? (View) row.getParent() : null;
+            }
+            if (!(row instanceof DialogCell) && list.getFragmentView() != null) {
+                row = findRow(list.getFragmentView(), dialogId, topicId, isTopic, 0);
+            }
+            android.util.Log.d("FluidMotion", "capture chat/topic: dialogId=" + dialogId + " topicId=" + topicId
+                    + " isTopic=" + isTopic + " touched=" + touched + " row=" + row);
+            if (row instanceof DialogCell && row.getWidth() > 0 && row.getHeight() > 0) {
+                DialogCell cell = (DialogCell) row;
+                if (cell.getDialogId() == dialogId && (!isTopic || (cell.forumTopic != null && cell.forumTopic.id == topicId))) {
+                    FluidChatTransition result = new FluidChatTransition(list, target, cell, dialogId, topicId, isTopic, true);
+                    boolean captured = result.captureRow(host, cell, 0f, 0f);
+                    android.util.Log.d("FluidMotion", "captureRow returned: " + captured);
+                    if (captured) return result;
+                }
+            }
         }
-        if (!(row instanceof DialogCell) && list.getFragmentView() != null) {
-            row = findRow(list.getFragmentView(), dialogId, topicId, isTopic, 0);
+
+        // Generic page morph transition (Profile, Settings, EditChat, Sub-pages, etc.)
+        FluidChatTransition result = new FluidChatTransition(list, target, touched, dialogId, topicId, isTopic, false);
+        if (touched != null && touched.isAttachedToWindow() && touched.getWidth() > 0 && touched.getHeight() > 0) {
+            if (result.captureGeneric(host, touched, 0f, 0f)) {
+                android.util.Log.d("FluidMotion", "captureGeneric succeeded for " + target.getClass().getSimpleName());
+                return result;
+            }
         }
-        android.util.Log.d("FluidMotion", "capture: dialogId=" + dialogId + " topicId=" + topicId
-                + " isTopic=" + isTopic + " touched=" + touched + " row=" + row);
-        if (!(row instanceof DialogCell) || row.getWidth() <= 0 || row.getHeight() <= 0) return null;
-        DialogCell cell = (DialogCell) row;
-        if (cell.getDialogId() != dialogId) {
-            android.util.Log.d("FluidMotion", "capture cell dialogId mismatch: cell=" + cell.getDialogId() + " != " + dialogId);
-            return null;
-        }
-        if (isTopic && (cell.forumTopic == null || cell.forumTopic.id != topicId)) return null;
-        FluidChatTransition result = new FluidChatTransition(list, target, dialogId, topicId, isTopic);
-        boolean captured = result.captureRow(host, cell, 0f, 0f);
-        android.util.Log.d("FluidMotion", "captureRow returned: " + captured);
-        return captured ? result : null;
+        result.captureFallback(host);
+        android.util.Log.d("FluidMotion", "captureFallback used for " + target.getClass().getSimpleName());
+        return result;
     }
 
     public boolean matches(BaseFragment previous, BaseFragment current) {
@@ -111,9 +130,32 @@ public final class FluidChatTransition {
     public void refreshOrigin(ViewGroup host, View listContainer, boolean returning) {
         BaseFragment owner = list.get();
         if (owner == null || owner.getFragmentView() == null || !owner.getFragmentView().isAttachedToWindow()) return;
-        DialogCell row = findRow(owner.getFragmentView(), 0);
-        boolean found = row != null && captureRow(host, row, listContainer.getTranslationX(), listContainer.getTranslationY());
-        if (returning && !found && owner.getFragmentView().isLaidOut()) unanchoredReturn = true;
+        if (isChatOrTopic) {
+            DialogCell row = findRow(owner.getFragmentView(), 0);
+            boolean found = row != null && captureRow(host, row, listContainer.getTranslationX(), listContainer.getTranslationY());
+            if (returning && !found && owner.getFragmentView().isLaidOut()) unanchoredReturn = true;
+        } else {
+            View src = sourceView != null ? sourceView.get() : null;
+            boolean found = src != null && src.isAttachedToWindow() && src.isShown() && captureGeneric(host, src, listContainer.getTranslationX(), listContainer.getTranslationY());
+            if (returning && !found && owner.getFragmentView().isLaidOut()) unanchoredReturn = true;
+        }
+    }
+
+    private boolean captureGeneric(ViewGroup host, View view, float dx, float dy) {
+        if (!view.getGlobalVisibleRect(visible) || visible.height() < 4) return false;
+        host.getLocationOnScreen(hostLocation);
+        view.getLocationOnScreen(location);
+        float x = location[0] - hostLocation[0] - dx, y = location[1] - hostLocation[1] - dy;
+        origin.set(x, y, x + view.getWidth(), y + view.getHeight());
+        return true;
+    }
+
+    private void captureFallback(ViewGroup host) {
+        float cx = host.getWidth() / 2f;
+        float h = AndroidUtilities.dp(56);
+        float y = host.getHeight() - h - AndroidUtilities.dp(24);
+        float w = Math.min(host.getWidth() * 0.88f, AndroidUtilities.dp(360));
+        origin.set(cx - w / 2f, y, cx + w / 2f, y + h);
     }
 
     private DialogCell findRow(View view, int depth) {
@@ -206,7 +248,11 @@ public final class FluidChatTransition {
         int save = canvas.save();
         canvas.clipPath(clip);
         if (unanchoredReturn) canvas.saveLayerAlpha(surface, (int) (255f * p));
-        paint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite, owner.getResourceProvider()));
+        int bgColor = Theme.getColor(Theme.key_windowBackgroundWhite, owner.getResourceProvider());
+        if (owner.getFragmentView() != null && owner.getFragmentView().getBackground() instanceof ColorDrawable) {
+            bgColor = ((ColorDrawable) owner.getFragmentView().getBackground()).getColor();
+        }
+        paint.setColor(bgColor);
         canvas.drawRect(surface, paint);
         int content = canvas.saveLayerAlpha(surface, (int) (255f * p));
         canvas.translate(-child.getTranslationX(), -child.getTranslationY());

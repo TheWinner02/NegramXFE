@@ -1492,6 +1492,15 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     int save = canvas.save();
                     canvas.translate(-child.getTranslationX(), -child.getTranslationY());
                     boolean result = super.drawChild(canvas, child, drawingTime);
+                    float width = getWidth() - getPaddingLeft() - getPaddingRight();
+                    float progress = androidx.core.math.MathUtils.clamp(1f - chatContainer.getTranslationX() / Math.max(1f, width), 0f, 1f);
+                    if (progress > 0f) {
+                        if (scrimPaint == null) {
+                            scrimPaint = new Paint();
+                        }
+                        scrimPaint.setColor((int) (0x26 * progress) << 24);
+                        canvas.drawRect(0, 0, getWidth(), getHeight(), scrimPaint);
+                    }
                     canvas.restoreToCount(save);
                     return result;
                 }
@@ -2720,17 +2729,8 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
         final BaseFragment currentFragment = !fragmentsStack.isEmpty() ? fragmentsStack.get(fragmentsStack.size() - 1) : null;
 
-        boolean isFluidTarget = (fragment instanceof ChatActivity || fragment instanceof TopicsFragment);
-        android.util.Log.d("FluidMotion", "presentFragment isFluidTarget=" + isFluidTarget
-                + " needAnimation=" + needAnimation
-                + " preview=" + preview
-                + " isSheet=" + isSheet
-                + " isLayersLayout=" + isLayersLayout
-                + " currentFragment=" + (currentFragment != null ? currentFragment.getClass().getSimpleName() : "null")
-                + " isFluid=" + xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()
-                + " isMotionEnabled=" + xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext()));
         if (needAnimation && !preview && !removeLast && !isSheet && !isLayersLayout && !isRightLayout
-                && isFluidTarget && !(currentFragment instanceof ChatActivity)
+                && fragment != null && !(fragment instanceof EmptyBaseFragment)
                 && xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()
                 && xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext())) {
             FluidChatTransition motion = FluidChatTransition.capture(this, currentFragment,
