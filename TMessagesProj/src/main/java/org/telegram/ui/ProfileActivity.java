@@ -10431,6 +10431,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     previousTransitionMainFragment = dialogsActivity;
                     previousTransitionFragment = (ChatActivityInterface) dialogsActivity.rightSlidingDialogContainer.currentFragment;
                 }
+            } else if (fragment instanceof MainTabsActivity) {
+                DialogsActivity dialogsActivity = ((MainTabsActivity) fragment).getDialogsActivity();
+                if (dialogsActivity != null && dialogsActivity.rightSlidingDialogContainer != null && dialogsActivity.rightSlidingDialogContainer.currentFragment instanceof ChatActivityInterface) {
+                    previousTransitionMainFragment = dialogsActivity;
+                    previousTransitionFragment = (ChatActivityInterface) dialogsActivity.rightSlidingDialogContainer.currentFragment;
+                }
             }
         }
 
@@ -10670,20 +10676,29 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
 
             boolean crossfadeOnlineText = false;
-            BaseFragment previousFragment = parentLayout.getFragmentStack().size() > 1 ? parentLayout.getFragmentStack().get(parentLayout.getFragmentStack().size() - 2) : null;
-            if (previousFragment instanceof ChatActivity) {
-                ChatAvatarContainer avatarContainer = ((ChatActivity) previousFragment).getAvatarContainer();
-                AndroidUtilities.doOnPreDraw(avatarContainer, () -> {
-                    prevAvatarTranslation = ViewPositionWatcher.computeXCoordinateInParent(avatarContainer.avatarImageView, (ViewGroup) previousFragment.fragmentView);
-                    fixAvatarImageInCenter();
-                });
-                View subtitleTextView = avatarContainer.getSubtitleTextView();
-                if (subtitleTextView instanceof SimpleTextView && ((SimpleTextView) subtitleTextView).getLeftDrawable() != null || avatarContainer.statusMadeShorter[0]) {
-                    transitionOnlineText = avatarContainer.getSubtitleTextView();
-                    avatarContainer2.invalidate();
-                    crossfadeOnlineText = true;
-                    animators.add(ObjectAnimator.ofFloat(onlineTextView[0], View.ALPHA, 0.0f));
-                    animators.add(ObjectAnimator.ofFloat(onlineTextView[1], View.ALPHA, 0.0f));
+            ChatActivityInterface prevChatInterface = previousTransitionFragment;
+            if (prevChatInterface == null && parentLayout != null && parentLayout.getFragmentStack().size() > 1) {
+                BaseFragment prev = parentLayout.getFragmentStack().get(parentLayout.getFragmentStack().size() - 2);
+                if (prev instanceof ChatActivityInterface) {
+                    prevChatInterface = (ChatActivityInterface) prev;
+                }
+            }
+            if (prevChatInterface != null) {
+                ChatAvatarContainer avatarContainer = prevChatInterface.getAvatarContainer();
+                if (avatarContainer != null && prevChatInterface instanceof BaseFragment) {
+                    BaseFragment previousFragment = (BaseFragment) prevChatInterface;
+                    AndroidUtilities.doOnPreDraw(avatarContainer, () -> {
+                        prevAvatarTranslation = ViewPositionWatcher.computeXCoordinateInParent(avatarContainer.avatarImageView, (ViewGroup) previousFragment.fragmentView);
+                        fixAvatarImageInCenter();
+                    });
+                    View subtitleTextView = avatarContainer.getSubtitleTextView();
+                    if (subtitleTextView instanceof SimpleTextView && ((SimpleTextView) subtitleTextView).getLeftDrawable() != null || avatarContainer.statusMadeShorter[0]) {
+                        transitionOnlineText = avatarContainer.getSubtitleTextView();
+                        avatarContainer2.invalidate();
+                        crossfadeOnlineText = true;
+                        animators.add(ObjectAnimator.ofFloat(onlineTextView[0], View.ALPHA, 0.0f));
+                        animators.add(ObjectAnimator.ofFloat(onlineTextView[1], View.ALPHA, 0.0f));
+                    }
                 }
             }
             if (!crossfadeOnlineText) {

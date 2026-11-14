@@ -91,7 +91,7 @@ public final class FluidChatTransition {
             android.util.Log.d("FluidMotion", "capture cell dialogId mismatch: cell=" + cell.getDialogId() + " != " + dialogId);
             return null;
         }
-        if (isTopic && (cell.forumTopic == null || cell.forumTopic.id != topicId)) return null;
+        if (isTopic && cell.forumTopic != null && cell.forumTopic.id != topicId) return null;
         FluidChatTransition result = new FluidChatTransition(list, target, dialogId, topicId, isTopic);
         boolean captured = result.captureRow(host, cell, 0f, 0f);
         android.util.Log.d("FluidMotion", "captureRow returned: " + captured);
@@ -124,12 +124,10 @@ public final class FluidChatTransition {
         if (depth > 18 || view == null || view.getVisibility() != View.VISIBLE) return null;
         if (view instanceof DialogCell) {
             DialogCell cell = (DialogCell) view;
-            if (isTopic) {
-                if (cell.getDialogId() == dialogId && cell.forumTopic != null && cell.forumTopic.id == topicId) {
+            if (cell.getDialogId() == dialogId) {
+                if (!isTopic || cell.forumTopic == null || cell.forumTopic.id == topicId) {
                     return cell;
                 }
-            } else if (cell.getDialogId() == dialogId) {
-                return cell;
             }
         }
         if (view instanceof ViewGroup) {
@@ -149,7 +147,7 @@ public final class FluidChatTransition {
         float x = location[0] - hostLocation[0] - dx, y = location[1] - hostLocation[1] - dy;
         origin.set(x, y, x + row.getWidth(), y + row.getHeight());
 
-        boolean isTopicCell = isTopic || row instanceof TopicsFragment.TopicDialogCell || (row.forumTopic != null && !row.drawAvatar);
+        boolean isTopicCell = (row.forumTopic != null && (isTopic || !row.drawAvatar)) || row instanceof TopicsFragment.TopicDialogCell;
         if (isTopicCell && !row.drawAvatar) {
             int padding = AndroidUtilities.dp(10);
             int paddingTop = AndroidUtilities.dp(10);
