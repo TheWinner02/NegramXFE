@@ -7960,7 +7960,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             searchAnimator = new AnimatorSet();
             ArrayList<Animator> animators = new ArrayList<>();
             animators.add(ObjectAnimator.ofFloat(viewPages[0], View.ALPHA, show ? 0.0f : 1.0f));
-            if (!budget) {
+            if (!budget && !UIStyleEngine.isFluid()) {
                 animators.add(ObjectAnimator.ofFloat(viewPages[0], View.SCALE_X, show ? 0.95f : 1.0f));
                 animators.add(ObjectAnimator.ofFloat(viewPages[0], View.SCALE_Y, show ? 0.95f : 1.0f));
             } else {
@@ -8186,9 +8186,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     viewPages[0].setVisibility(View.VISIBLE);
                 }
                 viewPages[0].setAlpha(1f - progress);
-                if (!budget) {
+                if (!budget && !UIStyleEngine.isFluid()) {
                     viewPages[0].setScaleX(.9f + .1f * progress);
                     viewPages[0].setScaleY(.9f + .1f * progress);
+                } else {
+                    viewPages[0].setScaleX(1f);
+                    viewPages[0].setScaleY(1f);
                 }
             }
             if (rightSlidingDialogContainer != null) {
@@ -8201,9 +8204,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
             if (searchViewPager != null) {
                 searchViewPager.setAlpha(progress);
-                if (!budget) {
+                if (!budget && !UIStyleEngine.isFluid()) {
                     searchViewPager.setScaleX(1f + .05f * (1f - progress));
                     searchViewPager.setScaleY(1f + .05f * (1f - progress));
+                } else {
+                    searchViewPager.setScaleX(1f);
+                    searchViewPager.setScaleY(1f);
                 }
             }
         }

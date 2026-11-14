@@ -1076,8 +1076,9 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 actionModeAnimation.playTogether(alphaUpdate);
             }
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                actionMode.setScaleY(0.92f);
-                animators.add(ObjectAnimator.ofFloat(actionMode, View.SCALE_Y, 0.92f, 1.0f));
+                actionMode.setScaleY(1.0f);
+                actionMode.setTranslationY(-AndroidUtilities.dp(8));
+                animators.add(ObjectAnimator.ofFloat(actionMode, View.TRANSLATION_Y, -AndroidUtilities.dp(8), 0.0f));
                 actionModeAnimation.setDuration(260);
                 actionModeAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
             } else {
@@ -1094,6 +1095,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                     if (actionModeAnimation != null && actionModeAnimation.equals(animation)) {
                         actionModeAnimation = null;
                         actionMode.setScaleY(1.0f);
+                        actionMode.setTranslationY(0.0f);
                         if (titleTextView[0] != null) {
                             titleTextView[0].setVisibility(INVISIBLE);
                         }
@@ -1249,7 +1251,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             actionModeAnimation.playTogether(alphaUpdate);
         }
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-            animators.add(ObjectAnimator.ofFloat(actionMode, View.SCALE_Y, 1.0f, 0.92f));
+            actionMode.setScaleY(1.0f);
+            animators.add(ObjectAnimator.ofFloat(actionMode, View.TRANSLATION_Y, 0.0f, -AndroidUtilities.dp(8)));
             actionModeAnimation.setDuration(220);
             actionModeAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
         } else {
@@ -1261,6 +1264,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 if (actionModeAnimation != null && actionModeAnimation.equals(animation)) {
                     actionModeAnimation = null;
                     actionMode.setScaleY(1.0f);
+                    actionMode.setTranslationY(0.0f);
                     actionMode.setVisibility(INVISIBLE);
                     actionMode.setAlpha(0.0f);
                     if (actionModeExtraView != null) {

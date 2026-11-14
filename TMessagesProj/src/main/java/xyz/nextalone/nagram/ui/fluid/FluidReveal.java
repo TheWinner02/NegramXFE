@@ -124,7 +124,10 @@ public final class FluidReveal implements FluidMotion {
     }
 
     private void render(float value) {
-        progress = value; view.invalidateOutline(); view.invalidate();
+        progress = value;
+        view.setAlpha(Math.max(0f, Math.min(1f, value * 2.5f)));
+        view.invalidateOutline();
+        view.invalidate();
         if (listener != null) listener.onProgress(Math.max(0f, Math.min(1f, value)));
     }
     private void retarget(float end) {
@@ -147,7 +150,11 @@ public final class FluidReveal implements FluidMotion {
         if (done != null) done.run();
     }
     private void runOpened() { Runnable done = opened; opened = null; if (done != null) done.run(); }
-    private void restoreOutline() { view.setOutlineProvider(originalOutline); view.setClipToOutline(originalClip); }
+    private void restoreOutline() {
+        view.setAlpha(1f);
+        view.setOutlineProvider(originalOutline);
+        view.setClipToOutline(originalClip);
+    }
     private void removePending() {
         if (pending != null && view.getViewTreeObserver().isAlive()) view.getViewTreeObserver().removeOnPreDrawListener(pending);
         pending = null;

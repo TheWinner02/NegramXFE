@@ -1466,7 +1466,7 @@ public class ItemOptions {
         actionBarPopupWindow.setFocusable(!dontFocus);
         actionBarPopupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
-        if (isIosGlass) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() || isIosGlass) {
             actionBarPopupWindow.setAnimationStyle(0);
             actionBarPopupWindow.setDismissAnimationDuration(220);
         } else {

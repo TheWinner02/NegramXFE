@@ -1136,7 +1136,12 @@ public class ActionBarMenuItem extends FrameLayout {
                 menuIcons.get(i).setAlpha(0f);
                 searchContainerAnimator.playTogether(ObjectAnimator.ofFloat(menuIcons.get(i), View.ALPHA, menuIcons.get(i).getAlpha(), 1f));
             }
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                searchContainerAnimator.playTogether(
+                        ObjectAnimator.ofFloat(searchContainer, View.TRANSLATION_X, searchContainer.getTranslationX(), AndroidUtilities.dp(16)));
+                searchContainerAnimator.setDuration(220);
+                searchContainerAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                 searchContainerAnimator.playTogether(
                         ObjectAnimator.ofFloat(searchContainer, View.SCALE_X, searchContainer.getScaleX(), 0.92f),
                         ObjectAnimator.ofFloat(searchContainer, View.SCALE_Y, searchContainer.getScaleY(), 0.92f));
@@ -1151,6 +1156,7 @@ public class ActionBarMenuItem extends FrameLayout {
                     searchContainer.setAlpha(0);
                     searchContainer.setScaleX(1f);
                     searchContainer.setScaleY(1f);
+                    searchContainer.setTranslationX(0f);
                     for (int i = 0; i < menuIcons.size(); i++) {
                         menuIcons.get(i).setAlpha(1f);
                     }
@@ -1192,7 +1198,15 @@ public class ActionBarMenuItem extends FrameLayout {
             for (int i = 0; i < menuIcons.size(); i++) {
                 searchContainerAnimator.playTogether(ObjectAnimator.ofFloat(menuIcons.get(i), View.ALPHA, menuIcons.get(i).getAlpha(), 0f));
             }
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                searchContainer.setScaleX(1f);
+                searchContainer.setScaleY(1f);
+                searchContainer.setTranslationX(AndroidUtilities.dp(16));
+                searchContainerAnimator.playTogether(
+                        ObjectAnimator.ofFloat(searchContainer, View.TRANSLATION_X, AndroidUtilities.dp(16), 0f));
+                searchContainerAnimator.setDuration(260);
+                searchContainerAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                 searchContainer.setScaleX(0.92f);
                 searchContainer.setScaleY(0.92f);
                 searchContainerAnimator.playTogether(
@@ -1209,6 +1223,7 @@ public class ActionBarMenuItem extends FrameLayout {
                     searchContainer.setAlpha(1f);
                     searchContainer.setScaleX(1f);
                     searchContainer.setScaleY(1f);
+                    searchContainer.setTranslationX(0f);
                     for (int i = 0; i < menuIcons.size(); i++) {
                         menuIcons.get(i).setAlpha(0f);
                     }
