@@ -11212,11 +11212,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
                 @Override
                 public void onRenderedFirstFrame(AnalyticsListener.EventTime eventTime) {
-                    if (pipFirstFrameCallback != null) {
-                        pipFirstFrameCallback.run();
-                        pipFirstFrameCallback = null;
-                    }
-
                     if (eventTime.eventPlaybackPositionMs == needCaptureFrameReadyAtTime) {
                         captureFrameReadyAtTime = eventTime.eventPlaybackPositionMs;
                         needCaptureFrameReadyAtTime = -1;
@@ -11371,19 +11366,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             videoPlayer.setVolume(muteVideo || sendPhotoType == SELECT_TYPE_AVATAR ? 0f : 1.0f);
             if (!isEmbedVideo) {
                 ensurePipSession();
-            }
-            if (pipSource != null) {
-                pipSource.setPlayer(videoPlayer.player);
-                if (videoPlayer.player != null) {
-                    VideoSize vs = videoPlayer.player.getVideoSize();
-                    if (vs != null && vs.width > 0 && vs.height > 0) {
-                        if (vs.unappliedRotationDegrees == 90 || vs.unappliedRotationDegrees == 270) {
-                            pipSource.setContentRatio(vs.height, vs.width);
-                        } else {
-                            pipSource.setContentRatio(vs.width, vs.height);
-                        }
-                    }
-                }
             }
         }
 
@@ -24782,108 +24764,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private View pipPlaceholderView;
     private boolean windowViewSkipRender;
     private boolean textureViewSkipRender;
-
-    @Override
-    public boolean pipIsAvailable() {
-        return pipItem != null && pipItem.isEnabled() && isPlaying;
-    }
-
-    @Override
-    public Bitmap pipCreatePrimaryWindowViewBitmap() {
-        if (videoTextureView != null) {
-            return videoTextureView.getBitmap();
-        }
-        if (usedSurfaceView) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                Bitmap bitmap = Bitmaps.createBitmap(videoSurfaceView.getWidth(), videoSurfaceView.getHeight(), Bitmap.Config.ARGB_8888);
-                AndroidUtilities.getBitmapFromSurface(videoSurfaceView, bitmap);
-                return bitmap;
-            }
-        }
-        return null;
-    }
-
-    @Override
-    public void pipRenderBackground(Canvas canvas) {
-        canvas.drawColor(0xFF000000);
-    }
-
-
-    @Override
-    public void pipRenderForeground(Canvas canvas) {
-        textureViewSkipRender = true;
-        windowView.draw(canvas);
-        textureViewSkipRender = false;
-    }
-
-    @Override
-    public View pipCreatePictureInPictureView() {
-        pipTextureView = new TextureView(parentActivity);
-        pipTextureView.setOpaque(false);
-        if (pipPlaceholderView != null) {
-            pipPlaceholderView.bringToFront();
-        }
-
-        return pipTextureView;
-    }
-
-    @Override
-    public void pipHidePrimaryWindowView(Runnable firstFrameCallback) {
-        if (PipVideoOverlay.isVisible()) {
-            PipVideoOverlay.dismiss(false);
-        }
-
-        this.pipFirstFrameCallback = firstFrameCallback;
-
-        if (videoPlayer != null) {
-            videoPlayer.setSurfaceView(null);
-            videoPlayer.setTextureView(null);
-            videoPlayer.play();
-            videoPlayer.setTextureView(pipTextureView);
-        };
-
-        WindowManager wm = (WindowManager) parentActivity.getSystemService(Context.WINDOW_SERVICE);
-        wm.removeView(windowView);
-        windowViewSkipRender = true;
-        windowView.invalidate();
-    }
-
-    @Override
-    public Bitmap pipCreatePictureInPictureViewBitmap() {
-        if (pipTextureView == null || !pipTextureView.isAvailable()) {
-            return null;
-        }
-
-        return pipTextureView.getBitmap();
-    }
-
-    @Override
-    public void pipShowPrimaryWindowView(Runnable firstFrameCallback) {
-        this.pipFirstFrameCallback = firstFrameCallback;
-
-        windowViewSkipRender = false;
-        if (windowView != null) {
-            WindowManager wm = (WindowManager) parentActivity.getSystemService(Context.WINDOW_SERVICE);
-            wm.addView(windowView, windowLayoutParams);
-            windowView.invalidate();
-        }
-
-        if (videoPlayer == null) {
-            return;
-        }
-
-        videoPlayer.setSurfaceView(null);
-        videoPlayer.setTextureView(null);
-        videoPlayer.play();
-        if (videoTextureView != null) {
-            if (!(videoTextureView instanceof VideoEditTextureView)) {
-                videoPlayer.setTextureView(videoTextureView);
-            }
-        } else if (videoSurfaceView != null) {
-            videoPlayer.setSurfaceView(videoSurfaceView);
-        }
-    }
-
 
     private void showPhotoQualityHint(boolean highQuality) {
         if (compressPhotoHint != null) {

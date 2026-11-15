@@ -1,6 +1,7 @@
 package org.telegram.ui;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
+import static org.telegram.messenger.AndroidUtilities.dpf2;
 
 import static org.telegram.messenger.AndroidUtilities.replaceSingleTag;
 import static org.telegram.messenger.LocaleController.formatString;
@@ -8,6 +9,13 @@ import static org.telegram.messenger.LocaleController.getString;
 import static org.telegram.ui.PremiumPreviewFragment.applyNewSpan;
 import static org.telegram.ui.PremiumPreviewFragment.applyNewSpanTimed;
 import static org.telegram.ui.Stars.StarGiftSheet.replaceUnderstood;
+
+import kotlin.Unit;
+import tw.nekomimi.nekogram.NekoSettingsActivity;
+import tw.nekomimi.nekogram.helpers.UpdateHelper;
+import tw.nekomimi.nekogram.ui.bottomsheets.BottomBuilder;
+import tw.nekomimi.nekogram.utils.AndroidUtil;
+import xyz.nextalone.nagram.NaConfig;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -631,9 +639,11 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 actionBarVisibleAnimator.cancel();
                 actionBarVisibleAnimator = null;
             }
-            actionBar.getTitlesContainer().setAlpha(1.0f);
-            if (actionBarBackground != null) {
-                actionBarBackground.setAlpha(0.0f);
+            if (simpleActionBar != null) {
+                simpleActionBar.setTitlesAlpha(1.0f);
+            }
+            if (actionBarFadeView != null) {
+                actionBarFadeView.setAlpha(0.0f);
             }
             return;
         }

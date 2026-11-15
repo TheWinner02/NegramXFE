@@ -38,6 +38,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import me.vkryl.core.reference.ReferenceList;
+import org.telegram.ui.FiltersListBottomSheet;
 import android.content.pm.ConfigurationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -5763,7 +5765,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         frameLayout.addView(actionBar);
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
-            actionBar.setupGlass(iBlur3FactoryLiquidGlass, BlurredBackgroundProviderImpl.topPanelChatActivity(resourcesProvider != null ? resourcesProvider : resourceProvider));
+            actionBar.setupGlass(getBaseSimpleGlass().factory, BlurredBackgroundProviderImpl.topPanelChatActivity(resourcesProvider != null ? resourcesProvider : resourceProvider));
             topAvatarContainer = new ChatAvatarContainer(context, this, false, resourcesProvider != null ? resourcesProvider : resourceProvider) {
                 @Override
                 protected boolean isCentered() {
@@ -8586,10 +8588,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         headerAnimatorSet.start();
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.needCheckSystemBarColors, true);
         if (topAvatarContainer != null) {
-            if (mediaHeaderVisible && mediaCounterTextView != null && mediaCounterTextView.getText() != null) {
-                topAvatarContainer.setSubtitle(mediaCounterTextView.getText());
-            } else if (onlineTextView != null && onlineTextView[1] != null && onlineTextView[1].getText() != null) {
-                topAvatarContainer.setSubtitle(onlineTextView[1].getText());
+            if (mediaHeaderVisible && mediaCounterText != null) {
+                topAvatarContainer.setSubtitle(mediaCounterText);
+            } else if (onlineTextView != null && onlineTextView.getText() != null) {
+                topAvatarContainer.setSubtitle(onlineTextView.getText());
             }
         }
     }
@@ -8808,7 +8810,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
         }
         if (topAvatarContainer != null && mediaHeaderVisible) {
-            topAvatarContainer.setSubtitle(mediaCounterTextView.getText());
+            topAvatarContainer.setSubtitle(mediaCounterText);
         }
     }
     private boolean isStarRatingVisible1;
@@ -9642,8 +9644,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return;
         }
         CharSequence title = null;
-        if (nameTextView != null && nameTextView[1] != null && nameTextView[1].getText() != null) {
-            title = nameTextView[1].getText();
+        if (nameTextView != null && nameTextView.getText() != null) {
+            title = nameTextView.getText();
         }
         if (userId != 0) {
             TLRPC.User user = getMessagesController().getUser(userId);
@@ -9659,10 +9661,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
         }
         CharSequence status = null;
-        if (mediaHeaderVisible && mediaCounterTextView != null && mediaCounterTextView.getText() != null) {
-            status = mediaCounterTextView.getText();
-        } else if (onlineTextView != null && onlineTextView[1] != null && onlineTextView[1].getText() != null) {
-            status = onlineTextView[1].getText();
+        if (mediaHeaderVisible && mediaCounterText != null) {
+            status = mediaCounterText;
+        } else if (onlineTextView != null && onlineTextView.getText() != null) {
+            status = onlineTextView.getText();
         }
         if (status != null) {
             topAvatarContainer.setSubtitle(status);
@@ -9684,15 +9686,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         topAvatarContainer.setScaleY(scale);
 
         float headerTextAlpha = 1.0f - pillProgress;
-        if (nameTextView != null && nameTextView[1] != null) {
-            nameTextView[1].setAlpha(headerTextAlpha);
+        if (nameTextView != null) {
+            nameTextView.setAlpha(headerTextAlpha);
         }
-        if (onlineTextView != null && onlineTextView[1] != null) {
-            onlineTextView[1].setAlpha(headerTextAlpha);
-        }
-        if (mediaCounterTextView != null) {
-            mediaCounterTextView.setAlpha(0f);
-            mediaCounterTextView.setVisibility(View.GONE);
+        if (onlineTextView != null) {
+            onlineTextView.setAlpha(headerTextAlpha);
         }
         if (avatarContainer != null) {
             avatarContainer.setAlpha(headerTextAlpha);
@@ -10913,11 +10911,18 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
             if (prevChatInterface != null) {
                 ChatAvatarContainer avatarContainer = prevChatInterface.getAvatarContainer();
-                AndroidUtilities.doOnPreDraw(avatarContainer, () -> {
-                    if (avatarContainer != null) {
-                        avatarContainer.setSkipDraw(true);
+                if (avatarContainer != null && prevChatInterface instanceof BaseFragment) {
+                    BaseFragment previousFragment = (BaseFragment) prevChatInterface;
+                    AndroidUtilities.doOnPreDraw(avatarContainer, () -> {
+                        prevAvatarTranslation = ViewPositionWatcher.computeXCoordinateInParent(avatarContainer.avatarImageView, (ViewGroup) previousFragment.fragmentView);
+                        fixAvatarImageInCenter();
+                    });
+                    View subtitleTextView = avatarContainer.getSubtitleTextView();
+                    if (subtitleTextView instanceof SimpleTextView && ((SimpleTextView) subtitleTextView).getLeftDrawable() != null || avatarContainer.statusMadeShorter[0]) {
+                        transitionOnlineText = avatarContainer.getSubtitleTextView();
+                        avatarContainer2.invalidate();
                     }
-                });
+                }
             }
             if (!crossfadeOnlineText && playProfileAnimation == 2) {
                 animators.add(ObjectAnimator.ofFloat(onlineTextView, View.ALPHA, 0.0f));
@@ -16351,7 +16356,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             writeButtonBgColors[2] = iconColor;
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                 writeButton.setBackground(new org.telegram.ui.Components.M3ExpressiveButtonDrawable(
-                    AndroidUtilities.dp(16),
                     color1,
                     color2,
                     AndroidUtilities.dp(16),

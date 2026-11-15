@@ -241,12 +241,18 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
             if (container.getWidth() == 0 || container.getHeight() == 0) {
                 return;
             }
-            int count = source.getVisiblePositions(positions, 0, capturePadding);
+            if (positions.isEmpty()) {
+                positions.add(new RectF());
+            }
+            positions.get(0).set(0, 0, container.getWidth(), (actionBar != null ? actionBar.getMeasuredHeight() : 0) + AndroidUtilities.dp(16));
+            int count = 1;
             count = RectFMergeBounding.mergeOverlapping(positions, count, positionsMerged);
             noiseSuppressor.setupRenderNodes(positionsMerged, count);
             if (noiseSuppressor.invalidateResultRenderNodes(capture, container.getWidth(), container.getHeight())) {
                 source.invalidateDisplayListForDrawables();
-                actionBar.invalidate();
+                if (actionBar != null) {
+                    actionBar.invalidate();
+                }
             }
         }
     }

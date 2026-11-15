@@ -11957,8 +11957,8 @@ public class ChatActivity extends BaseFragment implements
             searchFilterButton = new ImageView(getContext());
             searchFilterButton.setScaleType(ImageView.ScaleType.CENTER);
             searchFilterButton.setImageResource(R.drawable.ic_filter_list);
-            searchFilterButton.setColorFilter(new PorterDuffColorFilter(calIconColor, PorterDuff.Mode.MULTIPLY));
-            searchFilterButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 1));
+            ThemeBind.colorFilter(searchFilterButton, calIconColorKey, getResourceProvider(), PorterDuff.Mode.MULTIPLY);
+            ThemeBind.selectorBackground(searchFilterButton, Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 1), null, ThemeBind.of(Theme.key_actionBarActionModeDefaultSelector), getResourceProvider());
             searchContainer.addView(searchFilterButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.CENTER_VERTICAL, searchUserButton != null ? (96 - 2.66f) : 48, 0, 0, 0));
             searchFilterButton.setOnClickListener(view -> {
                 if (getParentActivity() == null) {
@@ -42365,6 +42365,7 @@ public class ChatActivity extends BaseFragment implements
             animatorSearchFieldVisibility.setValue(false, true);
             animatorSearchHashtagHistoryVisibility.setValue(false, true);
             if (chatActivityEnterView.hasText() && TextUtils.isEmpty(chatActivityEnterView.getSlowModeTimer()) && (currentChat == null || ChatObject.canSendPlain(currentChat)) && !isSidebarAttach()) {
+                boolean showAttachItem = !isTitleCentered();
                 if (headerItem != null) {
                     headerItem.setVisibility(View.GONE);
                 }
@@ -42374,9 +42375,6 @@ public class ChatActivity extends BaseFragment implements
                 }
                 if (otherIcon != null) {
                     otherIcon.setIconVisible(showAttachItem);
-                }
-                if (otherIcon != null) {
-                    otherIcon.setIconVisible(true);
                 }
                 if (searchIconItem != null && showSearchAsIcon) {
                     searchIconItem.setVisibility(View.GONE);

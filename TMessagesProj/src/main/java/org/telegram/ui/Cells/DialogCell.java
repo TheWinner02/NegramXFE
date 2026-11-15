@@ -3248,6 +3248,10 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
         return isSelected;
     }
 
+    public boolean isSectionSelected() {
+        return isSelected;
+    }
+
     public boolean checkCurrentDialogIndex(boolean frozen) {
         return false;
     }

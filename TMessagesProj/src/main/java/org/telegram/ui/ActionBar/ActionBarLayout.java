@@ -591,7 +591,6 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 View.OnLayoutChangeListener l = (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> requestUpdate();
                 container.addOnLayoutChangeListener(l);
                 captureViewGroup.addOnLayoutChangeListener(l);
-                source.setOnDrawablesRelativePositionChangeListener(this::requestUpdate);
                 requestUpdate();
             }
 
@@ -610,14 +609,11 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 if (capture == null || container.getWidth() == 0 || container.getHeight() == 0) {
                     return;
                 }
-                int count = source.getVisiblePositions(positions, 0, AndroidUtilities.dp(8));
-                if (count == 0) {
-                    if (positions.isEmpty()) {
-                        positions.add(new RectF());
-                    }
-                    positions.get(0).set(0, 0, container.getWidth(), actionBar.getMeasuredHeight() + AndroidUtilities.dp(16));
-                    count = 1;
+                if (positions.isEmpty()) {
+                    positions.add(new RectF());
                 }
+                positions.get(0).set(0, 0, container.getWidth(), (actionBar != null ? actionBar.getMeasuredHeight() : 0) + AndroidUtilities.dp(16));
+                int count = 1;
                 count = RectFMergeBounding.mergeOverlapping(positions, count, positionsMerged);
                 noiseSuppressor.setupRenderNodes(positionsMerged, count);
                 if (noiseSuppressor.invalidateResultRenderNodes(capture, container.getWidth(), container.getHeight())) {

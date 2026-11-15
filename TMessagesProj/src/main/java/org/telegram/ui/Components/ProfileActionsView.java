@@ -76,6 +76,7 @@ public class ProfileActionsView extends View {
     private float renderNodeScale;
     private float renderNodeTranslateY;
     private RenderNode renderNode;
+    private boolean ignoreRect = false;
 
     /** The buttons' glass, one drawable per drawn button in order; without it they are filled with their color. */
     @Nullable
@@ -152,6 +153,24 @@ public class ProfileActionsView extends View {
         setBackgroundColor(0);
 
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
+    }
+
+    public void drawingBlur(boolean drawing) {
+        if (ignoreRect != drawing || renderNode != null) {
+            ignoreRect = drawing;
+            renderNode = null;
+            avatarView = null;
+            invalidate();
+        }
+    }
+
+    public void drawingBlur(RenderNode renderNode, ProfileActivity.AvatarImageView avatarView, float scale, float dy) {
+        this.ignoreRect = false;
+        this.renderNode = renderNode;
+        this.avatarView = avatarView;
+        this.renderNodeScale = scale;
+        this.renderNodeTranslateY = dy;
+        invalidate();
     }
 
     /** The buttons on glass, see {@link ProfileButtonsGlass#actionsFactory}. */
@@ -495,6 +514,40 @@ public class ProfileActionsView extends View {
                 drawAction(canvas, actions.get(i), fraction, alphaFraction2);
             }
         }
+    }
+
+    private void drawRenderNode(Canvas canvas) {
+        if (renderNode == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || !renderNode.hasDisplayList() || !canvas.isHardwareAccelerated()) {
+            return;
+        }
+
+        canvas.save();
+        if (avatarView != null) {
+            View v = (View) avatarView.getParent();
+            float vl = v.getX();
+            float vt = v.getY() - getTranslationY();
+            float vw = v.getWidth() * v.getScaleX();
+            float vh = v.getHeight() * v.getScaleY();
+
+            clipAvatarPath.rewind();
+            clipAvatarPath.addRoundRect(
+                    vl,
+                    vt,
+                    vl + vw,
+                    vt + vh,
+                    avatarView.getRoundRadiusForExpand() * v.getScaleX(),
+                    avatarView.getRoundRadiusForExpand() * v.getScaleY(),
+                    Path.Direction.CCW
+            );
+            canvas.clipPath(clipAvatarPath);
+        }
+
+        canvas.clipPath(clipPath);
+        canvas.translate(0f, renderNodeTranslateY);
+        canvas.scale(renderNodeScale, renderNodeScale);
+        canvas.drawRenderNode(renderNode);
+
+        canvas.restore();
     }
 
     public void stopLoading(int key) {

@@ -4188,7 +4188,7 @@ public class SharedMediaLayout extends FrameLayout implements Theme.Colorable, N
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             selectedMessagesCountTextView.setText(LocaleController.formatPluralString("MessagesSelected", count), animated);
         } else {
-            selectedMessagesCountTextView.setNumber(count, animated);
+            selectedMessagesCountTextView.setText(String.valueOf(count), animated);
         }
         if (simpleActionBar != null) {
             simpleActionBar.setActionModeCount(count, animated);
