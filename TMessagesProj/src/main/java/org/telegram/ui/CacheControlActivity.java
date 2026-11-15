@@ -1478,7 +1478,7 @@ public class CacheControlActivity extends BaseFragment implements NotificationCe
 
         setListViewParams(contentInsetTop, contentInsetBottom);
 
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && actionBar != null) {
             actionBar.applyIosLiquidGlassTopBar();
         }
         return fragmentView;

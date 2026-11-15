@@ -200,7 +200,7 @@ public class GroupStickersActivity extends BaseFragment implements NotificationC
         FrameLayout frameLayout = (FrameLayout) fragmentView;
 
         listView = new RecyclerListView(context);
-        actionBar.setAdaptiveBackground(listView);
+        simpleActionBar.setAdaptiveBackground(listView);
         listView.setSections();
         listView.setSectionsDrawBackground(true);
         DefaultItemAnimator defaultItemAnimator = new DefaultItemAnimator();

@@ -653,7 +653,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
     }
 
     public void setAdaptiveBackground(RecyclerView list) {
-        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) return;
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || list == null) return;
         setM3LargeFlexible(true);
         int statusBar = occupyStatusBar ? AndroidUtilities.statusBarHeight : 0;
         int targetPaddingTop = statusBar + ActionBar.getCurrentActionBarHeight() + getM3ExpandedExtraHeight();
@@ -700,7 +700,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
     }
 
     public void setAdaptiveBackground(SectionsScrollView list) {
-        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) return;
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || list == null) return;
         setM3LargeFlexible(true);
         int statusBar = occupyStatusBar ? AndroidUtilities.statusBarHeight : 0;
         int targetPaddingTop = statusBar + ActionBar.getCurrentActionBarHeight() + getM3ExpandedExtraHeight();

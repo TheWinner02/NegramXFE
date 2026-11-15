@@ -3546,6 +3546,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         setAdaptiveBackground(list, hideTitle, Theme.key_windowBackgroundGray, Theme.key_actionBarDefault);
     }
     public void setAdaptiveBackground(RecyclerView list, boolean hideTitle, final int topColorKey, final int lowerColorKey) {
+        if (list == null) return;
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             setM3LargeFlexible(true);
             int statusBar = occupyStatusBar ? AndroidUtilities.statusBarHeight : 0;
@@ -3675,6 +3676,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         setAdaptiveBackground(list, Theme.key_windowBackgroundGray, Theme.key_actionBarDefault);
     }
     public void setAdaptiveBackground(SectionsScrollView list, final int topColorKey, final int lowerColorKey) {
+        if (list == null) return;
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             setM3LargeFlexible(true);
             int statusBar = occupyStatusBar ? AndroidUtilities.statusBarHeight : 0;

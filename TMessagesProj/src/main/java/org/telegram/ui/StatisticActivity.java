@@ -3536,8 +3536,13 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
 
     private void checkUi_listPaddings() {
         int pt = ActionBar.getCurrentActionBarHeight();
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && actionBar != null && actionBar.isM3LargeFlexible()) {
-            pt += actionBar.getM3ExpandedExtraHeight();
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            final View header = simpleActionBar != null ? simpleActionBar : actionBar;
+            if (header instanceof SimpleActionBar && ((SimpleActionBar) header).isM3LargeFlexible()) {
+                pt += ((SimpleActionBar) header).getM3ExpandedExtraHeight();
+            } else if (header instanceof ActionBar && ((ActionBar) header).isM3LargeFlexible()) {
+                pt += ((ActionBar) header).getM3ExpandedExtraHeight();
+            }
         }
         updateHeaderOverlayHeight();
         int pb = showTabs ? AndroidUtilities.dp(DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS) : 0;
