@@ -29,6 +29,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
@@ -39,6 +41,7 @@ import org.telegram.ui.Components.AnimatedTextView;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.SectionsScrollView;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.utils.glass.source.GlassSourceCrossfade;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
@@ -107,6 +110,11 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
 
     private boolean occupyStatusBar = true;
     private int extraHeight;
+    private boolean m3LargeFlexible;
+    private int m3ExpandedExtraHeight = AndroidUtilities.dp(64);
+    private float m3CollapseProgress = 0.0f;
+    private RecyclerView m3AdaptiveBackgroundList;
+    private SectionsScrollView m3AdaptiveBackgroundScroll;
     private boolean animationsAllowed;
     private boolean attached;
 
@@ -343,6 +351,15 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
     protected void dispatchDraw(@NonNull Canvas canvas) {
         animationsAllowed = attached;
 
+        if (m3LargeFlexible) {
+            int lowerColor = Theme.getColor(Theme.key_actionBarDefault, resourcesProvider);
+            int topColor = Theme.getColor(Theme.key_windowBackgroundGray, resourcesProvider);
+            int bgColor = androidx.core.graphics.ColorUtils.blendARGB(topColor, lowerColor, m3CollapseProgress);
+            canvas.drawColor(bgColor);
+            super.dispatchDraw(canvas);
+            return;
+        }
+
         final int p = dp(6);
 
         if (glassBack != null && backButton.getVisibility() == VISIBLE && backButton.getAlpha() > 0) {
@@ -512,6 +529,202 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         return extraHeight;
     }
 
+    public void setM3LargeFlexible(boolean value) {
+        if (m3LargeFlexible == value) return;
+        m3LargeFlexible = value;
+        if (m3LargeFlexible) {
+            extraHeight = m3ExpandedExtraHeight;
+            setClipChildren(false);
+            setClipToPadding(false);
+            if (titleLayout != null) {
+                titleLayout.setClipChildren(false);
+                titleLayout.setClipToPadding(false);
+                for (SimpleTextView tv : titleLayout.titleViews) {
+                    if (tv != null) {
+                        tv.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+                        tv.setTextSize(32);
+                        tv.setTypeface(AndroidUtilities.bold());
+                        tv.setAlpha(1.0f);
+                    }
+                }
+            }
+            int topColor = Theme.getColor(Theme.key_windowBackgroundGray, resourcesProvider);
+            setBackgroundColor(topColor);
+            updateM3TitleTransform();
+        } else {
+            extraHeight = 0;
+            if (titleLayout != null) {
+                for (SimpleTextView tv : titleLayout.titleViews) {
+                    if (tv != null) {
+                        tv.setGravity(Gravity.CENTER);
+                        tv.setTextSize(17);
+                        tv.setScaleX(1.0f);
+                        tv.setScaleY(1.0f);
+                        tv.setTranslationX(0f);
+                        tv.setTranslationY(0f);
+                    }
+                }
+            }
+        }
+        requestLayout();
+    }
+
+    public boolean isM3LargeFlexible() {
+        return m3LargeFlexible;
+    }
+
+    public int getM3ExpandedExtraHeight() {
+        return m3ExpandedExtraHeight;
+    }
+
+    public float getM3CollapseProgress() {
+        return m3CollapseProgress;
+    }
+
+    public void setM3CollapseProgress(float progress) {
+        if (!m3LargeFlexible) return;
+        progress = Math.max(0.0f, Math.min(1.0f, progress));
+        if (Math.abs(m3CollapseProgress - progress) < 0.0001f) return;
+        m3CollapseProgress = progress;
+
+        updateM3TitleTransform();
+
+        int lowerColor = Theme.getColor(Theme.key_actionBarDefault, resourcesProvider);
+        int topColor = Theme.getColor(Theme.key_windowBackgroundGray, resourcesProvider);
+        setBackgroundColor(androidx.core.graphics.ColorUtils.blendARGB(topColor, lowerColor, m3CollapseProgress));
+        requestLayout();
+        invalidate();
+    }
+
+    public void updateM3TitleTransform() {
+        if (!m3LargeFlexible) return;
+        float p = m3CollapseProgress;
+
+        float targetScale = 20.0f / 32.0f;
+        float scale = AndroidUtilities.lerp(1.0f, targetScale, p);
+
+        boolean hasBack = hasBackButton();
+        int collapsedX = hasBack ? dp(AndroidUtilities.isTablet() ? 80 : 72) : dp(AndroidUtilities.isTablet() ? 26 : 24);
+        int collapsedY = (ActionBar.getCurrentActionBarHeight() - dp(24)) / 2;
+        int expandedX = dp(24);
+
+        for (int i = 0; i < 2; i++) {
+            SimpleTextView titleView = titleLayout != null ? titleLayout.titleViews[i] : null;
+            if (titleView == null) continue;
+            titleView.setPivotX(0f);
+            titleView.setPivotY(0f);
+            titleView.setScaleX(scale);
+            titleView.setScaleY(scale);
+
+            int textH = titleView.getTextHeight() > 0 ? titleView.getTextHeight() : dp(38);
+            int expandedY = ActionBar.getCurrentActionBarHeight() + m3ExpandedExtraHeight - dp(24) - textH;
+
+            int curX = titleView.getLeft();
+            int curY = titleView.getTop() + titleView.getPaddingTop();
+            if (curX <= 0) curX = collapsedX;
+            if (curY <= 0) curY = collapsedY;
+
+            float transX = AndroidUtilities.lerp((float) (expandedX - curX), 0f, p);
+            float transY = AndroidUtilities.lerp((float) (expandedY - curY), 0f, p);
+            titleView.setTranslationX(transX);
+            titleView.setTranslationY(transY);
+            if (i == 0) {
+                titleView.setAlpha(1.0f);
+            }
+        }
+
+        if (titleLayout != null && titleLayout.subtitleView != null && titleLayout.subtitleView.getVisibility() != GONE) {
+            SimpleTextView subView = titleLayout.subtitleView;
+            subView.setPivotX(0f);
+            subView.setPivotY(0f);
+            subView.setScaleX(scale);
+            subView.setScaleY(scale);
+
+            int textH = subView.getTextHeight() > 0 ? subView.getTextHeight() : dp(20);
+            int expandedY = ActionBar.getCurrentActionBarHeight() + m3ExpandedExtraHeight - dp(10) - textH;
+
+            int curX = subView.getLeft();
+            int curY = subView.getTop() + subView.getPaddingTop();
+            if (curX <= 0) curX = collapsedX;
+            if (curY <= 0) curY = collapsedY;
+
+            float transX = AndroidUtilities.lerp((float) (expandedX - curX), 0f, p);
+            float transY = AndroidUtilities.lerp((float) (expandedY - curY), 0f, p);
+            subView.setTranslationX(transX);
+            subView.setTranslationY(transY);
+        }
+    }
+
+    public void setAdaptiveBackground(RecyclerView list) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) return;
+        setM3LargeFlexible(true);
+        int statusBar = occupyStatusBar ? AndroidUtilities.statusBarHeight : 0;
+        int targetPaddingTop = statusBar + ActionBar.getCurrentActionBarHeight() + getM3ExpandedExtraHeight();
+        if (list.getPaddingTop() < targetPaddingTop) {
+            list.setPadding(list.getPaddingLeft(), targetPaddingTop, list.getPaddingRight(), list.getPaddingBottom());
+            list.setClipToPadding(false);
+        }
+        if (m3AdaptiveBackgroundList == list) {
+            setM3CollapseProgress(list.canScrollVertically(-1) ? 1.0f : 0.0f);
+            return;
+        }
+        m3AdaptiveBackgroundList = list;
+        list.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                if (!m3LargeFlexible) return;
+                int maxScroll = getM3ExpandedExtraHeight();
+                RecyclerView.LayoutManager lm = recyclerView.getLayoutManager();
+                if (lm instanceof LinearLayoutManager) {
+                    LinearLayoutManager llm = (LinearLayoutManager) lm;
+                    int firstPos = llm.findFirstVisibleItemPosition();
+                    if (firstPos == 0) {
+                        View firstChild = llm.findViewByPosition(0);
+                        if (firstChild != null) {
+                            int atRest = recyclerView.getPaddingTop();
+                            int scrolled = atRest - firstChild.getTop();
+                            float progress = Math.max(0.0f, Math.min(1.0f, (float) scrolled / (float) maxScroll));
+                            setM3CollapseProgress(progress);
+                            return;
+                        }
+                    } else if (firstPos > 0) {
+                        setM3CollapseProgress(1.0f);
+                        return;
+                    }
+                }
+                if (!recyclerView.canScrollVertically(-1)) {
+                    setM3CollapseProgress(0.0f);
+                } else {
+                    setM3CollapseProgress(1.0f);
+                }
+            }
+        });
+        setM3CollapseProgress(list.canScrollVertically(-1) ? 1.0f : 0.0f);
+    }
+
+    public void setAdaptiveBackground(SectionsScrollView list) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) return;
+        setM3LargeFlexible(true);
+        int statusBar = occupyStatusBar ? AndroidUtilities.statusBarHeight : 0;
+        int targetPaddingTop = statusBar + ActionBar.getCurrentActionBarHeight() + getM3ExpandedExtraHeight();
+        if (list.getPaddingTop() < targetPaddingTop) {
+            list.setPadding(list.getPaddingLeft(), targetPaddingTop, list.getPaddingRight(), list.getPaddingBottom());
+            list.setClipToPadding(false);
+        }
+        if (m3AdaptiveBackgroundScroll == list) {
+            setM3CollapseProgress(list.canScrollVertically(-1) ? 1.0f : 0.0f);
+            return;
+        }
+        m3AdaptiveBackgroundScroll = list;
+        list.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+            if (!m3LargeFlexible) return;
+            int maxScroll = getM3ExpandedExtraHeight();
+            float progress = maxScroll > 0 ? Math.max(0.0f, Math.min(1.0f, (float) scrollY / (float) maxScroll)) : 1.0f;
+            setM3CollapseProgress(progress);
+        });
+        setM3CollapseProgress(list.canScrollVertically(-1) ? 1.0f : 0.0f);
+    }
+
     private int titleMinSideInset;
 
     /** The centered title keeps this far from both edges, e.g. clear of a custom child at the right (a balance). */
@@ -531,7 +744,8 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         final int width = MeasureSpec.getSize(widthMeasureSpec);
         final int rowTop = getRowTop();
         final int rowHeight = ActionBar.getCurrentActionBarHeight();
-        final int height = rowTop + rowHeight + extraHeight;
+        final int currentExtra = m3LargeFlexible ? (int) (m3ExpandedExtraHeight * (1.0f - m3CollapseProgress)) : extraHeight;
+        final int height = rowTop + rowHeight + currentExtra;
         final boolean hasBack = hasBackButton();
 
         final int buttonTop = rowTop + (rowHeight - dp(46)) / 2;
@@ -541,7 +755,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         final float doneSpace = getDoneButtonSpace(true);
         int titleSide = Math.max(hasBack ? dp(64) : dp(18), menuWidth > 0 || doneSpace > 0 ? (int) (menuWidth + doneSpace) + dp(6 + 12) : 0);
         titleSide = Math.max(titleSide, titleMinSideInset);
-        titleLayout.setSideInset(titleSide);
+        titleLayout.setSideInset(m3LargeFlexible ? 0 : titleSide);
         setMargins(titleLayout, 0, rowTop, 0);
         titleLayout.getLayoutParams().height = rowHeight;
 
@@ -1586,9 +1800,15 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
                 return;
             }
             final SimpleTextView view = new SimpleTextView(getContext());
-            view.setGravity(Gravity.CENTER);
-            view.setTypeface(AndroidUtilities.bold());
-            view.setTextSize(17);
+            if (m3LargeFlexible) {
+                view.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+                view.setTypeface(AndroidUtilities.bold());
+                view.setTextSize(32);
+            } else {
+                view.setGravity(Gravity.CENTER);
+                view.setTypeface(AndroidUtilities.bold());
+                view.setTextSize(17);
+            }
             view.setTextColor(titleColor);
             view.setEmojiColor(titleColor);
             view.setDrawablePadding(dp(4));
@@ -1609,6 +1829,9 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             titleViews[0].setTranslationY(0);
             titleViews[0].setText(value);
             titleViews[0].setVisibility(TextUtils.isEmpty(value) ? INVISIBLE : VISIBLE);
+            if (m3LargeFlexible) {
+                updateM3TitleTransform();
+            }
         }
 
         void setTitleAnimated(CharSequence value, boolean fromBottom, long duration, Interpolator interpolator) {
@@ -1629,6 +1852,9 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             old.animate().cancel();
             old.animate().alpha(0f).translationY(fromBottom ? -dp(16) : dp(16)).setDuration(duration).setInterpolator(interpolator)
                 .withEndAction(() -> old.setVisibility(GONE)).start();
+            if (m3LargeFlexible) {
+                updateM3TitleTransform();
+            }
             requestLayout();
         }
 
@@ -1716,11 +1942,19 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
             final int width = MeasureSpec.getSize(widthMeasureSpec);
             final int height = MeasureSpec.getSize(heightMeasureSpec);
-            final int available = Math.max(0, width - sideInset * 2);
+            final int available = m3LargeFlexible ? Math.max(0, width - dp(48)) : Math.max(0, width - sideInset * 2);
             for (SimpleTextView view : titleViews) {
                 if (view != null && view.getVisibility() != GONE) {
+                    if (m3LargeFlexible) {
+                        view.setTextSize(32);
+                        view.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+                    } else {
+                        view.setTextSize(17);
+                        view.setGravity(Gravity.CENTER);
+                    }
+                    int h = m3LargeFlexible ? dp(48) : dp(24);
                     view.measure(MeasureSpec.makeMeasureSpec(available, MeasureSpec.AT_MOST),
-                        MeasureSpec.makeMeasureSpec(dp(24) + view.getPaddingTop() + view.getPaddingBottom(), MeasureSpec.AT_MOST));
+                        MeasureSpec.makeMeasureSpec(h + view.getPaddingTop() + view.getPaddingBottom(), MeasureSpec.AT_MOST));
                 }
             }
             if (hasSubtitle()) {
@@ -1743,6 +1977,8 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             final int width = right - left;
             final int rowHeight = bottom - top;
             final boolean hasSubtitle = hasSubtitle();
+            final boolean hasBack = hasBackButton();
+            final int collapsedX = hasBack ? dp(AndroidUtilities.isTablet() ? 80 : 72) : dp(AndroidUtilities.isTablet() ? 26 : 24);
             for (SimpleTextView view : titleViews) {
                 if (view == null || view.getVisibility() == GONE) {
                     continue;
@@ -1750,7 +1986,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
                 final int textTop = hasSubtitle
                     ? (rowHeight / 2 - view.getTextHeight()) / 2 + dp(5)
                     : (rowHeight - view.getTextHeight()) / 2;
-                final int l = (width - view.getMeasuredWidth()) / 2;
+                final int l = m3LargeFlexible ? collapsedX : (width - view.getMeasuredWidth()) / 2;
                 final int t = textTop - view.getPaddingTop();
                 view.layout(l, t, l + view.getMeasuredWidth(), t + view.getMeasuredHeight());
             }
@@ -1760,7 +1996,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
                         continue;
                     }
                     final int textTop = rowHeight / 2 + (rowHeight / 2 - view.getTextHeight()) / 2 - dp(2);
-                    final int l = (width - view.getMeasuredWidth()) / 2;
+                    final int l = m3LargeFlexible ? collapsedX : (width - view.getMeasuredWidth()) / 2;
                     view.layout(l, textTop, l + view.getMeasuredWidth(), textTop + view.getTextHeight());
                 }
             }
@@ -1772,6 +2008,9 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
                     final int t = (rowHeight - child.getMeasuredHeight()) / 2 + lp.topMargin - lp.bottomMargin;
                     child.layout(l, t, l + child.getMeasuredWidth(), t + child.getMeasuredHeight());
                 }
+            }
+            if (m3LargeFlexible) {
+                updateM3TitleTransform();
             }
         }
     }

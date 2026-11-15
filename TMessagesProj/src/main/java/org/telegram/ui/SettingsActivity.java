@@ -284,6 +284,12 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         simpleActionBar.setBackButtonImage(R.drawable.ic_ab_back);
         leftButtonIsBack = true; // the view may be rebuilt (theme, language): checkUi_menuItems swaps it to QR again
         simpleActionBar.setTitle(getString(R.string.Settings));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            simpleActionBar.setM3LargeFlexible(true);
+            simpleActionBar.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+        } else {
+            simpleActionBar.setBackground(null);
+        }
         simpleActionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
             @Override
             public void onItemClick(int id) {
@@ -302,7 +308,6 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 }
             }
         });
-        simpleActionBar.setBackground(null);
 
         final SimpleActionBarMenu menu = simpleActionBar.createMenu();
         searchItem = menu.addItem(0, R.drawable.outline_header_search, resourceProvider).setIsSearchField(true).setActionBarMenuItemSearchListener(new ActionBarMenuItem.ActionBarMenuItemSearchListener() {
@@ -346,7 +351,11 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         listView.adapter.setApplyBackground(false);
         listView.setSections();
         listView.setSectionsDrawBackground(true);
-        BaseFragmentSimpleGlass.setListViewParams(listView, 0, 0, dp(12), additionNavigationBarHeight);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            listView.setPadding(0, getSettingsTopPadding(AndroidUtilities.statusBarHeight), 0, AndroidUtilities.navigationBarHeight + additionNavigationBarHeight);
+        } else {
+            BaseFragmentSimpleGlass.setListViewParams(listView, 0, 0, dp(12), additionNavigationBarHeight);
+        }
         listView.setClipToPadding(false);
         listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -370,6 +379,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
 
         actionBarFadeView = new View(context);
         actionBarFadeView.setBackground(getBaseSimpleGlass().createActionBarFadeDrawable(actionBarFadeView));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            actionBarFadeView.setVisibility(View.GONE);
+        }
         contentView.addView(actionBarFadeView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 0, Gravity.TOP));
         contentView.addView(simpleActionBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.FILL_HORIZONTAL | Gravity.TOP));
 
@@ -586,16 +598,16 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
     private boolean actionBarVisible;
     private ValueAnimator actionBarVisibleAnimator;
     private int getSettingsTopPadding(int statusBarHeight) {
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && actionBar != null) {
-            return statusBarHeight + ActionBar.getCurrentActionBarHeight() + actionBar.getM3ExpandedExtraHeight();
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && simpleActionBar != null) {
+            return statusBarHeight + ActionBar.getCurrentActionBarHeight() + simpleActionBar.getM3ExpandedExtraHeight();
         }
         return statusBarHeight + dp(12);
     }
     private void updateM3TopAppBarProgress(int dy) {
-        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || actionBar == null || !actionBar.isM3LargeFlexible()) {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || simpleActionBar == null || !simpleActionBar.isM3LargeFlexible()) {
             return;
         }
-        int maxScroll = actionBar.getM3ExpandedExtraHeight();
+        int maxScroll = simpleActionBar.getM3ExpandedExtraHeight();
         RecyclerView.LayoutManager lm = listView.getLayoutManager();
         if (lm instanceof LinearLayoutManager) {
             LinearLayoutManager llm = (LinearLayoutManager) lm;
@@ -606,18 +618,18 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                     int atRest = getSettingsTopPadding(AndroidUtilities.statusBarHeight);
                     int scrolled = atRest - firstChild.getTop();
                     float progress = Math.max(0.0f, Math.min(1.0f, (float) scrolled / (float) maxScroll));
-                    actionBar.setM3CollapseProgress(progress);
+                    simpleActionBar.setM3CollapseProgress(progress);
                     return;
                 }
             } else if (firstPos > 0) {
-                actionBar.setM3CollapseProgress(1.0f);
+                simpleActionBar.setM3CollapseProgress(1.0f);
                 return;
             }
         }
         if (!listView.canScrollVertically(-1)) {
-            actionBar.setM3CollapseProgress(0.0f);
+            simpleActionBar.setM3CollapseProgress(0.0f);
         } else {
-            actionBar.setM3CollapseProgress(1.0f);
+            simpleActionBar.setM3CollapseProgress(1.0f);
         }
     }
     private float top() {
@@ -689,9 +701,11 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
     }
 
     private void setActionBarVisibilityFactor(float factor) {
-        simpleActionBar.setTitlesAlpha(factor);
-        if (actionBarFadeView != null) {
-            actionBarFadeView.setAlpha(factor);
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            simpleActionBar.setTitlesAlpha(factor);
+            if (actionBarFadeView != null) {
+                actionBarFadeView.setAlpha(factor);
+            }
         }
     }
 
@@ -1171,7 +1185,14 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         final Insets systemInsets = AndroidUtilities.getDefaultWindowInsets(insets, false);
         navigationBarHeight = systemInsets.bottom;
         updateActionBarFadeHeight(systemInsets.top);
-        BaseFragmentSimpleGlass.setListViewParams(listView, systemInsets.top, systemInsets.bottom, dp(12), additionNavigationBarHeight);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            listView.setPadding(0, getSettingsTopPadding(systemInsets.top), 0, navigationBarHeight + additionNavigationBarHeight);
+            if (simpleActionBar != null && simpleActionBar.isM3LargeFlexible()) {
+                simpleActionBar.updateM3TitleTransform();
+            }
+        } else {
+            BaseFragmentSimpleGlass.setListViewParams(listView, systemInsets.top, systemInsets.bottom, dp(12), additionNavigationBarHeight);
+        }
         return WindowInsetsCompat.CONSUMED;
     }
 

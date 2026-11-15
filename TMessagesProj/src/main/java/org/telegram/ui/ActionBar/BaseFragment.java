@@ -324,9 +324,19 @@ public abstract class BaseFragment {
             }
 
             if (useFadeDrawableForActionBar() && header != null) {
-                header.setBackground(simpleGlass.createActionBarFadeDrawable(header));
+                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                    header.setBackground(simpleGlass.createActionBarFadeDrawable(header));
+                }
             }
-            BaseFragmentSimpleGlass.setListViewParams(listViewForSimpleGlass, mSystemInsets.top, mSystemInsets.bottom, ActionBar.getCurrentActionBarHeight(), 0);
+            int extraH = 0;
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (header instanceof SimpleActionBar && ((SimpleActionBar) header).isM3LargeFlexible()) {
+                    extraH = ((SimpleActionBar) header).getM3ExpandedExtraHeight();
+                } else if (header instanceof ActionBar && ((ActionBar) header).isM3LargeFlexible()) {
+                    extraH = ((ActionBar) header).getM3ExpandedExtraHeight();
+                }
+            }
+            BaseFragmentSimpleGlass.setListViewParams(listViewForSimpleGlass, mSystemInsets.top, mSystemInsets.bottom, ActionBar.getCurrentActionBarHeight() + extraH, 0);
 
             if (drawEdgeNavigationBar()) {
                 navigationBarFadeView = new View(context);

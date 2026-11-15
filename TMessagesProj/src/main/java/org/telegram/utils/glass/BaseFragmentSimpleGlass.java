@@ -218,6 +218,14 @@ public class BaseFragmentSimpleGlass {
 
         setupHeader(contentView, actionBar, resourceProvider);
 
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (actionBar instanceof SimpleActionBar) {
+                ((SimpleActionBar) actionBar).setAdaptiveBackground(listView);
+            } else if (actionBar instanceof ActionBar) {
+                ((ActionBar) actionBar).setAdaptiveBackground(listView);
+            }
+        }
+
         if (BuildConfig.DEBUG_PRIVATE_VERSION && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
              if (glassCaptureSourceCanvas != null) {
              //     contentView.addView(glassCaptureSourceCanvas.createDebugView(contentView.getContext()));
@@ -234,6 +242,14 @@ public class BaseFragmentSimpleGlass {
         listView.setClipToPadding(false);
 
         setupHeader(contentView, actionBar, resourceProvider);
+
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            if (actionBar instanceof SimpleActionBar) {
+                ((SimpleActionBar) actionBar).setAdaptiveBackground(listView);
+            } else if (actionBar instanceof ActionBar) {
+                ((ActionBar) actionBar).setAdaptiveBackground(listView);
+            }
+        }
     }
 
     public void setViews(FrameLayout contentView, ViewPagerFixed viewPager, @Nullable View actionBar, Theme.ResourcesProvider resourceProvider) {
@@ -261,16 +277,25 @@ public class BaseFragmentSimpleGlass {
         contentView.addView(header, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
         if (header instanceof SimpleActionBar) {
             final SimpleActionBar simpleActionBar = (SimpleActionBar) header;
-            simpleActionBar.setExtraHeight(dp(6));
-            simpleActionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
-            simpleActionBar.setMenuGlass(menuFactory, menuGlassSource);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                simpleActionBar.setM3LargeFlexible(true);
+            } else {
+                simpleActionBar.setExtraHeight(dp(6));
+                simpleActionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
+                simpleActionBar.setMenuGlass(menuFactory, menuGlassSource);
+                header.setTranslationY(dp(6));
+            }
         } else if (header instanceof ActionBar) {
             final ActionBar actionBar = (ActionBar) header;
-            actionBar.setAddToContainer(false);
-            actionBar.setCenterTitleAndGlass(true);
-            actionBar.setExtraHeight(dp(6));
-            actionBar.doNotDrawCenterGlass = true;
-            actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                actionBar.setM3LargeFlexible(true);
+            } else {
+                actionBar.setAddToContainer(false);
+                actionBar.setCenterTitleAndGlass(true);
+                actionBar.setExtraHeight(dp(6));
+                actionBar.doNotDrawCenterGlass = true;
+                actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
+            }
         }
     }
 
