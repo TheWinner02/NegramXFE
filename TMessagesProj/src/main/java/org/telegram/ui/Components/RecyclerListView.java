@@ -3602,6 +3602,17 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
             float roundRadius,
             boolean topPadding
     ) {
+        setSections(isSectionView, isViewTypeSection, padding, roundRadius, this::drawBackgroundRect, topPadding);
+    }
+
+    public void setSections(
+            Utilities.CallbackReturn<View, Boolean> isSectionView,
+            Utilities.CallbackReturn<Integer, Boolean> isViewTypeSection,
+            int padding,
+            float roundRadius,
+            Utilities.Callback5<Canvas, RectF, Float, Float, Float> drawSectionBackground,
+            boolean topPadding
+    ) {
         boolean m3Expressive = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
         boolean iosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
         m3ExpressivePressedSelector = m3Expressive || iosGlass;
@@ -3620,17 +3631,6 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
             selectorRadius = 0;
             m3ExpressiveSelectorRadiusApplied = false;
         }
-        setSections(isSectionView, isViewTypeSection, padding, roundRadius, this::drawBackgroundRect, topPadding);
-    }
-
-    public void setSections(
-            Utilities.CallbackReturn<View, Boolean> isSectionView,
-            Utilities.CallbackReturn<Integer, Boolean> isViewTypeSection,
-            int padding,
-            float roundRadius,
-            Utilities.Callback5<Canvas, RectF, Float, Float, Float> drawSectionBackground,
-            boolean topPadding
-    ) {
         ThemeBind.listSelectorColor(this, Theme.key_settings_listSelector, resourcesProvider);
         this.isSectionView = isSectionView;
         this.isViewTypeSection = isViewTypeSection;

@@ -42,7 +42,7 @@ public class BlurredRecyclerView extends RecyclerListView {
         if (getLayoutParams() == null) {
             return;
         }
-        if (SharedConfig.chatBlurEnabled() && !xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+        if (SharedConfig.chatBlurEnabled() && !xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             blurTopPadding = measureBlurTopPadding();
             ((MarginLayoutParams) getLayoutParams()).topMargin = -blurTopPadding;
         } else {

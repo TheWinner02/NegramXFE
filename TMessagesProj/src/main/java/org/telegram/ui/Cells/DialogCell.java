@@ -4185,7 +4185,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             gtx += translationX;
         }
 
-        boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+        boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
         float cardRad = isM3 ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : 0;
         float cornersRadius = isM3 ? cardRad : dp(8) * cornerProgress;
         boolean isItemChecked = isM3 && checkBox != null && checkBox.isChecked();
@@ -4993,7 +4993,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             canvas.restore();
         }
 
-        if (useSeparator && !(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && fullSeparator)) {
+        if (useSeparator && !((xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) && fullSeparator)) {
             int left;
             if (fullSeparator || currentDialogFolderId != 0 && archiveHidden && !fullSeparator2 || fullSeparator2 && !archiveHidden) {
                 left = 0;
@@ -5015,7 +5015,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                     Theme.dividerPaint.setAlpha((int) (alpha * (1f - rightFragmentOpenedProgress)));
                 }
                 float y = getMeasuredHeight() - (isIosGlass ? AndroidUtilities.dpf2(0.5f) : 1) - rightFragmentOffset * rightFragmentOpenedProgress;
-                int rightPadding = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(16) : 0;
+                int rightPadding = (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || isIosGlass) ? dp(16) : 0;
                 if (LocaleController.isRTL) {
                     canvas.drawLine(rightPadding, y, getMeasuredWidth() - left, y, Theme.dividerPaint);
                 } else {

@@ -4247,6 +4247,28 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     }
                     return false;
                 });
+                viewPage.listView.setSectionGroupingChecker((v1, pos1, v2, pos2) -> {
+                    if (viewPage.dialogsAdapter != null) {
+                        boolean p1Pinned = viewPage.dialogsAdapter.isDialogPinned(pos1);
+                        boolean p2Pinned = viewPage.dialogsAdapter.isDialogPinned(pos2);
+                        return p1Pinned == p2Pinned;
+                    }
+                    return true;
+                });
+                viewPage.listView.setSections(
+                    view -> {
+                        if (view == null || view.getParent() != viewPage.listView) {
+                            return false;
+                        }
+                        RecyclerView.ViewHolder holder = viewPage.listView.getChildViewHolder(view);
+                        return holder != null && isM3ChatSectionViewType(holder.getItemViewType());
+                    },
+                    this::isM3ChatSectionViewType,
+                    xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? dp(16) : dp(12),
+                    xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius(),
+                    viewPage.listView::drawBackgroundRect,
+                    false
+                );
             } else if (initialDialogsType == DIALOGS_TYPE_BOT_REQUEST_PEER) {
                 ThemeBind.backgroundColor(viewPage.listView, Theme.key_windowBackgroundGray, getResourceProvider());
             }
