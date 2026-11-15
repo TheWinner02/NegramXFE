@@ -68,8 +68,6 @@ if (nativeTarget == 'SKIP') {
         }
     }
 }
-    }
-}
 
 android {
     defaultConfig.applicationId = APP_PACKAGE
