@@ -61,8 +61,6 @@ public final class FluidChatTransition {
 
     public static FluidChatTransition capture(ViewGroup host, BaseFragment list, BaseFragment target, View touched) {
         if (!UIStyleEngine.isFluid() || list == null || target == null || list.getCurrentAccount() != target.getCurrentAccount()) {
-            android.util.Log.d("FluidMotion", "capture rejected early: isFluid=" + UIStyleEngine.isFluid()
-                    + " list=" + list + " target=" + target);
             return null;
         }
         long dialogId = 0;
@@ -91,30 +89,24 @@ public final class FluidChatTransition {
             if (!(row instanceof DialogCell) && list.getFragmentView() != null) {
                 row = findRow(list.getFragmentView(), dialogId, topicId, isTopic, 0);
             }
-            android.util.Log.d("FluidMotion", "capture chat/topic: dialogId=" + dialogId + " topicId=" + topicId
-                    + " isTopic=" + isTopic + " touched=" + touched + " row=" + row);
             if (row instanceof DialogCell && row.getWidth() > 0 && row.getHeight() > 0) {
                 DialogCell cell = (DialogCell) row;
                 if (cell.getDialogId() == dialogId && (!isTopic || (cell.forumTopic != null && cell.forumTopic.id == topicId))) {
                     FluidChatTransition result = new FluidChatTransition(list, target, cell, dialogId, topicId, isTopic, true);
                     boolean captured = result.captureRow(host, cell, 0f, 0f);
-                    android.util.Log.d("FluidMotion", "captureRow returned: " + captured);
                     if (captured) return result;
                 }
             }
         }
 
         // Generic page morph transition (Profile, Settings, EditChat, Sub-pages, etc.)
-        FluidChatTransition result = new FluidChatTransition(list, target, touched, dialogId, topicId, isTopic, false);
         if (touched != null && touched.isAttachedToWindow() && touched.getWidth() > 0 && touched.getHeight() > 0) {
+            FluidChatTransition result = new FluidChatTransition(list, target, touched, dialogId, topicId, isTopic, false);
             if (result.captureGeneric(host, touched, 0f, 0f)) {
-                android.util.Log.d("FluidMotion", "captureGeneric succeeded for " + target.getClass().getSimpleName());
                 return result;
             }
         }
-        result.captureFallback(host);
-        android.util.Log.d("FluidMotion", "captureFallback used for " + target.getClass().getSimpleName());
-        return result;
+        return null;
     }
 
     public boolean matches(BaseFragment previous, BaseFragment current) {
@@ -148,14 +140,6 @@ public final class FluidChatTransition {
         float x = location[0] - hostLocation[0] - dx, y = location[1] - hostLocation[1] - dy;
         origin.set(x, y, x + view.getWidth(), y + view.getHeight());
         return true;
-    }
-
-    private void captureFallback(ViewGroup host) {
-        float cx = host.getWidth() / 2f;
-        float h = AndroidUtilities.dp(56);
-        float y = host.getHeight() - h - AndroidUtilities.dp(24);
-        float w = Math.min(host.getWidth() * 0.88f, AndroidUtilities.dp(360));
-        origin.set(cx - w / 2f, y, cx + w / 2f, y + h);
     }
 
     private DialogCell findRow(View view, int depth) {
@@ -227,9 +211,6 @@ public final class FluidChatTransition {
         View avatar = header == null ? null : header.getAvatarImageView();
         View title = header == null ? null : header.getTitleTextView();
         boolean sharedHeader = avatar != null && title != null && avatar.getWidth() > 0 && title.getWidth() > 0;
-        android.util.Log.d("FluidMotion", "FluidChatTransition.draw: p=" + p + " sharedHeader=" + sharedHeader
-                + " avatar=" + (avatar != null ? avatar.getWidth() + "x" + avatar.getHeight() : "null")
-                + " title=" + (title != null ? title.getWidth() + "x" + title.getHeight() : "null"));
         if (sharedHeader) {
             bounds(host, child, avatar, targetAvatar);
             bounds(host, child, title, targetTitle);
@@ -247,17 +228,21 @@ public final class FluidChatTransition {
         clip.addRoundRect(surface, radius, radius, Path.Direction.CW);
         int save = canvas.save();
         canvas.clipPath(clip);
-        if (unanchoredReturn) canvas.saveLayerAlpha(surface, (int) (255f * p));
         int bgColor = Theme.getColor(Theme.key_windowBackgroundWhite, owner.getResourceProvider());
         if (owner.getFragmentView() != null && owner.getFragmentView().getBackground() instanceof ColorDrawable) {
             bgColor = ((ColorDrawable) owner.getFragmentView().getBackground()).getColor();
         }
         paint.setColor(bgColor);
         canvas.drawRect(surface, paint);
-        int content = canvas.saveLayerAlpha(surface, (int) (255f * p));
+        int content = -1;
+        if (p < 0.999f) {
+            content = canvas.saveLayerAlpha(surface, (int) (255f * p));
+        }
         canvas.translate(-child.getTranslationX(), -child.getTranslationY());
         boolean result = renderer.draw();
-        canvas.restoreToCount(content);
+        if (content != -1) {
+            canvas.restoreToCount(content);
+        }
         if (sharedHeader) {
             avatarBounds.set(mix(unanchoredReturn ? targetAvatar.left : originAvatar.left, targetAvatar.left, p),
                     mix(unanchoredReturn ? targetAvatar.top : originAvatar.top, targetAvatar.top, p),

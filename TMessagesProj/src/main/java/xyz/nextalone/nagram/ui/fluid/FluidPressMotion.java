@@ -38,7 +38,7 @@ public final class FluidPressMotion {
             @Override public void setValue(FluidPressMotion host, float value) { host.render(value); }
         });
         spring.setSpring(FluidTiming.springForce(FluidCapabilities.motionScale(view.getContext())));
-        spring.setMinimumVisibleChange(FluidTiming.MIN_VISIBLE_CHANGE);
+        spring.setMinimumVisibleChange(0.005f);
         FluidCapabilities.track(view.getContext(), spring);
         view.addOnAttachStateChangeListener(detach);
         view.addOnLayoutChangeListener(layout);
@@ -76,7 +76,8 @@ public final class FluidPressMotion {
         if (!UIStyleEngine.isFluid() || !view.isAttachedToWindow()
                 || !FluidCapabilities.isMotionEnabled(view.getContext())) { spring.cancel(); render(0f); return; }
         if (value > 0f && haptic) com.exteragram.messenger.utils.system.VibratorUtils.vibrateClick(view);
-        spring.getSpring().setStiffness(FluidTiming.stiffness(FluidCapabilities.motionScale(view.getContext())));
+        float baseStiff = value > 0f ? 520f : FluidTiming.stiffness(FluidCapabilities.motionScale(view.getContext()));
+        spring.getSpring().setStiffness(baseStiff);
         spring.animateToFinalPosition(value);
     }
     private void render(float value) {

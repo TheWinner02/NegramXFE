@@ -54,6 +54,9 @@ public interface INavigationLayout {
     boolean isPreviewOpenAnimationInProgress();
     void movePreviewFragment(float dy);
     void expandPreviewFragment();
+    default void expandPreviewInto(BaseFragment fragment) {
+        expandPreviewFragment();
+    }
     void finishPreviewFragment();
     void setFragmentPanTranslationOffset(int offset);
     FrameLayout getOverlayContainerView();

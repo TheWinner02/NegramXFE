@@ -18969,9 +18969,13 @@ public class ChatActivity extends BaseFragment implements
                     }
                     if (pressActionBar || MathUtils.distance(x, y, ev.getX(), ev.getY()) < AndroidUtilities.dp(6) && SystemClock.elapsedRealtime() - pressTime <= ViewConfiguration.getTapTimeout()) {
                         if (pressActionBar) {
-                            final INavigationLayout layout = parentLayout;
-                            removeSelfFromStack(false);
-                            layout.presentFragment(ProfileActivity.of(dialog_id));
+                            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && parentLayout != null && parentLayout.isInPreviewMode()) {
+                                parentLayout.expandPreviewInto(ProfileActivity.of(dialog_id));
+                            } else {
+                                final INavigationLayout layout = parentLayout;
+                                removeSelfFromStack(false);
+                                layout.presentFragment(ProfileActivity.of(dialog_id));
+                            }
                         } else {
                             parentLayout.expandPreviewFragment();
                         }

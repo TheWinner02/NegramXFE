@@ -9097,8 +9097,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             openProfileItem.setTextAndIcon(LocaleController.getString(R.string.OpenProfile), R.drawable.msg_openprofile);
             openProfileItem.setMinimumWidth(160);
             openProfileItem.setOnClickListener(e -> {
-                finishPreviewFragment();
-                AndroidUtilities.runOnUIThread(() -> presentFragment(ProfileActivity.of(dialogId)), 500);
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && parentLayout != null && parentLayout.isInPreviewMode()) {
+                    parentLayout.expandPreviewInto(ProfileActivity.of(dialogId));
+                } else {
+                    finishPreviewFragment();
+                    AndroidUtilities.runOnUIThread(() -> presentFragment(ProfileActivity.of(dialogId)), 500);
+                }
             });
             previewMenu[0].addView(openProfileItem);
         }
@@ -9432,14 +9436,18 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (blurredView == null) {
             return;
         }
-        int w = (int) (fragmentView.getMeasuredWidth() / 9.0f);
-        int h = (int) (fragmentView.getMeasuredHeight() / 9.0f);
+        float downscale = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? 14.0f : 9.0f;
+        int w = (int) (fragmentView.getMeasuredWidth() / downscale);
+        int h = (int) (fragmentView.getMeasuredHeight() / downscale);
+        if (w <= 0 || h <= 0) {
+            return;
+        }
         Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         bitmap.eraseColor(getThemedColor(Theme.key_windowBackgroundWhite));
         Canvas canvas = new Canvas(bitmap);
-        canvas.scale(1.0f / 9.0f, 1.0f / 9.0f);
+        canvas.scale(1.0f / downscale, 1.0f / downscale);
         fragmentView.draw(canvas);
-        Utilities.stackBlurBitmap(bitmap, Math.max(9, Math.max(w, h) / 180));
+        Utilities.stackBlurBitmap(bitmap, Math.max(7, Math.max(w, h) / 120));
         blurredView.setBackground(new BitmapDrawable(bitmap));
         blurredView.setAlpha(0.0f);
         blurredView.setVisibility(View.VISIBLE);

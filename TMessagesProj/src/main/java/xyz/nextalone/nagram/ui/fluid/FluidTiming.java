@@ -7,10 +7,10 @@ import androidx.dynamicanimation.animation.SpringForce;
  * Strictly centralized: no local arbitrary multipliers.
  */
 public final class FluidTiming {
-    public static final float DAMPING_RATIO = 0.82f;
-    public static final float MIN_VISIBLE_CHANGE = 0.001f;
-    private static final float BASE_STIFFNESS = 140f;
-    private static final float TIME_SCALE = 1.65f;
+    public static final float DAMPING_RATIO = 0.86f;
+    public static final float MIN_VISIBLE_CHANGE = 0.002f;
+    private static final float BASE_STIFFNESS = 380f;
+    private static final float TIME_SCALE = 1.0f;
 
     private FluidTiming() {}
 
