@@ -651,25 +651,23 @@ public class ActionBarPopupWindow extends PopupWindow {
                             glassStrokePaint.setColor(xyz.nextalone.nagram.ui.UIStyleEngine.getGlassStrokeColor(isDark));
                             canvas.drawRoundRect(m3ClipRect, cardRad, cardRad, glassStrokePaint);
                         }
-                    } else if (isM3 || isIosGlass) {
+                    } else if (isIosGlass) {
                         m3ClipPath.rewind();
                         m3ClipRect.set(AndroidUtilities.rectTmp2.left + bgPaddings.left, AndroidUtilities.rectTmp2.top + bgPaddings.top, AndroidUtilities.rectTmp2.right - bgPaddings.right, AndroidUtilities.rectTmp2.bottom - bgPaddings.bottom);
-                        float cardRad = isIosGlass ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(18);
+                        float cardRad = xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius();
                         m3ClipPath.addRoundRect(m3ClipRect, cardRad, cardRad, Path.Direction.CW);
                         canvas.save();
                         canvas.clipPath(m3ClipPath);
                         backgroundDrawable.draw(canvas);
                         canvas.restore();
-                        if (isIosGlass) {
-                            if (glassStrokePaint == null) {
-                                glassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-                                glassStrokePaint.setStyle(Paint.Style.STROKE);
-                                glassStrokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.6f));
-                            }
-                            boolean isDark = Theme.isCurrentThemeDark();
-                            glassStrokePaint.setColor(xyz.nextalone.nagram.ui.UIStyleEngine.getGlassStrokeColor(isDark));
-                            canvas.drawRoundRect(m3ClipRect, cardRad, cardRad, glassStrokePaint);
+                        if (glassStrokePaint == null) {
+                            glassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                            glassStrokePaint.setStyle(Paint.Style.STROKE);
+                            glassStrokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.6f));
                         }
+                        boolean isDark = Theme.isCurrentThemeDark();
+                        glassStrokePaint.setColor(xyz.nextalone.nagram.ui.UIStyleEngine.getGlassStrokeColor(isDark));
+                        canvas.drawRoundRect(m3ClipRect, cardRad, cardRad, glassStrokePaint);
                     } else {
                         backgroundDrawable.draw(canvas);
                     }
@@ -1362,8 +1360,8 @@ public class ActionBarPopupWindow extends PopupWindow {
             if (outEmptyTime > 0) {
                 windowAnimatorSet.playTogether(ValueAnimator.ofFloat(0, 1f));
                 windowAnimatorSet.setDuration(outEmptyTime);
-            } else if (scaleOut || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            } else if (scaleOut || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
                     viewGroup.setPivotX(viewGroup.getMeasuredWidth() * 0.5f);
                     viewGroup.setPivotY((content != null && content.shownFromBottom) ? viewGroup.getMeasuredHeight() : 0);
                 }

@@ -996,6 +996,9 @@ public class ActionBarMenuItem extends FrameLayout {
 
     /** Opens or closes the sub menu in the overlay; false when it has none, then the popup window is used. */
     private boolean toggleSubMenuInOverlay() {
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            return false;
+        }
         final MenuOverlayHost host = getSubMenuOverlayHost();
         final SimpleActionBarMenuOverlay overlay = host != null ? getSubMenuOverlay() : null;
         if (overlay == null || popupWindow != null && popupWindow.isShowing()) {
@@ -2282,9 +2285,20 @@ public class ActionBarMenuItem extends FrameLayout {
         updateOrShowPopup(true, true);
     }
 
+    protected View getParentActionBarView() {
+        if (parentMenu != null) {
+            return parentMenu.parentActionBar;
+        }
+        if (this instanceof SimpleActionBarMenuItem) {
+            return ((SimpleActionBarMenuItem) this).getParentMenu().parentBar;
+        }
+        return null;
+    }
+
     private void updateOrShowPopup(boolean show, boolean update) {
         int offsetY;
 
+        View parentBar = getParentActionBarView();
         if (anchor != null) {
             float scaleY = anchor.getScaleY();
             offsetY = -(int) (anchor.getMeasuredHeight() * scaleY - anchor.getTranslationY() / scaleY) + additionalYOffset;
@@ -2303,8 +2317,9 @@ public class ActionBarMenuItem extends FrameLayout {
                     offsetY -= popupLayout.getMeasuredHeight() / 2;
                 }
             }
-        } else if (parentMenu != null) {
-            offsetY = -parentMenu.parentActionBar.getMeasuredHeight() + parentMenu.getTop() + parentMenu.getPaddingTop()/* - (int) parentMenu.parentActionBar.getTranslationY()*/;
+        } else if (parentBar != null) {
+            int top = parentMenu != null ? parentMenu.getTop() + parentMenu.getPaddingTop() : (getParent() instanceof View ? ((View) getParent()).getTop() : 0);
+            offsetY = -parentBar.getMeasuredHeight() + top/* - (int) parentBar.getTranslationY()*/;
         } else {
             float scaleY = getScaleY();
             offsetY = -(int) (getMeasuredHeight() * scaleY - (subMenuOpenSide != 2 ? getTranslationY() : 0) / scaleY) + additionalYOffset;
@@ -2341,15 +2356,16 @@ public class ActionBarMenuItem extends FrameLayout {
                     popupWindow.update(anchor, anchor.getMeasuredWidth() - popupLayout.getMeasuredWidth() + additionalXOffset, offsetY, -1, -1);
                 }
             }
-        } else if (parentMenu != null) {
+        } else if (parentBar != null) {
             View fromView = showSubMenuFrom == null ? this : showSubMenuFrom;
-            View parent = parentMenu.parentActionBar;
+            View parent = parentBar;
+            int menuLeft = parentMenu != null ? parentMenu.getLeft() : (getParent() instanceof View ? ((View) getParent()).getLeft() : 0);
             if (subMenuOpenSide == 0) {
                 if (show) {
-                    popupWindow.showAsDropDown(parent, fromView.getLeft() + parentMenu.getLeft() + fromView.getMeasuredWidth() - popupWindow.getContentView().getMeasuredWidth() + (int) getTranslationX() + xOffset, offsetY);
+                    popupWindow.showAsDropDown(parent, fromView.getLeft() + menuLeft + fromView.getMeasuredWidth() - popupWindow.getContentView().getMeasuredWidth() + (int) getTranslationX() + xOffset, offsetY);
                 }
                 if (update) {
-                    popupWindow.update(parent, fromView.getLeft() + parentMenu.getLeft() + fromView.getMeasuredWidth() - popupWindow.getContentView().getMeasuredWidth() + (int) getTranslationX() + xOffset, offsetY, -1, -1);
+                    popupWindow.update(parent, fromView.getLeft() + menuLeft + fromView.getMeasuredWidth() - popupWindow.getContentView().getMeasuredWidth() + (int) getTranslationX() + xOffset, offsetY, -1, -1);
                 }
             } else {
                 if (show) {
