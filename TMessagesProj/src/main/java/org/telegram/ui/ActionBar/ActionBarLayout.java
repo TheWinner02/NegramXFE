@@ -2472,16 +2472,26 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         containerView.setTranslationX(0);
                         containerView.setTranslationY(0);
 
-                        float scale = 0.5f + interpolated * 0.5f;
-                        containerView.setScaleX(scale);
-                        containerView.setScaleY(scale);
+                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                            containerView.setScaleX(1.0f);
+                            containerView.setScaleY(1.0f);
+                        } else {
+                            float scale = 0.5f + interpolated * 0.5f;
+                            containerView.setScaleX(scale);
+                            containerView.setScaleY(scale);
+                        }
                         containerView.setAlpha(clampedInterpolated);
 
                         if (previewMenu != null) {
                             containerView.setTranslationY(AndroidUtilities.dp(40) * (1f - interpolated));
                             previewMenu.setTranslationY(-AndroidUtilities.dp(40 + 30) * (1f - interpolated));
-                            previewMenu.setScaleX(0.95f + 0.05f * interpolated);
-                            previewMenu.setScaleY(0.95f + 0.05f * interpolated);
+                            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                                previewMenu.setScaleX(1.0f);
+                                previewMenu.setScaleY(1.0f);
+                            } else {
+                                previewMenu.setScaleX(0.95f + 0.05f * interpolated);
+                                previewMenu.setScaleY(0.95f + 0.05f * interpolated);
+                            }
                         }
                         previewBackgroundDrawable.setAlpha((int) (0x2e * clampedInterpolated));
                         Theme.moveUpDrawable.setAlpha((int) (255 * clampedInterpolated));
@@ -2508,9 +2518,14 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         containerViewBack.setTranslationX(0);
                         containerViewBack.setTranslationY(0);
 
-                        float scale = 0.5f + (1f - interpolated) * 0.5f;
-                        containerViewBack.setScaleX(scale);
-                        containerViewBack.setScaleY(scale);
+                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                            containerViewBack.setScaleX(1.0f);
+                            containerViewBack.setScaleY(1.0f);
+                        } else {
+                            float scale = 0.5f + (1f - interpolated) * 0.5f;
+                            containerViewBack.setScaleX(scale);
+                            containerViewBack.setScaleY(scale);
+                        }
                         containerViewBack.setAlpha(clampedReverseInterpolated);
                         previewBackgroundDrawable.setAlpha((int) (0x2e * clampedReverseInterpolated));
                         if (previewMenu == null) {
@@ -2974,8 +2989,13 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         if (preview) {
                             containerView.setAlpha(0.0f);
                             containerView.setTranslationX(0.0f);
-                            containerView.setScaleX(0.5f);
-                            containerView.setScaleY(0.5f);
+                            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                                containerView.setScaleX(1.0f);
+                                containerView.setScaleY(1.0f);
+                            } else {
+                                containerView.setScaleX(0.5f);
+                                containerView.setScaleY(0.5f);
+                            }
                         } else {
                             float widthNoPaddings = getWidth() - getPaddingLeft() - getPaddingRight();
                             containerView.setTranslationX(widthNoPaddings);
@@ -2985,8 +3005,13 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         containerView.setAlpha(0.0f);
                         if (preview) {
                             containerView.setTranslationX(0.0f);
-                            containerView.setScaleX(0.9f);
-                            containerView.setScaleY(0.9f);
+                            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                                containerView.setScaleX(1.0f);
+                                containerView.setScaleY(1.0f);
+                            } else {
+                                containerView.setScaleX(0.9f);
+                                containerView.setScaleY(0.9f);
+                            }
                         } else {
                             containerView.setTranslationX(48.0f);
                             containerView.setScaleX(1.0f);

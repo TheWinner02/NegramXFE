@@ -8729,21 +8729,21 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     if (animated) {
                         writeButtonAnimation = new AnimatorSet();
                         if (writeButtonVisible) {
-                            writeButtonAnimation.setInterpolator(new DecelerateInterpolator());
+                            writeButtonAnimation.setInterpolator(UIStyleEngine.isFluid() ? UIStyleEngine.getBouncyInterpolator() : new DecelerateInterpolator());
                             writeButtonAnimation.playTogether(
                                     ObjectAnimator.ofFloat(writeButton, View.SCALE_X, 1.0f),
                                     ObjectAnimator.ofFloat(writeButton, View.SCALE_Y, 1.0f),
                                     ObjectAnimator.ofFloat(writeButton, View.ALPHA, 1.0f)
                             );
                         } else {
-                            writeButtonAnimation.setInterpolator(new AccelerateInterpolator());
+                            writeButtonAnimation.setInterpolator(UIStyleEngine.isFluid() ? UIStyleEngine.getFluidSpringInterpolator() : new AccelerateInterpolator());
                             writeButtonAnimation.playTogether(
                                     ObjectAnimator.ofFloat(writeButton, View.SCALE_X, 0.2f),
                                     ObjectAnimator.ofFloat(writeButton, View.SCALE_Y, 0.2f),
                                     ObjectAnimator.ofFloat(writeButton, View.ALPHA, 0.0f)
                             );
                         }
-                        writeButtonAnimation.setDuration(150);
+                        writeButtonAnimation.setDuration(UIStyleEngine.isFluid() ? 220 : 150);
                         writeButtonAnimation.addListener(new AnimatorListenerAdapter() {
                             @Override
                             public void onAnimationEnd(Animator animation) {
@@ -10457,7 +10457,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             updateStar();
         }
         final AnimatorSet animatorSet = new AnimatorSet();
-        animatorSet.setDuration(playProfileAnimation == 2 ? 250 : 180);
+        if (UIStyleEngine.isFluid()) {
+            animatorSet.setDuration(playProfileAnimation == 2 ? 300 : 280);
+        } else {
+            animatorSet.setDuration(playProfileAnimation == 2 ? 250 : 180);
+        }
         listView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         ActionBarMenu menu = actionBar.createMenu();
         if (menu.getItem(10) == null) {
@@ -10776,7 +10780,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 fragmentView.invalidate();
             }
         });
-        animatorSet.setInterpolator(playProfileAnimation == 2 ? CubicBezierInterpolator.DEFAULT : new DecelerateInterpolator());
+        if (UIStyleEngine.isFluid()) {
+            animatorSet.setInterpolator(UIStyleEngine.getFluidSpringInterpolator());
+        } else {
+            animatorSet.setInterpolator(playProfileAnimation == 2 ? CubicBezierInterpolator.DEFAULT : new DecelerateInterpolator());
+        }
 
         if (UIStyleEngine.isFluid() && FluidCapabilities.isMotionEnabled(getParentActivity())) {
             AndroidUtilities.runOnUIThread(() -> {

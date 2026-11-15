@@ -2679,7 +2679,11 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 float t = (float) anm.getAnimatedValue();
                 historyCell.setAlpha(t);
                 historyCell.setTranslationY(-historyCell.getHeight() / 2f * (1f - t));
-                historyCell.setScaleY(.2f + .8f * t);
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                    historyCell.setScaleY(1.0f);
+                } else {
+                    historyCell.setScaleY(.2f + .8f * t);
+                }
                 for (int i = 0; i < nextViews.size(); ++i) {
                     nextViews.get(i).setTranslationY(-historyCell.getHeight() * (1f - t));
                 }
@@ -2693,13 +2697,22 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                     }
                 }
             });
-            updateHistoryShowAnimator.setDuration(320);
-            updateHistoryShowAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                updateHistoryShowAnimator.setDuration(280);
+                updateHistoryShowAnimator.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator());
+            } else {
+                updateHistoryShowAnimator.setDuration(320);
+                updateHistoryShowAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            }
             updateHistoryShowAnimator.start();
         } else {
             historyCell.setAlpha(show ? 1f : 0f);
             historyCell.setTranslationY(-historyCell.getHeight() / 2f * (show ? 0 : 1f));
-            historyCell.setScaleY(.2f + .8f * (show ? 1f : 0f));
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                historyCell.setScaleY(1.0f);
+            } else {
+                historyCell.setScaleY(.2f + .8f * (show ? 1f : 0f));
+            }
             historyCell.setVisibility(finalShow ? View.VISIBLE : View.GONE);
             for (int i = 0; i < nextViews.size(); ++i) {
                 nextViews.get(i).setTranslationY(0);

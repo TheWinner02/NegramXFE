@@ -559,8 +559,13 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
                             }
                         }
                     });
-                    translateAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
-                    translateAnimator.setDuration(350);
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                        translateAnimator.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator());
+                        translateAnimator.setDuration(280);
+                    } else {
+                        translateAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                        translateAnimator.setDuration(350);
+                    }
                     translateAnimator.start();
                 }
                 prevHeight = getHeight();
