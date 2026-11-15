@@ -19,6 +19,7 @@ import androidx.core.graphics.ColorUtils;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Components.LayoutHelper;
 import xyz.nextalone.nagram.ui.M3ColorRoles;
 
@@ -30,7 +31,7 @@ public class TextInfoCell extends FrameLayout {
         super(context);
 
         textView = new TextView(context);
-        textView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteGrayText5));
+        ThemeBind.textColor(textView, Theme.key_windowBackgroundWhiteGrayText5);
         textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
         textView.setGravity(Gravity.CENTER);
         textView.setPadding(0, AndroidUtilities.dp(19), 0, AndroidUtilities.dp(19));

@@ -24,6 +24,7 @@ import androidx.core.view.ViewCompat;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.ActionBar.ThemeDescription;
 import org.telegram.ui.Components.AnimatedEmojiSpan;
 import org.telegram.ui.Components.AnimatedTextView;
@@ -33,6 +34,7 @@ import org.telegram.ui.Components.RecyclerListView;
 import xyz.nextalone.nagram.ui.M3ColorRoles;
 
 import java.util.List;
+import java.util.HashSet;
 
 public class GraySectionCell extends FrameLayout implements Theme.Colorable {
 
@@ -59,12 +61,16 @@ public class GraySectionCell extends FrameLayout implements Theme.Colorable {
             layerHeight = Math.max(layerHeight, 36);
         }
 
-        setBackgroundColor(m3Expressive ? 0 : getThemedColor(Theme.key_graySection));
+        if (m3Expressive) {
+            setBackgroundColor(0);
+        } else {
+            ThemeBind.backgroundColor(this, Theme.key_graySection, resourcesProvider);
+        }
 
         textView = new AnimatedEmojiSpan.TextViewEmojis(getContext());
         textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         textView.setTypeface(AndroidUtilities.bold());
-        textView.setTextColor(getThemedColor(Theme.key_graySectionText));
+        ThemeBind.textColor(textView, Theme.key_graySectionText, resourcesProvider);
         textView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
         addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, padding, 0, padding, 0));
 
@@ -77,7 +83,7 @@ public class GraySectionCell extends FrameLayout implements Theme.Colorable {
         rightTextView.setPadding(dp(2), 0, dp(2), 0);
         rightTextView.setAnimationProperties(.9f, 0, 420, CubicBezierInterpolator.EASE_OUT_QUINT);
         rightTextView.setTextSize(dp(14));
-        rightTextView.setTextColor(getThemedColor(Theme.key_graySectionText));
+        ThemeBind.textColor(rightTextView, Theme.key_graySectionText, resourcesProvider);
         rightTextView.setGravity(LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT);
         addView(rightTextView, rightTextViewLayoutParams = LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.TOP, padding, 0, padding, 0));
 
@@ -110,9 +116,8 @@ public class GraySectionCell extends FrameLayout implements Theme.Colorable {
     }
 
     public void setTextColor(int key) {
-        int color = getThemedColor(key);
-        textView.setTextColor(color);
-        rightTextView.setTextColor(color);
+        ThemeBind.textColor(textView, key, resourcesProvider);
+        ThemeBind.textColor(rightTextView, key, resourcesProvider);
     }
 
     public CharSequence getText() {
@@ -160,9 +165,6 @@ public class GraySectionCell extends FrameLayout implements Theme.Colorable {
     }
 
     public static void createThemeDescriptions(List<ThemeDescription> descriptions, RecyclerListView listView) {
-        descriptions.add(new ThemeDescription(listView, 0, new Class[]{GraySectionCell.class}, new String[]{"textView"}, null, null, null, Theme.key_graySectionText));
-        descriptions.add(new ThemeDescription(listView, 0, new Class[]{GraySectionCell.class}, new String[]{"rightTextView"}, null, null, null, Theme.key_graySectionText));
-        descriptions.add(new ThemeDescription(listView, ThemeDescription.FLAG_CELLBACKGROUNDCOLOR, new Class[]{GraySectionCell.class}, null, null, null, Theme.key_graySection));
     }
 
     public TextView getTextView() {

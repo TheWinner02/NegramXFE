@@ -20,6 +20,7 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AnimatedFloat;
 import org.telegram.ui.Components.ChatActivityEnterView;
 import org.telegram.ui.Components.CubicBezierInterpolator;
@@ -31,7 +32,7 @@ import org.telegram.ui.Components.inset.WindowInsetsProvider;
 
 import xyz.nextalone.nagram.ui.UIStyleEngine;
 
-public class ChatInputViewsContainer extends FrameLayout {
+public class ChatInputViewsContainer extends FrameLayout implements Theme.Colorable {
     public static final int INPUT_BUBBLE_RADIUS = 22;
     public static final int INPUT_KEYBOARD_RADIUS = 29;
 
@@ -141,6 +142,8 @@ public class ChatInputViewsContainer extends FrameLayout {
         underKeyboardBackgroundDrawable.setIntensity(0.4f);
     }
 
+    /** also called on every theme update (Theme.Colorable) */
+    @Override
     public void updateColors() {
         if (blurredBackgroundDrawable != null) {
             blurredBackgroundDrawable.updateColors();

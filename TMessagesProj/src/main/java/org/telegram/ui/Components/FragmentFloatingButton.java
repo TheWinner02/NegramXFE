@@ -8,6 +8,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -23,7 +24,7 @@ import org.telegram.messenger.utils.ViewOutlineProviderImpl;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProviderThemed;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
+import org.telegram.utils.glass.source.GlassSourceColor;
 
 import java.util.ArrayList;
 
@@ -31,7 +32,7 @@ import me.vkryl.android.animator.BoolAnimator;
 import me.vkryl.android.animator.FactorAnimator;
 
 @SuppressLint("ViewConstructor")
-public class FragmentFloatingButton extends FrameLayout implements FactorAnimator.Target {
+public class FragmentFloatingButton extends FrameLayout implements FactorAnimator.Target, Theme.Colorable {
     private static final java.util.Set<FragmentFloatingButton> activeButtons = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
     public static void notifyShapeChanged() {
@@ -112,8 +113,8 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                     return isDark() ? 0x04FFFFFF : 0x20000000;
                 }
             };
-            iBlur3SourceColor = new BlurredBackgroundSourceColor();
-            iBlur3Background = iBlur3SourceColor.createDrawable();
+            iBlur3SourceColor = new GlassSourceColor();
+            iBlur3Background = new BlurredBackgroundDrawable(iBlur3SourceColor);
             iBlur3Background.setColorProvider(iBlur3ColorProviderTabs);
             iBlur3Background.setStrokeWidth(dpf2(0.4f), dpf2(0.4f));
             iBlur3Background.setRadius(dp(18));
@@ -164,54 +165,106 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         imageView.setImageResource(drawable);
     }
 
-    private BlurredBackgroundSourceColor iBlur3SourceColor;
+    private GlassSourceColor iBlur3SourceColor;
     private BlurredBackgroundDrawable iBlur3Background;
     private BlurredBackgroundColorProviderThemed iBlur3ColorProviderTabs;
 
+    private Drawable themedBackground;
+    private int themedIconColor;
+    private boolean themedIconColorSet;
+    private int themedBackgroundColor, themedBackgroundPressedColor;
+
+    @Override
     public void updateColors() {
+        if (imageView == null || progressView == null) {
+            return;
+        }
+        final boolean recolorBackground = themedBackground != null && getBackground() == themedBackground;
         if (isSubButton) {
-            imageView.setColorFilter(Theme.getColor(Theme.key_actionBarDefaultIcon, resourcesProvider), PorterDuff.Mode.SRC_IN);
+            final int iconColor = Theme.getColor(Theme.key_actionBarDefaultIcon, resourcesProvider);
+            if (iconColor != themedIconColor || !themedIconColorSet) {
+                themedIconColor = iconColor;
+                themedIconColorSet = true;
+                imageView.setColorFilter(iconColor, PorterDuff.Mode.SRC_IN);
+            }
             progressView.setProgressColor(Theme.getColor(Theme.key_actionBarDefaultIcon, resourcesProvider));
 
-            iBlur3SourceColor.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-            iBlur3ColorProviderTabs.updateColors();
-            iBlur3Background.updateColors();
+            if (iBlur3SourceColor != null) {
+                iBlur3SourceColor.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+            }
+            if (iBlur3ColorProviderTabs != null) {
+                iBlur3ColorProviderTabs.updateColors();
+            }
+            if (iBlur3Background != null) {
+                iBlur3Background.updateColors();
+            }
             invalidate();
 
             int rad = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(12) : dp(18);
             int pressedColor = Theme.getColor(Theme.key_listSelector, resourcesProvider);
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                setBackground(new M3ExpressiveButtonDrawable(0, pressedColor, rad, dp(6)));
+                setBackground(themedBackground = new M3ExpressiveButtonDrawable(0, themedBackgroundPressedColor = pressedColor, rad, dp(6)));
+            } else if (recolorBackground) {
+                if (pressedColor != themedBackgroundPressedColor) {
+                    themedBackgroundPressedColor = pressedColor;
+                    Theme.setSelectorDrawableColor(themedBackground, pressedColor, true);
+                }
             } else {
-                setBackground(Theme.createInsetRoundRectDrawable(pressedColor, rad, dp(6)));
+                setBackground(themedBackground = Theme.createInsetRoundRectDrawable(themedBackgroundPressedColor = pressedColor, rad, dp(6)));
             }
         } else {
-            imageView.setColorFilter(Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider), PorterDuff.Mode.SRC_IN);
+            final int iconColor = Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider);
+            if (iconColor != themedIconColor || !themedIconColorSet) {
+                themedIconColor = iconColor;
+                themedIconColorSet = true;
+                imageView.setColorFilter(iconColor, PorterDuff.Mode.SRC_IN);
+            }
             progressView.setProgressColor(Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider));
             boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
             boolean isSquare = isM3 || xyz.nextalone.nagram.NaConfig.INSTANCE.getSquareFloatingButton().Bool();
+            final int color = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
+            final int pressedColor = Theme.getColor(Theme.key_featuredStickers_addButtonPressed, resourcesProvider);
             if (isM3) {
                 int radius = dp(16);
                 setOutlineProvider(ViewOutlineProviderImpl.boundsWithPaddingRoundRect(0, radius));
-                setBackground(new M3ExpressiveButtonDrawable(
-                    Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider),
-                    Theme.multAlpha(Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider), 0.20f),
+                setBackground(themedBackground = new M3ExpressiveButtonDrawable(
+                    themedBackgroundColor = color,
+                    themedBackgroundPressedColor = Theme.multAlpha(Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider), 0.20f),
                     radius,
                     0
                 ));
             } else if (isSquare) {
                 int radius = dp(16);
                 setOutlineProvider(ViewOutlineProviderImpl.boundsWithPaddingRoundRect(0, radius));
-                setBackground(Theme.createSimpleSelectorRoundRectDrawable(radius,
-                    Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider),
-                    Theme.getColor(Theme.key_featuredStickers_addButtonPressed, resourcesProvider)
-                ));
+                if (recolorBackground) {
+                    if (color != themedBackgroundColor || pressedColor != themedBackgroundPressedColor) {
+                        themedBackgroundColor = color;
+                        themedBackgroundPressedColor = pressedColor;
+                        Theme.setSelectorDrawableColor(themedBackground, color, false);
+                        Theme.setSelectorDrawableColor(themedBackground, pressedColor, true);
+                        themedBackground.invalidateSelf();
+                    }
+                } else {
+                    themedBackgroundColor = color;
+                    themedBackgroundPressedColor = pressedColor;
+                    setBackground(themedBackground = Theme.createSimpleSelectorRoundRectDrawable(radius, color, pressedColor));
+                }
             } else {
                 setOutlineProvider(ViewOutlineProviderImpl.BOUNDS_OVAL);
-                setBackground(Theme.createSimpleSelectorCircleDrawable(dp(48),
-                    Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider),
-                    Theme.getColor(Theme.key_featuredStickers_addButtonPressed, resourcesProvider)
-                ));
+                if (recolorBackground) {
+                    if (color != themedBackgroundColor || pressedColor != themedBackgroundPressedColor) {
+                        themedBackgroundColor = color;
+                        themedBackgroundPressedColor = pressedColor;
+                        Theme.setSelectorDrawableColor(themedBackground, color, false);
+                        Theme.setSelectorDrawableColor(themedBackground, pressedColor, true);
+                        themedBackground.invalidateSelf();
+                    }
+                } else {
+                    themedBackgroundColor = color;
+                    themedBackgroundPressedColor = pressedColor;
+                    setBackground(themedBackground = Theme.createSimpleSelectorCircleDrawable(dp(48), color, pressedColor));
+                }
+            }
             }
         }
     }

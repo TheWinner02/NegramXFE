@@ -20,6 +20,7 @@ import org.telegram.messenger.SharedConfig;
 import org.telegram.ui.ActionBar.Theme;
 
 import java.util.Random;
+import java.util.HashSet;
 
 import xyz.nextalone.nagram.ui.UIStyleEngine;
 
@@ -980,6 +981,11 @@ public class FlickerLoadingView extends View implements Theme.Colorable {
             }
             paint.setShader(gradient);
         }
+    }
+    @Override
+    public void addColorKeys(HashSet<Integer> colors) {
+        colors.add(colorKey1);
+        colors.add(colorKey2);
     }
 
     private float checkRtl(float x) {

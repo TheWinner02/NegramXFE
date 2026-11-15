@@ -68,6 +68,8 @@ if (nativeTarget == 'SKIP') {
         }
     }
 }
+    }
+}
 
 android {
     defaultConfig.applicationId = APP_PACKAGE
@@ -80,6 +82,11 @@ android {
         jniLibs {
             useLegacyPackaging = true
         }
+    }
+
+    // IWidgetEngine: the widget engine's isolated process (WidgetEngineService).
+    buildFeatures {
+        aidl true
     }
 
     splits {
@@ -123,6 +130,7 @@ android {
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-27', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+                targets 'tmessages.49', 'twidget'
                 System.getenv('PATH').split(File.pathSeparator).any { path ->
                     var file = Paths.get("${path}${File.separator}ccache${if (OperatingSystem.current().windows) ".exe" else ""}").toFile()
                     if (file.exists()) {
@@ -243,6 +251,8 @@ dependencies {
     compileOnly libs.checker.qual
     compileOnly libs.checker.compat.qual
     implementation libs.firebase.messaging
+    api platform('com.google.firebase:firebase-bom:34.19.0')
+    implementation "com.google.firebase:firebase-pnv"
     implementation libs.firebase.crashlytics
     implementation libs.play.services.cast.framework
     implementation libs.play.services.maps
