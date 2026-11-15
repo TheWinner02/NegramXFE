@@ -2086,17 +2086,23 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         if (predictiveBackPreview) {
             predictiveBackHasProgress = t > 0;
             float interpolated = CubicBezierInterpolator.StandardDecelerate.getInterpolation(t);
-            float downY = AndroidUtilities.dp(32) * interpolated;
+            float downY = AndroidUtilities.dp(24) * interpolated;
             float alpha = 1.0f - interpolated * 0.25f;
             float scale = 1.0f - interpolated * 0.08f;
             if (containerView != null) {
+                View card = (fragmentsStack.isEmpty()) ? null : fragmentsStack.get(fragmentsStack.size() - 1).fragmentView;
+                float pivotY = card != null && card.getHeight() > 0 ? (card.getY() + card.getHeight() / 2f) : (containerView.getHeight() / 2f);
+                containerView.setPivotX(containerView.getWidth() / 2f);
+                containerView.setPivotY(pivotY);
                 containerView.setTranslationY(downY);
                 containerView.setAlpha(alpha);
                 containerView.setScaleX(scale);
                 containerView.setScaleY(scale);
             }
             if (previewMenu != null) {
-                previewMenu.setTranslationY(-AndroidUtilities.dp(36 + 20) * interpolated);
+                previewMenu.setPivotX(previewMenu.getWidth() / 2f);
+                previewMenu.setPivotY(0);
+                previewMenu.setTranslationY(AndroidUtilities.dp(12) * interpolated);
                 previewMenu.setAlpha(alpha);
                 previewMenu.setScaleX(scale);
                 previewMenu.setScaleY(scale);
@@ -2725,15 +2731,26 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     containerView.setAlpha(clampedInterpolated);
                     if (preview) {
                         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                            float scale = 0.85f + 0.15f * interpolated;
+                            View card = (newFragment != null && newFragment.fragmentView != null) ? newFragment.fragmentView : ((fragmentsStack.isEmpty()) ? null : fragmentsStack.get(fragmentsStack.size() - 1).fragmentView);
+                            if (card == null && containerView.getChildCount() > 0) {
+                                card = containerView.getChildAt(0);
+                            }
+                            float pivotY = card != null && card.getHeight() > 0 ? (card.getY() + card.getHeight() / 2f) : (containerView.getHeight() / 2f);
+                            containerView.setPivotX(containerView.getWidth() / 2f);
+                            containerView.setPivotY(pivotY);
+
+                            float scale = 0.90f + 0.10f * interpolated;
                             containerView.setScaleX(scale);
                             containerView.setScaleY(scale);
-                            containerView.setTranslationY(dp(32) * (1f - interpolated));
+                            containerView.setTranslationY(dp(24) * (1f - interpolated));
                             if (previewMenu != null) {
-                                previewMenu.setTranslationY(-dp(36 + 20) * (1f - interpolated));
-                                float menuScale = 0.90f + 0.10f * interpolated;
+                                previewMenu.setPivotX(previewMenu.getWidth() / 2f);
+                                previewMenu.setPivotY(0);
+                                float menuScale = 0.94f + 0.06f * interpolated;
                                 previewMenu.setScaleX(menuScale);
                                 previewMenu.setScaleY(menuScale);
+                                previewMenu.setTranslationY(dp(12) * (1f - interpolated));
+                                previewMenu.setAlpha(clampedInterpolated);
                             }
                         } else {
                             containerView.setScaleX(0.7f + 0.3f * interpolated);
@@ -2757,15 +2774,26 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     containerViewBack.setAlpha(clampedReverseInterpolated);
                     if (preview) {
                         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                            float scale = 0.85f + 0.15f * clampedReverseInterpolated;
+                            View card = (oldFragment != null && oldFragment.fragmentView != null) ? oldFragment.fragmentView : ((fragmentsStack.isEmpty()) ? null : fragmentsStack.get(fragmentsStack.size() - 1).fragmentView);
+                            if (card == null && containerViewBack.getChildCount() > 0) {
+                                card = containerViewBack.getChildAt(0);
+                            }
+                            float pivotY = card != null && card.getHeight() > 0 ? (card.getY() + card.getHeight() / 2f) : (containerViewBack.getHeight() / 2f);
+                            containerViewBack.setPivotX(containerViewBack.getWidth() / 2f);
+                            containerViewBack.setPivotY(pivotY);
+
+                            float scale = 0.90f + 0.10f * clampedReverseInterpolated;
                             containerViewBack.setScaleX(scale);
                             containerViewBack.setScaleY(scale);
-                            containerViewBack.setTranslationY(dp(32) * (1f - clampedReverseInterpolated));
+                            containerViewBack.setTranslationY(dp(24) * (1f - clampedReverseInterpolated));
                             if (previewMenu != null) {
-                                previewMenu.setTranslationY(-dp(36 + 20) * (1f - clampedReverseInterpolated));
-                                float menuScale = 0.90f + 0.10f * clampedReverseInterpolated;
+                                previewMenu.setPivotX(previewMenu.getWidth() / 2f);
+                                previewMenu.setPivotY(0);
+                                float menuScale = 0.94f + 0.06f * clampedReverseInterpolated;
                                 previewMenu.setScaleX(menuScale);
                                 previewMenu.setScaleY(menuScale);
+                                previewMenu.setTranslationY(dp(12) * (1f - clampedReverseInterpolated));
+                                previewMenu.setAlpha(clampedReverseInterpolated);
                             }
                         } else {
                             containerViewBack.setScaleX(0.9f + 0.1f * (1.0f - interpolated));
@@ -2978,8 +3006,12 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
                         @Override
                         public void getOutline(View view, Outline outline) {
-                            final float rTop = dp(29);
-                            final float rBottom = dp(12);
+                            final float rTop = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()
+                                    ? xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius()
+                                    : dp(29);
+                            final float rBottom = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()
+                                    ? dp(16)
+                                    : dp(12);
                             final float[] radii = new float[] {
                                 rTop, rTop, rTop, rTop,
                                 rBottom, rBottom, rBottom, rBottom
@@ -2995,16 +3027,23 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         }
                     });
                 } else {
-                    fragmentView.setOutlineProvider(ViewOutlineProviderImpl.boundsWithPaddingRoundRect(0, dp(29)));
+                    float r = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()
+                            ? xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius()
+                            : dp(29);
+                    fragmentView.setOutlineProvider(ViewOutlineProviderImpl.boundsWithPaddingRoundRect(0, (int) r));
                 }
             } else {
-                fragmentView.setOutlineProvider(ViewOutlineProviderImpl.boundsWithPaddingRoundRect(0, dp(menu == null ? 24 : 12)));
+                float r = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()
+                        ? xyz.nextalone.nagram.ui.UIStyleEngine.getDialogCornerRadius()
+                        : dp(menu == null ? 24 : 12);
+                fragmentView.setOutlineProvider(ViewOutlineProviderImpl.boundsWithPaddingRoundRect(0, (int) r));
             }
             fragmentView.setClipToOutline(true);
-            fragmentView.setElevation(dp(4));
+            fragmentView.setElevation(dp(xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? 8 : 4));
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                 fragmentView.setOutlineSpotShadowColor(0xB0000000);
-                 fragmentView.setOutlineAmbientShadowColor(0xB0000000);
+                 int shadowColor = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? 0x66000000 : 0xB0000000;
+                 fragmentView.setOutlineSpotShadowColor(shadowColor);
+                 fragmentView.setOutlineAmbientShadowColor(shadowColor);
             }
             if (previewBackgroundDrawable == null) {
                 previewBackgroundDrawable = new ColorDrawable(0x2e000000);
@@ -3118,9 +3157,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                             containerView.setAlpha(0.0f);
                             containerView.setTranslationX(0.0f);
                             if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                                containerView.setScaleX(0.85f);
-                                containerView.setScaleY(0.85f);
-                                containerView.setTranslationY(dp(32));
+                                containerView.setScaleX(0.90f);
+                                containerView.setScaleY(0.90f);
+                                containerView.setTranslationY(dp(24));
                             } else {
                                 containerView.setScaleX(0.5f);
                                 containerView.setScaleY(0.5f);
@@ -3135,9 +3174,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         if (preview) {
                             containerView.setTranslationX(0.0f);
                             if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                                containerView.setScaleX(0.85f);
-                                containerView.setScaleY(0.85f);
-                                containerView.setTranslationY(dp(32));
+                                containerView.setScaleX(0.90f);
+                                containerView.setScaleY(0.90f);
+                                containerView.setTranslationY(dp(24));
                             } else {
                                 containerView.setScaleX(0.9f);
                                 containerView.setScaleY(0.9f);
