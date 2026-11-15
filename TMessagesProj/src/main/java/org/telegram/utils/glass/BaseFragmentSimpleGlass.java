@@ -20,6 +20,7 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.SectionsScrollView;
+import org.telegram.ui.Components.SiblingRecyclerPagerLayout;
 import org.telegram.ui.Components.ViewPagerFixed;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.BlurredBackgroundWithFadeDrawable;
@@ -219,10 +220,12 @@ public class BaseFragmentSimpleGlass {
         setupHeader(contentView, actionBar, resourceProvider);
 
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-            if (actionBar instanceof SimpleActionBar) {
-                ((SimpleActionBar) actionBar).setAdaptiveBackground(listView);
-            } else if (actionBar instanceof ActionBar) {
-                ((ActionBar) actionBar).setAdaptiveBackground(listView);
+            if (!(contentView instanceof SiblingRecyclerPagerLayout)) {
+                if (actionBar instanceof SimpleActionBar) {
+                    ((SimpleActionBar) actionBar).setAdaptiveBackground(listView);
+                } else if (actionBar instanceof ActionBar) {
+                    ((ActionBar) actionBar).setAdaptiveBackground(listView);
+                }
             }
         }
 
@@ -244,10 +247,12 @@ public class BaseFragmentSimpleGlass {
         setupHeader(contentView, actionBar, resourceProvider);
 
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-            if (actionBar instanceof SimpleActionBar) {
-                ((SimpleActionBar) actionBar).setAdaptiveBackground(listView);
-            } else if (actionBar instanceof ActionBar) {
-                ((ActionBar) actionBar).setAdaptiveBackground(listView);
+            if (!(contentView instanceof SiblingRecyclerPagerLayout)) {
+                if (actionBar instanceof SimpleActionBar) {
+                    ((SimpleActionBar) actionBar).setAdaptiveBackground(listView);
+                } else if (actionBar instanceof ActionBar) {
+                    ((ActionBar) actionBar).setAdaptiveBackground(listView);
+                }
             }
         }
     }
@@ -278,7 +283,9 @@ public class BaseFragmentSimpleGlass {
         if (header instanceof SimpleActionBar) {
             final SimpleActionBar simpleActionBar = (SimpleActionBar) header;
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                simpleActionBar.setM3LargeFlexible(true);
+                if (!(contentView instanceof SiblingRecyclerPagerLayout)) {
+                    simpleActionBar.setM3LargeFlexible(true);
+                }
             } else {
                 simpleActionBar.setExtraHeight(dp(6));
                 simpleActionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
@@ -288,7 +295,9 @@ public class BaseFragmentSimpleGlass {
         } else if (header instanceof ActionBar) {
             final ActionBar actionBar = (ActionBar) header;
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                actionBar.setM3LargeFlexible(true);
+                if (!(contentView instanceof SiblingRecyclerPagerLayout)) {
+                    actionBar.setM3LargeFlexible(true);
+                }
             } else {
                 actionBar.setAddToContainer(false);
                 actionBar.setCenterTitleAndGlass(true);

@@ -1448,6 +1448,9 @@ public class CacheControlActivity extends BaseFragment implements NotificationCe
 
         actionBarShownAnimator = new BoolAnimator(0, (id, factor, fraction, callee) -> {
             simpleActionBar.setTitlesAlpha(factor);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                simpleActionBar.setBackgroundColor(Theme.multAlpha(getThemedColor(Theme.key_windowBackgroundGray), factor));
+            }
             updateListTopOverlayTranslation();
             fragmentView.invalidate();
         }, CubicBezierInterpolator.EASE_OUT_QUINT, 380);
@@ -1466,7 +1469,11 @@ public class CacheControlActivity extends BaseFragment implements NotificationCe
         getBaseSimpleGlass().setCapture((canvas, position) ->
                 scrollCoordinator.captureScrollingContent(canvas, position, listCapture));
 
-        listTopOverlay.setBackground(getBaseSimpleGlass().createActionBarFadeDrawable(listTopOverlay));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            listTopOverlay.setVisibility(View.GONE);
+        } else {
+            listTopOverlay.setBackground(getBaseSimpleGlass().createActionBarFadeDrawable(listTopOverlay));
+        }
         simpleActionBar.setBackground(null);
 
         setListViewParams(contentInsetTop, contentInsetBottom);
@@ -1495,11 +1502,15 @@ public class CacheControlActivity extends BaseFragment implements NotificationCe
             }
         };
         tabsContainer = cachedMediaLayout.takeTabsContainer();
-        tabsContainer.setBackground(getBaseSimpleGlass().factory
-                .create(tabsContainer)
-                .setColorProvider(BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider))
-                .setPadding(dp(9.66f))
-                .setRadius(dp(18)));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            tabsContainer.setBackground(Theme.createRoundRectDrawable(dp(18), getThemedColor(Theme.key_windowBackgroundWhite)));
+        } else {
+            tabsContainer.setBackground(getBaseSimpleGlass().factory
+                    .create(tabsContainer)
+                    .setColorProvider(BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider))
+                    .setPadding(dp(9.66f))
+                    .setRadius(dp(18)));
+        }
         scrollCoordinator.setPager(cachedMediaLayout, cachedMediaLayout.getViewPager(), cachedMediaLayout::getPageListView);
         scrollCoordinator.setTabs(tabsContainer, LayoutHelper.WRAP_CONTENT);
         tabsContainer.setLayoutParams(LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT,
@@ -2670,6 +2681,7 @@ public class CacheControlActivity extends BaseFragment implements NotificationCe
                     break;
                 case VIEW_TYPE_CLEAR_CACHE_BUTTON:
                     view = clearCacheButton = new ClearCacheButtonInternal(mContext);
+                    view.setTag(RecyclerListView.TAG_NOT_SECTION);
                     break;
                 case VIEW_TYPE_MAX_CACHE_SIZE:
                     SlideChooseView slideChooseView2 = new SlideChooseView(mContext);
