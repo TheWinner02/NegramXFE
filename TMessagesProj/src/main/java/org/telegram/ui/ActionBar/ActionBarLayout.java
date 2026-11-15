@@ -277,7 +277,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             if (lastSheet != null && lastSheet.isFullyVisible() && lastSheet.getWindowView() != child) {
                 return true;
             }
-            if (child instanceof ActionBar) {
+            if (child instanceof ActionBar || child instanceof SimpleActionBar) {
                 return super.drawChild(canvas, child, drawingTime);
             } else {
                 int actionBarHeight = 0;
@@ -289,18 +289,20 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     if (view == child) {
                         continue;
                     }
-                    if (view instanceof ActionBar && view.getVisibility() == VISIBLE) {
-                        final ActionBar actionBar = (ActionBar) view;
-                        if (actionBar.getCastShadows() && actionBar.getShadowAlpha() > 0) {
-                            actionBarHeight = view.getMeasuredHeight();
-                            actionBarY = (int) view.getY();
-                            actionBarShadowAlpha = actionBar.getShadowAlpha();
+                    if ((view instanceof ActionBar || view instanceof SimpleActionBar) && view.getVisibility() == VISIBLE) {
+                        if (view instanceof ActionBar) {
+                            final ActionBar actionBar = (ActionBar) view;
+                            if (actionBar.getCastShadows() && actionBar.getShadowAlpha() > 0) {
+                                actionBarHeight = view.getMeasuredHeight();
+                                actionBarY = (int) view.getY();
+                                actionBarShadowAlpha = actionBar.getShadowAlpha();
+                            }
                         }
                         break;
                     }
                 }
                 boolean result = super.drawChild(canvas, child, drawingTime);
-                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && actionBarHeight != 0 && headerShadowDrawable != null) {
+                if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && !xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && actionBarHeight != 0 && headerShadowDrawable != null) {
                     int wasAlpha = headerShadowDrawable.getAlpha();
                     headerShadowDrawable.setBounds(0, actionBarY + actionBarHeight, getMeasuredWidth(), actionBarY + actionBarHeight + headerShadowDrawable.getIntrinsicHeight());
                     headerShadowDrawable.setAlpha(actionBarShadowAlpha);
@@ -425,9 +427,14 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             setupSubSettingsGlass(view);
 
             int abHeight = actionBarHeight;
-            if (abHeight <= 0 && fragment != null && fragment.getActionBar() != null) {
-                ActionBar bar = fragment.getActionBar();
-                abHeight = (bar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight();
+            if (abHeight <= 0 && fragment != null) {
+                if (fragment.getActionBar() != null) {
+                    ActionBar bar = fragment.getActionBar();
+                    abHeight = (bar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight();
+                } else if (fragment.getSimpleActionBar() != null) {
+                    SimpleActionBar bar = fragment.getSimpleActionBar();
+                    abHeight = (bar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight();
+                }
             }
             if (abHeight <= 0) return;
 
@@ -674,22 +681,24 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
             for (int a = 0; a < count; a++) {
                 View child = getChildAt(a);
-                if (child instanceof ActionBar) {
+                if (child instanceof ActionBar || child instanceof SimpleActionBar) {
                     child.measure(
                         MeasureSpec.makeMeasureSpec(width - getPaddingLeft() - getPaddingRight(), MeasureSpec.EXACTLY),
                         MeasureSpec.makeMeasureSpec(height, MeasureSpec.UNSPECIFIED));
                     actionBarHeight = child.getMeasuredHeight();
-                    ActionBar ab = (ActionBar) child;
-                    if (ab.isM3LargeFlexible()) {
-                        isM3Flexible = true;
-                        m3ActionBar = ab;
+                    if (child instanceof ActionBar) {
+                        ActionBar ab = (ActionBar) child;
+                        if (ab.isM3LargeFlexible()) {
+                            isM3Flexible = true;
+                            m3ActionBar = ab;
+                        }
                     }
                     break;
                 }
             }
             for (int a = 0; a < count; a++) {
                 View child = getChildAt(a);
-                if (!(child instanceof ActionBar)) {
+                if (!(child instanceof ActionBar || child instanceof SimpleActionBar)) {
                     if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && actionBarHeight > 0) {
                         applyLiquidGlassPadding(child, actionBarHeight);
                     }
@@ -721,12 +730,14 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             ActionBar m3ActionBar = null;
             for (int a = 0; a < count; a++) {
                 View child = getChildAt(a);
-                if (child instanceof ActionBar) {
+                if (child instanceof ActionBar || child instanceof SimpleActionBar) {
                     actionBarHeight = child.getMeasuredHeight();
-                    ActionBar ab = (ActionBar) child;
-                    if (ab.isM3LargeFlexible()) {
-                        isM3Flexible = true;
-                        m3ActionBar = ab;
+                    if (child instanceof ActionBar) {
+                        ActionBar ab = (ActionBar) child;
+                        if (ab.isM3LargeFlexible()) {
+                            isM3Flexible = true;
+                            m3ActionBar = ab;
+                        }
                     }
                     child.layout(paddingLeft, 0, paddingLeft + child.getMeasuredWidth(), actionBarHeight);
                     break;
@@ -734,7 +745,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             }
             for (int a = 0; a < count; a++) {
                 View child = getChildAt(a);
-                if (!(child instanceof ActionBar)) {
+                if (!(child instanceof ActionBar || child instanceof SimpleActionBar)) {
                     FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) child.getLayoutParams();
                     if (child.getTag(R.id.sheet_attached_to_fragment_tag) != null || child.getFitsSystemWindows() || child instanceof BaseFragment.AttachedSheetWindow || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() || isM3Flexible) {
                         child.layout(

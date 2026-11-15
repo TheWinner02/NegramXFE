@@ -84,6 +84,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
     private BlurredBackgroundDrawable glassBack;
     private BlurredBackgroundDrawable glassMenu;
     private BlurredBackgroundDrawable glassDone;
+    private BlurredBackgroundDrawable glassTitle;
     private float glassMenuRadius = -1;
     private BlurredBackgroundDrawableViewFactory glassFactory;
     private BlurredBackgroundColorProvider glassColorProvider;
@@ -149,10 +150,12 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             return;
         }
         final BlurredBackgroundColorProvider buttonsColors = buttonsGlassColorProvider != null ? buttonsGlassColorProvider : glassColorProvider;
-        glassBack = factory.create(this).setColorProvider(buttonsColors).setRadius(dp(23)).setPadding(dp(6));
-        glassMenu = factory.create(this).setColorProvider(buttonsColors).setRadius(dp(23)).setPadding(dp(6));
-        glassDone = factory.create(this).setColorProvider(buttonsColors).setRadius(dp(23)).setPadding(dp(6));
-        glassMenuRadius = dp(23);
+        final float rad = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(20) : dp(23);
+        glassBack = factory.create(this).setColorProvider(buttonsColors).setRadius(rad).setPadding(dp(6));
+        glassMenu = factory.create(this).setColorProvider(buttonsColors).setRadius(rad).setPadding(dp(6));
+        glassDone = factory.create(this).setColorProvider(buttonsColors).setRadius(rad).setPadding(dp(6));
+        glassTitle = factory.create(this).setColorProvider(buttonsColors).setRadius(rad).setPadding(dp(6));
+        glassMenuRadius = rad;
         invalidate();
     }
 
@@ -178,6 +181,9 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             glassBack.setColorProvider(colors);
             glassMenu.setColorProvider(colors);
             glassDone.setColorProvider(colors);
+            if (glassTitle != null) {
+                glassTitle.setColorProvider(colors);
+            }
         }
         invalidate();
     }
@@ -187,6 +193,9 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             glassBack.updateColors();
             glassMenu.updateColors();
             glassDone.updateColors();
+            if (glassTitle != null) {
+                glassTitle.updateColors();
+            }
         }
         invalidate();
         if (openMenuOverlay != null) {
@@ -352,12 +361,34 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             glassDone.draw(canvas);
         }
 
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassTitle != null) {
+            SimpleTextView titleView = getTitleTextView();
+            if (titleView != null && titleView.getVisibility() == VISIBLE && titleView.getAlpha() > 0 && titleLayout.getVisibility() == VISIBLE && titleLayout.getAlpha() > 0 && !searchFieldVisible && !actionModeVisible) {
+                CharSequence text = titleView.getText();
+                if (!TextUtils.isEmpty(text)) {
+                    int textW = titleView.getTextWidth();
+                    if (textW <= 0) {
+                        textW = titleView.getWidth();
+                    }
+                    if (textW > 0) {
+                        float cx = getWidth() / 2f;
+                        float hw = Math.min(getWidth() / 2f - dp(56), textW / 2f + dp(16));
+                        float t = titleLayout.getY() + (titleLayout.getHeight() - dp(46)) / 2f;
+                        float b = t + dp(46);
+                        glassTitle.setBounds((int) (cx - hw) - p, (int) t - p, (int) (cx + hw) + p, (int) b + p);
+                        glassTitle.setAlpha((int) (255 * titleLayout.getAlpha() * titleView.getAlpha()));
+                        glassTitle.draw(canvas);
+                    }
+                }
+            }
+        }
+
         if (glassMenu != null) {
             final float alpha = computeMenuPill(menuPillRect);
             // a menu growing out of the pill takes over its glass
             final boolean pillInOverlay = isMenuPillInOverlay();
             if (alpha > 0 && menuPillRect.width() > 0 && !pillInOverlay) {
-                final float radius = menuPillRect.height() / 2f;
+                final float radius = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(20) : (menuPillRect.height() / 2f);
                 if (Math.abs(radius - glassMenuRadius) > 0.5f) {
                     glassMenuRadius = radius;
                     glassMenu.setRadius(radius);
@@ -641,6 +672,12 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         }
         if (glassMenu != null) {
             glassMenu.updateColors();
+        }
+        if (glassDone != null) {
+            glassDone.updateColors();
+        }
+        if (glassTitle != null) {
+            glassTitle.updateColors();
         }
         invalidate();
     }

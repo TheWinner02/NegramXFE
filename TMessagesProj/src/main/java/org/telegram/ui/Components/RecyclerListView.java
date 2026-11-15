@@ -3461,6 +3461,9 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
     }
 
     public void setLegacySections(boolean legacySections) {
+        if (m3ExpressiveSections || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            legacySections = true;
+        }
         if (this.legacySections == legacySections) {
             return;
         }
@@ -3480,7 +3483,8 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
             return;
         }
         bitmapSectionsDrawBackground = drawBackground;
-        if (drawBackground) {
+        boolean customStyle = m3ExpressiveSections || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        if (drawBackground && !customStyle) {
             // only this decoration draws it
             setLegacySections(false);
         }
@@ -3523,7 +3527,8 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         if (isSectionView == null || isViewTypeSection == null || drawSectionBackground == null) {
             return;
         }
-        if (!legacySections) {
+        boolean customStyle = m3ExpressiveSections || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        if (!legacySections && !customStyle) {
             bitmapSectionsItemDecoration = new BitmapSectionsItemDecoration(
                     this,
                     isSectionView,
@@ -3733,7 +3738,11 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         @Override
         public void onDraw(@NonNull Canvas c, @NonNull RecyclerView parent, @NonNull State state) {
             if (parent instanceof RecyclerListView) {
-                ((RecyclerListView) parent).drawSectionsBackgrounds(c);
+                RecyclerListView listView = (RecyclerListView) parent;
+                if (listView.bitmapSectionsDrawBackground) {
+                    c.drawColor(listView.getSectionsBackgroundColorForDecoration());
+                }
+                listView.drawSectionsBackgrounds(c);
             }
         }
 
@@ -3741,6 +3750,9 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         public void capture(Canvas canvas, RectF position) {
             canvas.save();
             canvas.clipRect(position);
+            if (parent.bitmapSectionsDrawBackground) {
+                canvas.drawColor(parent.getSectionsBackgroundColorForDecoration());
+            }
             parent.drawSectionsBackgrounds(canvas);
             canvas.restore();
         }
@@ -4182,14 +4194,19 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
             backgroundColor = M3ColorRoles.surfaceContainer(fallbackColor);
         } else if (isIosGlass) {
             if (isDark) {
-                backgroundColor = ColorUtils.blendARGB(backgroundColor, 0xFFFFFFFF, 0.07f);
+                backgroundColor = ColorUtils.blendARGB(backgroundColor, 0xFFFFFFFF, 0.08f);
             }
-            sectionGlassStrokePaint.setStrokeWidth(dpf2(0.5f));
-            sectionGlassStrokePaint.setColor(multAlpha(isDark ? 0x14FFFFFF : 0x06000000, alpha));
+            float glassAlpha = xyz.nextalone.nagram.ui.UIStyleEngine.getGlassAlpha();
+            backgroundColor = Theme.multAlpha(backgroundColor, Math.min(1.0f, Math.max(0.60f, glassAlpha)));
+            sectionGlassStrokePaint.setStrokeWidth(dpf2(0.75f));
+            sectionGlassStrokePaint.setColor(multAlpha(xyz.nextalone.nagram.ui.UIStyleEngine.getGlassStrokeColor(isDark), alpha));
         }
         sectionBackgroundPaint.setColor(multAlpha(backgroundColor, alpha));
         if (topRadius <= 0 && bottomRadius <= 0) {
             canvas.drawRect(rect, sectionBackgroundPaint);
+            if (isIosGlass) {
+                canvas.drawRect(rect, sectionGlassStrokePaint);
+            }
         } else if (topRadius == bottomRadius) {
             if (SharedConfig.shadowsInSections && !isIosGlass) {
                 canvas.drawRoundRect(rect, topRadius, topRadius, sectionBackgroundStrokePaint);
@@ -4223,7 +4240,7 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
     }
 
     private void clipChild(Canvas canvas, View child) {
-        if (bitmapSectionsItemDecoration != null || child == null || !shouldClipChildToSection(child) || !sectionsItemDecoration.isSectionItem.run(child) || !isVisualSectionItem(child))
+        if (bitmapSectionsItemDecoration != null || child == null || !shouldClipChildToSection(child) || sectionsItemDecoration == null || !sectionsItemDecoration.isSectionItem.run(child) || !isVisualSectionItem(child))
             return;
 
         int position = getChildAdapterPosition(child);
