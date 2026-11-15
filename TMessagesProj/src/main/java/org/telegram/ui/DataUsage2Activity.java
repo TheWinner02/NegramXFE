@@ -129,15 +129,23 @@ public class DataUsage2Activity extends BaseFragment {
         ViewGroup.LayoutParams layoutParams = listTopOverlay.getLayoutParams();
         layoutParams.height = insetTop + ActionBar.getCurrentActionBarHeight() + dp(44);
 
-        tabsContainer.setTranslationY(BaseFragmentSimpleGlass.getPillGlassTop(insetTop) - dp(9.66f));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            tabsContainer.setTranslationY(insetTop + ActionBar.getCurrentActionBarHeight() + dp(6));
+        } else {
+            tabsContainer.setTranslationY(BaseFragmentSimpleGlass.getPillGlassTop(insetTop) - dp(9.66f));
+        }
         tabsContainer.addView(tabsView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 36 + 6 + 6));
         tabsContainer.setPadding(dp(4), dp(4), dp(4), dp(4));
-        tabsContainer.setBackground(getBaseSimpleGlass().factory
-            .create(tabsContainer)
-            .setColorProvider(BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider))
-            .setPadding(dp(9.66f))
-            .setRadius(dp(18))
-        );
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            tabsContainer.setBackground(Theme.createRoundRectDrawable(dp(18), getThemedColor(Theme.key_windowBackgroundWhite)));
+        } else {
+            tabsContainer.setBackground(getBaseSimpleGlass().factory
+                .create(tabsContainer)
+                .setColorProvider(BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider))
+                .setPadding(dp(9.66f))
+                .setRadius(dp(18))
+            );
+        }
 
         getBaseSimpleGlass().setViews(frameLayout, pager, simpleActionBar, resourceProvider);
         getBaseSimpleGlass().setCapture((canvas, position) -> {
@@ -150,9 +158,15 @@ public class DataUsage2Activity extends BaseFragment {
             }
         });
         getBaseSimpleGlass().setClipView(null);
-        frameLayout.addView(tabsContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP, -4, 0, -4, 0));
-        listTopOverlay.setBackground(getBaseSimpleGlass().createActionBarFadeDrawable(listTopOverlay));
-        simpleActionBar.setBackground(null);
+        int tabsMargin = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? 12 : -4;
+        frameLayout.addView(tabsContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP, tabsMargin, 0, tabsMargin, 0));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            listTopOverlay.setVisibility(View.GONE);
+            simpleActionBar.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
+        } else {
+            listTopOverlay.setBackground(getBaseSimpleGlass().createActionBarFadeDrawable(listTopOverlay));
+            simpleActionBar.setBackground(null);
+        }
 
         return fragmentView = frameLayout;
     }
@@ -378,7 +392,11 @@ public class DataUsage2Activity extends BaseFragment {
         private CacheChart chart;
 
         public void checkInsets() {
-            BaseFragmentSimpleGlass.setListViewParams(this, insetTop, insetBottom, ActionBar.getCurrentActionBarHeight() + dp(42), 0);
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                BaseFragmentSimpleGlass.setListViewParams(this, insetTop, insetBottom, ActionBar.getCurrentActionBarHeight() + dp(48 + 8 + 6), 0);
+            } else {
+                BaseFragmentSimpleGlass.setListViewParams(this, insetTop, insetBottom, ActionBar.getCurrentActionBarHeight() + dp(42), 0);
+            }
         }
 
         private String formatPercent(int percent) {
@@ -1207,7 +1225,11 @@ public class DataUsage2Activity extends BaseFragment {
         this.insetTop = top;
         this.insetBottom = bottom;
 
-        tabsContainer.setTranslationY(BaseFragmentSimpleGlass.getPillGlassTop(insetTop) - dp(9.66f));
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            tabsContainer.setTranslationY(insetTop + ActionBar.getCurrentActionBarHeight() + dp(6));
+        } else {
+            tabsContainer.setTranslationY(BaseFragmentSimpleGlass.getPillGlassTop(insetTop) - dp(9.66f));
+        }
         ViewGroup.LayoutParams layoutParams = listTopOverlay.getLayoutParams();
         layoutParams.height = insetTop + ActionBar.getCurrentActionBarHeight() + dp(44);
 

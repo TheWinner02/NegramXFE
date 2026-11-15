@@ -556,8 +556,13 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             if (titleLayout != null) {
                 for (SimpleTextView tv : titleLayout.titleViews) {
                     if (tv != null) {
-                        tv.setGravity(Gravity.CENTER);
-                        tv.setTextSize(17);
+                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                            tv.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+                            tv.setTextSize(20);
+                        } else {
+                            tv.setGravity(Gravity.CENTER);
+                            tv.setTextSize(17);
+                        }
                         tv.setScaleX(1.0f);
                         tv.setScaleY(1.0f);
                         tv.setTranslationX(0f);
@@ -1796,6 +1801,10 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
                 view.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
                 view.setTypeface(AndroidUtilities.bold());
                 view.setTextSize(32);
+            } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                view.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+                view.setTypeface(AndroidUtilities.bold());
+                view.setTextSize(20);
             } else {
                 view.setGravity(Gravity.CENTER);
                 view.setTypeface(AndroidUtilities.bold());
@@ -1940,6 +1949,9 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
                     if (m3LargeFlexible) {
                         view.setTextSize(32);
                         view.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+                    } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                        view.setTextSize(20);
+                        view.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
                     } else {
                         view.setTextSize(17);
                         view.setGravity(Gravity.CENTER);
@@ -1979,8 +1991,8 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
                 final int textTop = hasSubtitle
                     ? (rowHeight / 2 - view.getTextHeight()) / 2 + dp(5)
                     : (rowHeight - view.getTextHeight()) / 2;
-                final int l = m3LargeFlexible ? collapsedX : (width - view.getMeasuredWidth()) / 2;
-                final int t = m3LargeFlexible ? (collapsedY - view.getPaddingTop()) : (textTop - view.getPaddingTop());
+                final int l = (m3LargeFlexible || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) ? collapsedX : (width - view.getMeasuredWidth()) / 2;
+                final int t = (m3LargeFlexible || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) ? (collapsedY - view.getPaddingTop()) : (textTop - view.getPaddingTop());
                 view.layout(l, t, l + view.getMeasuredWidth(), t + view.getMeasuredHeight());
             }
             if (hasSubtitle) {
@@ -1990,8 +2002,8 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
                         continue;
                     }
                     final int textTop = rowHeight / 2 + (rowHeight / 2 - view.getTextHeight()) / 2 - dp(2);
-                    final int l = m3LargeFlexible ? collapsedX : (width - view.getMeasuredWidth()) / 2;
-                    final int t = m3LargeFlexible ? (collapsedSubY - view.getPaddingTop()) : textTop;
+                    final int l = (m3LargeFlexible || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) ? collapsedX : (width - view.getMeasuredWidth()) / 2;
+                    final int t = (m3LargeFlexible || xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) ? (collapsedSubY - view.getPaddingTop()) : textTop;
                     view.layout(l, t, l + view.getMeasuredWidth(), t + view.getMeasuredHeight());
                 }
             }

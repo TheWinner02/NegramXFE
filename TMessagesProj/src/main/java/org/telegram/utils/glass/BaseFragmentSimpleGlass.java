@@ -283,8 +283,10 @@ public class BaseFragmentSimpleGlass {
         if (header instanceof SimpleActionBar) {
             final SimpleActionBar simpleActionBar = (SimpleActionBar) header;
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                if (!(contentView instanceof SiblingRecyclerPagerLayout)) {
+                if (!(contentView instanceof SiblingRecyclerPagerLayout) && !(clipView instanceof ViewPagerFixed)) {
                     simpleActionBar.setM3LargeFlexible(true);
+                } else {
+                    simpleActionBar.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray, resourceProvider));
                 }
             } else {
                 simpleActionBar.setExtraHeight(dp(6));
@@ -295,8 +297,10 @@ public class BaseFragmentSimpleGlass {
         } else if (header instanceof ActionBar) {
             final ActionBar actionBar = (ActionBar) header;
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-                if (!(contentView instanceof SiblingRecyclerPagerLayout)) {
+                if (!(contentView instanceof SiblingRecyclerPagerLayout) && !(clipView instanceof ViewPagerFixed)) {
                     actionBar.setM3LargeFlexible(true);
+                } else {
+                    actionBar.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray, resourceProvider));
                 }
             } else {
                 actionBar.setAddToContainer(false);
