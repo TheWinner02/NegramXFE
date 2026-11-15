@@ -2544,7 +2544,13 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
 
     /** Visible surface in containerView-local coordinates, excluding transparent sheet margins. */
     public void getFluidSurfaceBounds(android.graphics.RectF bounds) {
-        bounds.set(0, 0, containerView.getWidth(), containerView.getHeight());
+        if (containerView == null) {
+            bounds.set(0, 0, 0, 0);
+            return;
+        }
+        bounds.set(backgroundPaddingLeft, backgroundPaddingTop,
+                Math.max(backgroundPaddingLeft, containerView.getWidth() - backgroundPaddingLeft),
+                containerView.getHeight());
     }
 
     public int getFluidSurfaceColor() { return getThemedColor(Theme.key_dialogBackground); }
