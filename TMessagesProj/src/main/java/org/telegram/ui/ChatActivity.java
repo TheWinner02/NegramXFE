@@ -8699,7 +8699,7 @@ public class ChatActivity extends BaseFragment implements
 
         actionsButtonsLayout = new ChatActivityActionsButtonsLayout(context, resourceProvider, blurredBackgroundButtonsColorProvider, glassBackgroundDrawableFactory);
         actionsButtonsLayout.setForwardButtonOnClickListener(v -> openForward(false));
-        actionsButtonsLayout.setReplyButtonOnClickListener(v -> {
+        /*actionsButtonsLayout.setReplyButtonOnClickListener(v -> {
             MessageObject messageObject = null;
             for (int a = 1; a >= 0; a--) {
                 if (messageObject == null && selectedMessagesIds[a].size() != 0) {
