@@ -143,22 +143,22 @@ public class DialogOrContactPickerActivity extends BaseFragment {
         searchItem = menu.addItem(search_button, R.drawable.outline_header_search).setIsSearchField(true).setActionBarMenuItemSearchListener(new ActionBarMenuItem.ActionBarMenuItemSearchListener() {
             @Override
             public void onSearchExpand() {
-                dialogsActivity.getActionBar().openSearchField("", false);
-                contactsActivity.getActionBar().openSearchField("", false);
+                openSearchField(dialogsActivity, "", false);
+                openSearchField(contactsActivity, "", false);
                 searchItem.getSearchField().requestFocus();
-
             }
 
             @Override
             public void onSearchCollapse() {
-                dialogsActivity.getActionBar().closeSearchField(false);
-                contactsActivity.getActionBar().closeSearchField(false);
+                closeSearchField(dialogsActivity, false);
+                closeSearchField(contactsActivity, false);
             }
 
             @Override
             public void onTextChanged(EditText editText) {
-                dialogsActivity.getActionBar().setSearchFieldText(editText.getText().toString());
-                contactsActivity.getActionBar().setSearchFieldText(editText.getText().toString());
+                String text = editText.getText().toString();
+                setSearchFieldText(dialogsActivity, text);
+                setSearchFieldText(contactsActivity, text);
             }
         });
         searchItem.setSearchFieldHint(LocaleController.getString(R.string.Search));
@@ -738,6 +738,39 @@ public class DialogOrContactPickerActivity extends BaseFragment {
             }
         } catch (Exception e) {
             org.telegram.messenger.FileLog.e(e);
+        }
+    }
+
+    private void openSearchField(BaseFragment fragment, String text, boolean animated) {
+        if (fragment == null) {
+            return;
+        }
+        if (fragment.getActionBar() != null) {
+            fragment.getActionBar().openSearchField(text, animated);
+        } else if (fragment.getSimpleActionBar() != null) {
+            fragment.getSimpleActionBar().openSearchField(text, animated);
+        }
+    }
+
+    private void closeSearchField(BaseFragment fragment, boolean animated) {
+        if (fragment == null) {
+            return;
+        }
+        if (fragment.getActionBar() != null) {
+            fragment.getActionBar().closeSearchField(animated);
+        } else if (fragment.getSimpleActionBar() != null) {
+            fragment.getSimpleActionBar().closeSearchField(animated);
+        }
+    }
+
+    private void setSearchFieldText(BaseFragment fragment, String text) {
+        if (fragment == null) {
+            return;
+        }
+        if (fragment.getActionBar() != null) {
+            fragment.getActionBar().setSearchFieldText(text);
+        } else if (fragment.getSimpleActionBar() != null) {
+            fragment.getSimpleActionBar().setSearchFieldText(text);
         }
     }
 }
