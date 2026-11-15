@@ -852,7 +852,6 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         requestLayout();
         invalidate();
     }
-    }
 
     public void setTitleRightMargin(int value) {
         titleRightMargin = value;
@@ -1797,6 +1796,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 titleTextView[i].setAlpha(1.0f);
             }
         }
+    }
 
     public int getExtraHeight() {
         return extraHeight;
@@ -1966,7 +1966,6 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 }
                 if (m3LargeFlexible) {
                     availableWidth = Math.max(availableWidth, width - dp(48));
-                }
                 }
                 availableWidth = Math.max(availableWidth, 0);
 
@@ -3305,8 +3304,6 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 final int menuWidthWithPadding = menuWidth + ((hasForcedMenuWidth || hasForcedMenuMinWidth) ? (menuWidth > 0 ? p : 0) : (int) (p * Math.max(animatorHasMenuItems.getFloatValue(), actionModeFactor)));
                 final int rightOffset = lerp(menuWidthWithPadding, Math.max(menuWidthWithPadding, p + s), chatAvatarContainer == null ? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
 
-
-        if (glassDrawable != null && !glassOnlyBack && drawGlassTitle) {
             if (centerTitleAndGlass && titleTextView[0] != null && titleTextView[0].getVisibility() == View.VISIBLE) {
                 int titleWidth = (int) Math.ceil(titleTextView[0].getTextWidth()) + p * 2 + dp(48);
                 int titleLeft = (getWidth() - titleWidth) / 2 + Math.round(titleTextView[0].getTranslationX());
@@ -3346,7 +3343,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                     glassDrawable.draw(canvas);
                 }
             }
-            if (glassDrawableBack != null && hasBackButton) {
+        }
+        if (glassDrawableBack != null && hasBackButton) {
                 int left = backButtonImageView.getLeft() + dp(10);
                 int right = backButtonImageView.getRight() + dp(10);
                 if (glassBackButtonIsRound) {
@@ -3371,7 +3369,6 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 glassDrawableMenu.setBounds(left + insetX, t + insetY, right - insetX, b - insetY);
                 glassDrawableMenu.draw(canvas);
             }
-        }
         }
 
         if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && blurredBackground && actionBarColor != Color.TRANSPARENT) {
