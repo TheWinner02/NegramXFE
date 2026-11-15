@@ -518,7 +518,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         updateColors();
         checkUi_menuItems();
 
-        simpleActionBar.setBackground(null);
+        if (!xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            simpleActionBar.setBackground(null);
+        }
         updateActionBarFadeHeight(mSystemInsets.top);
         updateActionBarVisible(true, false);
 
@@ -592,6 +594,12 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             navigationBar.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] { Theme.multAlpha(navigationBarColor, 0.0f), navigationBarColor }));
         }
 
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && simpleActionBar != null) {
+            int lowerColor = getThemedColor(Theme.key_actionBarDefault);
+            int topColor = getThemedColor(Theme.key_windowBackgroundGray);
+            simpleActionBar.setBackgroundColor(androidx.core.graphics.ColorUtils.blendARGB(topColor, lowerColor, simpleActionBar.getM3CollapseProgress()));
+        }
+
         listView.invalidate();
     }
 
@@ -615,7 +623,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             if (firstPos == 0) {
                 View firstChild = llm.findViewByPosition(0);
                 if (firstChild != null) {
-                    int atRest = getSettingsTopPadding(AndroidUtilities.statusBarHeight);
+                    int atRest = listView.getPaddingTop();
                     int scrolled = atRest - firstChild.getTop();
                     float progress = Math.max(0.0f, Math.min(1.0f, (float) scrolled / (float) maxScroll));
                     simpleActionBar.setM3CollapseProgress(progress);

@@ -111,7 +111,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
     private boolean occupyStatusBar = true;
     private int extraHeight;
     private boolean m3LargeFlexible;
-    private int m3ExpandedExtraHeight = AndroidUtilities.dp(64);
+    private int m3ExpandedExtraHeight = AndroidUtilities.dp(76);
     private float m3CollapseProgress = 0.0f;
     private RecyclerView m3AdaptiveBackgroundList;
     private SectionsScrollView m3AdaptiveBackgroundScroll;
@@ -607,25 +607,21 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         int collapsedX = hasBack ? dp(AndroidUtilities.isTablet() ? 80 : 72) : dp(AndroidUtilities.isTablet() ? 26 : 24);
         int collapsedY = (ActionBar.getCurrentActionBarHeight() - dp(24)) / 2;
         int expandedX = dp(24);
+        int expandedY = ActionBar.getCurrentActionBarHeight() + m3ExpandedExtraHeight - dp(24);
 
         for (int i = 0; i < 2; i++) {
             SimpleTextView titleView = titleLayout != null ? titleLayout.titleViews[i] : null;
             if (titleView == null) continue;
             titleView.setPivotX(0f);
-            titleView.setPivotY(0f);
+            titleView.setPivotY(titleView.getPaddingTop());
             titleView.setScaleX(scale);
             titleView.setScaleY(scale);
 
             int textH = titleView.getTextHeight() > 0 ? titleView.getTextHeight() : dp(38);
-            int expandedY = ActionBar.getCurrentActionBarHeight() + m3ExpandedExtraHeight - dp(24) - textH;
+            int targetExpandedY = expandedY - textH;
 
-            int curX = titleView.getLeft();
-            int curY = titleView.getTop() + titleView.getPaddingTop();
-            if (curX <= 0) curX = collapsedX;
-            if (curY <= 0) curY = collapsedY;
-
-            float transX = AndroidUtilities.lerp((float) (expandedX - curX), 0f, p);
-            float transY = AndroidUtilities.lerp((float) (expandedY - curY), 0f, p);
+            float transX = AndroidUtilities.lerp((float) (expandedX - collapsedX), 0f, p);
+            float transY = AndroidUtilities.lerp((float) (targetExpandedY - collapsedY), 0f, p);
             titleView.setTranslationX(transX);
             titleView.setTranslationY(transY);
             if (i == 0) {
@@ -636,20 +632,16 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         if (titleLayout != null && titleLayout.subtitleView != null && titleLayout.subtitleView.getVisibility() != GONE) {
             SimpleTextView subView = titleLayout.subtitleView;
             subView.setPivotX(0f);
-            subView.setPivotY(0f);
+            subView.setPivotY(subView.getPaddingTop());
             subView.setScaleX(scale);
             subView.setScaleY(scale);
 
-            int textH = subView.getTextHeight() > 0 ? subView.getTextHeight() : dp(20);
-            int expandedY = ActionBar.getCurrentActionBarHeight() + m3ExpandedExtraHeight - dp(10) - textH;
+            int textH = subView.getTextHeight() > 0 ? subView.getTextHeight() : dp(18);
+            int collapsedSubY = ActionBar.getCurrentActionBarHeight() / 2 + (ActionBar.getCurrentActionBarHeight() / 2 - dp(18)) / 2;
+            int targetExpandedSubY = ActionBar.getCurrentActionBarHeight() + m3ExpandedExtraHeight - dp(10) - textH;
 
-            int curX = subView.getLeft();
-            int curY = subView.getTop() + subView.getPaddingTop();
-            if (curX <= 0) curX = collapsedX;
-            if (curY <= 0) curY = collapsedY;
-
-            float transX = AndroidUtilities.lerp((float) (expandedX - curX), 0f, p);
-            float transY = AndroidUtilities.lerp((float) (expandedY - curY), 0f, p);
+            float transX = AndroidUtilities.lerp((float) (expandedX - collapsedX), 0f, p);
+            float transY = AndroidUtilities.lerp((float) (targetExpandedSubY - collapsedSubY), 0f, p);
             subView.setTranslationX(transX);
             subView.setTranslationY(transY);
         }
@@ -1979,6 +1971,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             final boolean hasSubtitle = hasSubtitle();
             final boolean hasBack = hasBackButton();
             final int collapsedX = hasBack ? dp(AndroidUtilities.isTablet() ? 80 : 72) : dp(AndroidUtilities.isTablet() ? 26 : 24);
+            final int collapsedY = (rowHeight - dp(24)) / 2;
             for (SimpleTextView view : titleViews) {
                 if (view == null || view.getVisibility() == GONE) {
                     continue;
@@ -1987,17 +1980,19 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
                     ? (rowHeight / 2 - view.getTextHeight()) / 2 + dp(5)
                     : (rowHeight - view.getTextHeight()) / 2;
                 final int l = m3LargeFlexible ? collapsedX : (width - view.getMeasuredWidth()) / 2;
-                final int t = textTop - view.getPaddingTop();
+                final int t = m3LargeFlexible ? (collapsedY - view.getPaddingTop()) : (textTop - view.getPaddingTop());
                 view.layout(l, t, l + view.getMeasuredWidth(), t + view.getMeasuredHeight());
             }
             if (hasSubtitle) {
+                final int collapsedSubY = rowHeight / 2 + (rowHeight / 2 - dp(18)) / 2;
                 for (SimpleTextView view : new SimpleTextView[] { subtitleView, subtitleOutView }) {
                     if (view == null || view.getVisibility() == GONE) {
                         continue;
                     }
                     final int textTop = rowHeight / 2 + (rowHeight / 2 - view.getTextHeight()) / 2 - dp(2);
                     final int l = m3LargeFlexible ? collapsedX : (width - view.getMeasuredWidth()) / 2;
-                    view.layout(l, textTop, l + view.getMeasuredWidth(), textTop + view.getTextHeight());
+                    final int t = m3LargeFlexible ? (collapsedSubY - view.getPaddingTop()) : textTop;
+                    view.layout(l, t, l + view.getMeasuredWidth(), t + view.getMeasuredHeight());
                 }
             }
             for (int i = 0, N = getChildCount(); i < N; i++) {

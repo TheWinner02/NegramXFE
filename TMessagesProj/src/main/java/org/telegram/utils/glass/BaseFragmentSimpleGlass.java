@@ -355,6 +355,11 @@ public class BaseFragmentSimpleGlass {
     }
 
     public static void setListViewParams(ViewGroup listView, int insetTop, int insetBottom, int paddingTop, int paddingBottom) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            AndroidUtilities.setViewLayoutMargins(listView, 0, 0, 0, 0);
+            listView.setPadding(0, insetTop + paddingTop, 0, insetBottom + paddingBottom);
+            return;
+        }
         final int mT = -getOverscan(insetTop);
         final int pT = insetTop + paddingTop - mT;
         final int mB = -getOverscan(insetBottom);

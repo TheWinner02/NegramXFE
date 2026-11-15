@@ -3675,6 +3675,24 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         setAdaptiveBackground(list, Theme.key_windowBackgroundGray, Theme.key_actionBarDefault);
     }
     public void setAdaptiveBackground(SectionsScrollView list, final int topColorKey, final int lowerColorKey) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            setM3LargeFlexible(true);
+            int statusBar = occupyStatusBar ? AndroidUtilities.statusBarHeight : 0;
+            int targetPaddingTop = statusBar + getCurrentActionBarHeight() + getM3ExpandedExtraHeight();
+            if (list.getPaddingTop() < targetPaddingTop) {
+                list.setPadding(list.getPaddingLeft(), targetPaddingTop, list.getPaddingRight(), list.getPaddingBottom());
+                list.setClipToPadding(false);
+            }
+            list.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+                if (!m3LargeFlexible) return;
+                int maxScroll = getM3ExpandedExtraHeight();
+                float progress = maxScroll > 0 ? Math.max(0.0f, Math.min(1.0f, (float) scrollY / (float) maxScroll)) : 1.0f;
+                setM3CollapseProgress(progress);
+            });
+            setM3CollapseProgress(list.canScrollVertically(-1) ? 1.0f : 0.0f);
+            return;
+        }
+
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             this.adaptive_topColorKey = topColorKey;
             this.adaptive_lowerColorKey = lowerColorKey;
