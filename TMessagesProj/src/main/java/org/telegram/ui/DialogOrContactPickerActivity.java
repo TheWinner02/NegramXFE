@@ -508,9 +508,15 @@ public class DialogOrContactPickerActivity extends BaseFragment {
             viewPages[a].fragmentView = (FrameLayout) viewPages[a].parentFragment.getFragmentView();
             viewPages[a].actionBar = viewPages[a].parentFragment.getActionBar();
             viewPages[a].addView(viewPages[a].fragmentView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-            AndroidUtilities.removeFromParent(viewPages[a].actionBar);
-            viewPages[a].addView(viewPages[a].actionBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-            viewPages[a].actionBar.setVisibility(View.GONE);
+            if (viewPages[a].actionBar != null) {
+                AndroidUtilities.removeFromParent(viewPages[a].actionBar);
+                viewPages[a].addView(viewPages[a].actionBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                viewPages[a].actionBar.setVisibility(View.GONE);
+            }
+            if (viewPages[a].parentFragment.getSimpleActionBar() != null) {
+                AndroidUtilities.removeFromParent(viewPages[a].parentFragment.getSimpleActionBar());
+                viewPages[a].parentFragment.getSimpleActionBar().setVisibility(View.GONE);
+            }
 
             for (int i = 0; i < 2; i++) {
                 RecyclerListView listView = i == 0 ? viewPages[a].listView : viewPages[a].listView2;

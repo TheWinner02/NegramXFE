@@ -9057,11 +9057,13 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         backButtonSelectorColor = applySelectorBackground(backButtonView, Theme.getColor(Theme.key_listSelector), backButtonSelectorColor, Theme.RIPPLE_MASK_CIRCLE_20DP);
 
         final int proxyColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
-        if (proxyColor != proxyDrawableColor || proxyDrawable.getColorFilter() == null) {
+        if (proxyDrawable != null && (proxyColor != proxyDrawableColor || proxyDrawable.getColorFilter() == null)) {
             proxyDrawable.setColorFilter(new PorterDuffColorFilter(proxyColor, PorterDuff.Mode.SRC_IN));
             proxyDrawableColor = proxyColor;
         }
-        proxyButtonSelectorColor = applySelectorBackground(proxyButtonView, Theme.getColor(Theme.key_listSelector), proxyButtonSelectorColor, Theme.RIPPLE_MASK_CIRCLE_20DP);
+        if (proxyButtonView != null) {
+            proxyButtonSelectorColor = applySelectorBackground(proxyButtonView, Theme.getColor(Theme.key_listSelector), proxyButtonSelectorColor, Theme.RIPPLE_MASK_CIRCLE_20DP);
+        }
         if (moreButtonView != null) {
             moreButtonView.setIconColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             moreButtonView.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector)));
@@ -9110,7 +9112,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
     @Override
     public void onThemeColorsChanged() {
         try {
-            if (fragmentView == null || backButtonView == null || proxyDrawable == null || proxyButtonView == null || radialProgressView == null
+            if (fragmentView == null || backButtonView == null || radialProgressView == null
                     || floatingButton == null || floatingButtonIcon == null || keyboardView == null) {
                 return;
             }
@@ -9454,6 +9456,9 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
     }
 
     private void showProxyButton(boolean show, boolean animated) {
+        if (proxyButtonView == null) {
+            return;
+        }
         if (show == proxyButtonVisible) {
             return;
         }

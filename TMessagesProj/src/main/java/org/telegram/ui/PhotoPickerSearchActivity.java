@@ -610,8 +610,13 @@ public class PhotoPickerSearchActivity extends BaseFragment {
             viewPages[a].listView.setClipToPadding(false);
             viewPages[a].actionBar = viewPages[a].parentFragment.getActionBar();
             viewPages[a].addView(viewPages[a].fragmentView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-            viewPages[a].addView(viewPages[a].actionBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-            viewPages[a].actionBar.setVisibility(View.GONE);
+            if (viewPages[a].actionBar != null) {
+                viewPages[a].addView(viewPages[a].actionBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                viewPages[a].actionBar.setVisibility(View.GONE);
+            }
+            if (viewPages[a].parentFragment.getSimpleActionBar() != null) {
+                viewPages[a].parentFragment.getSimpleActionBar().setVisibility(View.GONE);
+            }
 
             RecyclerView.OnScrollListener onScrollListener = viewPages[a].listView.getOnScrollListener();
             viewPages[a].listView.setOnScrollListener(new RecyclerView.OnScrollListener() {
