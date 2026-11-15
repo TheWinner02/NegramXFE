@@ -538,14 +538,17 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         if (avatarContainer == null) {
             return;
         }
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
-            avatarContainer.setBackgroundColor(Color.TRANSPARENT);
+        final boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
+        final boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+        if (!isM3 && !isIosGlass) {
+            ThemeBind.backgroundColor(avatarContainer, Theme.key_windowBackgroundWhite);
             return;
         }
-        final boolean isIosGlass = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass();
         final boolean isDark = Theme.isCurrentThemeDark();
         int backgroundColor = Theme.getColor(Theme.key_windowBackgroundWhite, resourceProvider);
-        if (isIosGlass && isDark) {
+        if (isM3) {
+            backgroundColor = xyz.nextalone.nagram.ui.M3ColorRoles.surfaceContainer(backgroundColor);
+        } else if (isIosGlass && isDark) {
             backgroundColor = androidx.core.graphics.ColorUtils.blendARGB(backgroundColor, 0xFFFFFFFF, 0.07f);
         }
         android.graphics.drawable.GradientDrawable drawable = new android.graphics.drawable.GradientDrawable();
@@ -725,7 +728,13 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
         linearLayout1.setOrientation(LinearLayout.VERTICAL);
 
-        simpleActionBar.setTitle(getString(R.string.ChannelEdit));
+        if (userId != 0) {
+            simpleActionBar.setTitle(getString(R.string.BotEdit));
+        } else if (isChannel) {
+            simpleActionBar.setTitle(getString(R.string.ChannelEdit));
+        } else {
+            simpleActionBar.setTitle(getString(R.string.GroupEdit));
+        }
 
         avatarContainer = new LinearLayout(context);
         avatarContainer.setOrientation(LinearLayout.VERTICAL);

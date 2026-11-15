@@ -102,7 +102,10 @@ public class SectionsScrollView extends ScrollView implements IBlur3Capture {
                 view instanceof org.telegram.ui.Cells.AdminedChannelCell ||
                 view instanceof LinkActionView ||
                 view instanceof org.telegram.ui.PeerColorActivity.ChangeNameColorCell ||
-                view instanceof org.telegram.ui.community.cells.CommunityLinkView2
+                view instanceof org.telegram.ui.community.cells.CommunityLinkView2 ||
+                view instanceof org.telegram.ui.Components.EditTextBoldCursor ||
+                view instanceof org.telegram.ui.Cells.HeaderCell ||
+                (view instanceof LinearLayout && ((LinearLayout) view).getChildCount() > 0 && ((LinearLayout) view).getChildAt(0) instanceof org.telegram.ui.Components.EditTextBoldCursor)
             );
         }
         return !Objects.equals(view.getTag(), RecyclerListView.TAG_NOT_SECTION) && !(
@@ -125,6 +128,7 @@ public class SectionsScrollView extends ScrollView implements IBlur3Capture {
         this.resourcesProvider = resourcesProvider;
         this.contentView = content;
         setWillNotDraw(false);
+        setClipToPadding(false);
 
         int horizontalPadding = 12;
         int topPadding = enableTopPadding ? 12 : (isM3Expressive() ? 8 : 4);
@@ -603,13 +607,18 @@ public class SectionsScrollView extends ScrollView implements IBlur3Capture {
     protected void dispatchDraw(@NonNull Canvas canvas) {
         updateColors();
         collectSections();
-        if (drawBackground) {
+        if (isM3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+            if (drawBackground) {
+                canvas.drawRect(getScrollX(), getScrollY(), getScrollX() + getWidth(), getScrollY() + getHeight(), backgroundPaint);
+            }
+            drawM3ExpressiveSectionBackgrounds(canvas);
+        } else if (drawBackground) {
             drawOptimizedBackground(canvas);
         } else {
             drawSectionsBackgrounds(canvas);
         }
         super.dispatchDraw(canvas);
-        if (!isM3Expressive()) {
+        if (!isM3Expressive() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             drawSectionCorners(canvas);
         }
     }
@@ -648,15 +657,19 @@ public class SectionsScrollView extends ScrollView implements IBlur3Capture {
         try {
             canvas.clipRect(position);
             canvas.translate(-scrollX, -scrollY);
-            for (int i = 0; i < sectionsCount; i += SECTION_VALUES_COUNT) {
-                if (!captureRect.intersects(
-                        sections[i], sections[i + 1], sections[i + 2], sections[i + 3])) {
-                    continue;
+            if (isM3Expressive() || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                drawM3ExpressiveSectionBackgrounds(canvas);
+            } else {
+                for (int i = 0; i < sectionsCount; i += SECTION_VALUES_COUNT) {
+                    if (!captureRect.intersects(
+                            sections[i], sections[i + 1], sections[i + 2], sections[i + 3])) {
+                        continue;
+                    }
+                    final int sectionAlpha = Math.round(Color.alpha(sectionColor) * Math.max(0.0f, Math.min(1.0f, sections[i + 4])));
+                    sectionPaint.setColor(ColorUtils.setAlphaComponent(sectionColor, sectionAlpha));
+                    cornerDst.set(sections[i], sections[i + 1], sections[i + 2], sections[i + 3]);
+                    canvas.drawRoundRect(cornerDst, sectionRadius, sectionRadius, sectionPaint);
                 }
-                final int sectionAlpha = Math.round(Color.alpha(sectionColor) * Math.max(0.0f, Math.min(1.0f, sections[i + 4])));
-                sectionPaint.setColor(ColorUtils.setAlphaComponent(sectionColor, sectionAlpha));
-                cornerDst.set(sections[i], sections[i + 1], sections[i + 2], sections[i + 3]);
-                canvas.drawRoundRect(cornerDst, sectionRadius, sectionRadius, sectionPaint);
             }
 
             canvas.save();
@@ -695,7 +708,9 @@ public class SectionsScrollView extends ScrollView implements IBlur3Capture {
                 canvas.restore();
             }
 
-            drawSectionCorners(canvas, captureRect);
+            if (!isM3Expressive() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
+                drawSectionCorners(canvas, captureRect);
+            }
         } finally {
             canvas.restore();
         }
