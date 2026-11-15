@@ -12,7 +12,10 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 
 import org.telegram.ui.Components.CubicBezierInterpolator;
+import org.telegram.ui.Components.M3ExpressiveButtonDrawable;
 import org.telegram.ui.Components.RLottieDrawable;
+import org.telegram.ui.Components.ScaleStateListAnimator;
+import xyz.nextalone.nagram.ui.UIStyleEngine;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -121,6 +124,67 @@ public class SimpleActionBarMenu extends LinearLayout {
             if (view instanceof ActionBarMenuItem) {
                 ((ActionBarMenuItem) view).closeSubMenu();
             }
+        }
+    }
+
+    public void setM3ButtonGroup(View... children) {
+        setM3ButtonGroup(false, children);
+    }
+
+    public void setM3ButtonGroupInsideContainer(View... children) {
+        setM3ButtonGroup(true, children);
+    }
+
+    private void setM3ButtonGroup(boolean insideContainer, View... children) {
+        if (!UIStyleEngine.isMaterial3Expressive()) {
+            return;
+        }
+        ArrayList<View> visibleChildren = new ArrayList<>();
+        for (View child : children) {
+            if (child != null && child.getVisibility() != GONE) {
+                visibleChildren.add(child);
+            }
+        }
+        int totalVisible = visibleChildren.size();
+        if (totalVisible == 0) {
+            return;
+        }
+        int iconColor = parentBar != null ? parentBar.getItemsColor(isActionMode) : Theme.getColor(Theme.key_actionBarDefaultIcon);
+        int btnBg = Theme.multAlpha(iconColor, 0.14f);
+        int btnStroke = Theme.multAlpha(iconColor, 0.22f);
+        int pressColor = Theme.multAlpha(iconColor, 0.32f);
+        float outer = dp(16);
+        float inner = totalVisible > 1 ? dp(4) : dp(16);
+        float morph = dp(8);
+        int inset = insideContainer ? dp(4) : 0;
+
+        for (int i = 0; i < totalVisible; i++) {
+            View child = visibleChildren.get(i);
+            M3ExpressiveButtonDrawable drawable;
+            Drawable bg = child.getBackground();
+            if (bg instanceof M3ExpressiveButtonDrawable) {
+                drawable = (M3ExpressiveButtonDrawable) bg;
+                drawable.setColors(btnBg, pressColor);
+            } else {
+                drawable = new M3ExpressiveButtonDrawable(btnBg, pressColor, outer, morph, inset);
+                child.setBackground(drawable);
+                ScaleStateListAnimator.apply(child, .1f, 1.5f, false);
+            }
+            drawable.setInset(inset);
+            drawable.setStroke(insideContainer ? 0 : btnStroke, insideContainer ? 0 : dp(1));
+
+            float[] restRadii;
+            if (totalVisible == 1) {
+                restRadii = new float[]{outer, outer, outer, outer, outer, outer, outer, outer};
+            } else if (i == 0) {
+                restRadii = new float[]{outer, outer, inner, inner, inner, inner, outer, outer};
+            } else if (i == totalVisible - 1) {
+                restRadii = new float[]{inner, inner, outer, outer, outer, outer, inner, inner};
+            } else {
+                restRadii = new float[]{inner, inner, inner, inner, inner, inner, inner, inner};
+            }
+            float[] pressedRadii = new float[]{morph, morph, morph, morph, morph, morph, morph, morph};
+            drawable.setRadii(restRadii, pressedRadii);
         }
     }
 

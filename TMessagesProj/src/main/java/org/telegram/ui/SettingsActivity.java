@@ -11,9 +11,9 @@ import static org.telegram.ui.PremiumPreviewFragment.applyNewSpanTimed;
 import static org.telegram.ui.Stars.StarGiftSheet.replaceUnderstood;
 
 import kotlin.Unit;
-import tw.nekomimi.nekogram.NekoSettingsActivity;
-import tw.nekomimi.nekogram.helpers.UpdateHelper;
-import tw.nekomimi.nekogram.ui.bottomsheets.BottomBuilder;
+import tw.nekomimi.nekogram.settings.NekoSettingsActivity;
+import tw.nekomimi.nekogram.helpers.remote.UpdateHelper;
+import tw.nekomimi.nekogram.ui.BottomBuilder;
 import tw.nekomimi.nekogram.utils.AndroidUtil;
 import xyz.nextalone.nagram.NaConfig;
 

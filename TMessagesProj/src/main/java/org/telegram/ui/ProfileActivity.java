@@ -39,7 +39,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import me.vkryl.core.reference.ReferenceList;
-import org.telegram.ui.FiltersListBottomSheet;
+import org.telegram.ui.Components.FiltersListBottomSheet;
 import android.content.pm.ConfigurationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;

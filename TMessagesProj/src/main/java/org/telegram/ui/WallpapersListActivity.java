@@ -697,9 +697,9 @@ public class WallpapersListActivity extends BaseFragment implements Notification
             final SimpleActionBarMenu actionMode = simpleActionBar.createActionMode();
 
 
-            actionModeViews.add(actionMode.addItemWithWidth(forward, R.drawable.msg_forward, dp(54), LocaleController.getString(R.string.Forward)));
-            actionModeViews.add(actionMode.addItemWithWidth(delete, R.drawable.msg_delete, dp(54), LocaleController.getString(R.string.Delete)));
-            actionMode.setM3ButtonGroupInsideContainer(actionModeViews.toArray(new View[0]));
+            final SimpleActionBarMenuItem forwardItem = actionMode.addItemWithWidth(forward, R.drawable.msg_forward, dp(54), LocaleController.getString(R.string.Forward));
+            final SimpleActionBarMenuItem deleteItem = actionMode.addItemWithWidth(delete, R.drawable.msg_delete, dp(54), LocaleController.getString(R.string.Delete));
+            actionMode.setM3ButtonGroupInsideContainer(forwardItem, deleteItem);
 
             selectedWallPapers.clear();
         }
