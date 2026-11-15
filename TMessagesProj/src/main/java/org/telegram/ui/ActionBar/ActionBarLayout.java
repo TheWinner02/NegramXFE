@@ -93,6 +93,7 @@ import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.SettingsActivity;
 import org.telegram.ui.Stories.StoryViewer;
+import org.telegram.ui.ViewPagerActivity;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1927,7 +1928,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         } else {
                             containerView.setTranslationX(dx);
                             if (useSlideAnimation()) {
-                                if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null) {
+                                if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null && !isInPreviewMode()) {
                                     float progress = MathUtils.clamp((float) dx / containerView.getMeasuredWidth(), 0f, 1f);
                                     containerViewBack.setTranslationX(-(1f - progress) * 0.12f * containerView.getMeasuredWidth());
                                     float backScale = 0.94f + progress * 0.06f;
@@ -2013,6 +2014,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         return false;
     }
 
+    private boolean predictiveBackPreview;
     private boolean predictiveInput;
     private boolean predictiveBackInProgress;
     private boolean predictiveBackHasProgress;
@@ -2036,6 +2038,18 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             return false;
         }
         if (isInPreviewMode()) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                predictiveBackPreview = true;
+                predictiveBackHasProgress = false;
+                predictiveBackInProgress = true;
+                predictiveInput = true;
+                predictiveBackLeft = touchX < AndroidUtilities.displaySize.x / 2f;
+                predictiveBackY = touchY;
+                if (parentActivity != null && parentActivity.getCurrentFocus() != null) {
+                    AndroidUtilities.hideKeyboard(parentActivity.getCurrentFocus());
+                }
+                return true;
+            }
             return false;
         }
         if (sheetFragment != null && sheetFragment.hasShownSheet()) {
@@ -2069,13 +2083,43 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
     public void onBackProgress(float t) {
         if (!predictiveInput) return;
+        if (predictiveBackPreview) {
+            predictiveBackHasProgress = t > 0;
+            float interpolated = CubicBezierInterpolator.StandardDecelerate.getInterpolation(t);
+            float downY = AndroidUtilities.dp(32) * interpolated;
+            float alpha = 1.0f - interpolated * 0.25f;
+            float scale = 1.0f - interpolated * 0.08f;
+            if (containerView != null) {
+                containerView.setTranslationY(downY);
+                containerView.setAlpha(alpha);
+                containerView.setScaleX(scale);
+                containerView.setScaleY(scale);
+            }
+            if (previewMenu != null) {
+                previewMenu.setTranslationY(-AndroidUtilities.dp(36 + 20) * interpolated);
+                previewMenu.setAlpha(alpha);
+                previewMenu.setScaleX(scale);
+                previewMenu.setScaleY(scale);
+            }
+            if (previewBackgroundDrawable != null) {
+                previewBackgroundDrawable.setAlpha((int) (0x2e * (1.0f - interpolated * 0.35f)));
+            }
+            if (fragmentsStack.size() > 1) {
+                BaseFragment bgFragment = fragmentsStack.get(fragmentsStack.size() - 2);
+                if (bgFragment != null) {
+                    bgFragment.onTransitionAnimationProgress(false, 1.0f - interpolated * 0.35f);
+                }
+            }
+            invalidate();
+            return;
+        }
         final float dx;
         if (useSlideAnimation()) {
             float width = getWidth() - getPaddingLeft() - getPaddingRight();
             dx = fluidChatTransition() != null
                     ? fluidChatBackStart + (width - fluidChatBackStart) * .35f * CubicBezierInterpolator.StandardDecelerate.getInterpolation(t)
                     : width * .35f * CubicBezierInterpolator.StandardDecelerate.getInterpolation(t);
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null && !isInPreviewMode()) {
                 float p = MathUtils.clamp(dx / Math.max(1f, width), 0f, 1f);
                 containerViewBack.setTranslationX(-(1f - p) * 0.12f * width);
                 float backScale = 0.94f + p * 0.06f;
@@ -2095,6 +2139,29 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     public void onBackCancelled() {
         if (!predictiveInput) return;
         predictiveInput = false;
+        if (predictiveBackPreview) {
+            predictiveBackPreview = false;
+            predictiveBackInProgress = false;
+            if (containerView != null) {
+                containerView.animate().translationY(0f).alpha(1.0f).scaleX(1.0f).scaleY(1.0f).setDuration(220)
+                        .setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator()).start();
+            }
+            if (previewMenu != null) {
+                previewMenu.animate().translationY(0f).alpha(1.0f).scaleX(1.0f).scaleY(1.0f).setDuration(220)
+                        .setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator()).start();
+            }
+            if (previewBackgroundDrawable != null) {
+                previewBackgroundDrawable.setAlpha(0x2e);
+            }
+            if (fragmentsStack.size() > 1) {
+                BaseFragment bgFragment = fragmentsStack.get(fragmentsStack.size() - 2);
+                if (bgFragment != null) {
+                    bgFragment.onTransitionAnimationProgress(false, 1.0f);
+                }
+            }
+            invalidate();
+            return;
+        }
         animateBackEndAnimation(true, 0f);
     }
 
@@ -2104,6 +2171,12 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             return;
         }
         predictiveInput = false;
+        if (predictiveBackPreview) {
+            predictiveBackPreview = false;
+            predictiveBackInProgress = false;
+            finishPreviewFragment();
+            return;
+        }
         animateBackEndAnimation(false, 0f);
     }
 
@@ -2144,7 +2217,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             }
             currentSpringAnimation.addUpdateListener((animation, value, velocity) -> {
                 var progress = value / SPRING_MULTIPLIER;
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null && !isInPreviewMode()) {
                     float width = containerView.getMeasuredWidth();
                     containerView.setTranslationX(progress * width);
                     containerViewBack.setTranslationX(-(1f - progress) * 0.12f * width);
@@ -2339,8 +2412,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         if (transitionAnimationPreviewMode) {
             return false;
         }
-        if (transitionAnimationInProgress && (transitionAnimationStartTime < System.currentTimeMillis() - 1500
-                && !(xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && currentSpringAnimation != null && currentSpringAnimation.isRunning()) || inPreviewMode)) {
+        if (transitionAnimationInProgress && (transitionAnimationStartTime < System.currentTimeMillis() - 1500 || inPreviewMode)) {
             onAnimationEndCheck(true);
         }
         return transitionAnimationInProgress;
@@ -2405,12 +2477,12 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             animationProgress = 0.0f;
             lastFrameTime = System.nanoTime() / 1000000;
         }
-        if (useSlideAnimation()) {
+        if (useSlideAnimation() && !preview) {
             if (useActionBarCrossfade()) {
                 swipeProgress = open ? 1f : 0f;
                 invalidateActionBars();
             }
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null && !preview && !isInPreviewMode()) {
                 if (open) {
                     containerView.setOutlineProvider(fluidOutlineProvider);
                     containerView.setClipToOutline(true);
@@ -2470,12 +2542,14 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     float clampedInterpolated = MathUtils.clamp(interpolated, 0, 1);
                     if (preview) {
                         containerView.setTranslationX(0);
-                        containerView.setTranslationY(0);
 
                         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                            containerView.setScaleX(1.0f);
-                            containerView.setScaleY(1.0f);
+                            float scale = 0.85f + 0.15f * clampedInterpolated;
+                            containerView.setScaleX(scale);
+                            containerView.setScaleY(scale);
+                            containerView.setTranslationY(AndroidUtilities.dp(32) * (1f - clampedInterpolated));
                         } else {
+                            containerView.setTranslationY(0);
                             float scale = 0.5f + interpolated * 0.5f;
                             containerView.setScaleX(scale);
                             containerView.setScaleY(scale);
@@ -2483,11 +2557,15 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         containerView.setAlpha(clampedInterpolated);
 
                         if (previewMenu != null) {
-                            containerView.setTranslationY(AndroidUtilities.dp(40) * (1f - interpolated));
-                            previewMenu.setTranslationY(-AndroidUtilities.dp(40 + 30) * (1f - interpolated));
+                            if (!xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                                containerView.setTranslationY(AndroidUtilities.dp(40) * (1f - interpolated));
+                            }
+                            previewMenu.setTranslationY(-AndroidUtilities.dp(40 + 30) * (1f - clampedInterpolated));
                             if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                                previewMenu.setScaleX(1.0f);
-                                previewMenu.setScaleY(1.0f);
+                                float menuScale = 0.90f + 0.10f * clampedInterpolated;
+                                previewMenu.setScaleX(menuScale);
+                                previewMenu.setScaleY(menuScale);
+                                previewMenu.setAlpha(clampedInterpolated);
                             } else {
                                 previewMenu.setScaleX(0.95f + 0.05f * interpolated);
                                 previewMenu.setScaleY(0.95f + 0.05f * interpolated);
@@ -2516,17 +2594,32 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     float clampedReverseInterpolated = MathUtils.clamp(1f - interpolated, 0, 1);
                     if (preview) {
                         containerViewBack.setTranslationX(0);
-                        containerViewBack.setTranslationY(0);
 
                         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                            containerViewBack.setScaleX(1.0f);
-                            containerViewBack.setScaleY(1.0f);
+                            float scale = 0.85f + 0.15f * clampedReverseInterpolated;
+                            containerViewBack.setScaleX(scale);
+                            containerViewBack.setScaleY(scale);
+                            containerViewBack.setTranslationY(AndroidUtilities.dp(32) * (1f - clampedReverseInterpolated));
                         } else {
+                            containerViewBack.setTranslationY(0);
                             float scale = 0.5f + (1f - interpolated) * 0.5f;
                             containerViewBack.setScaleX(scale);
                             containerViewBack.setScaleY(scale);
                         }
                         containerViewBack.setAlpha(clampedReverseInterpolated);
+                        if (previewMenu != null) {
+                            previewMenu.setTranslationY(-AndroidUtilities.dp(40 + 30) * (1f - clampedReverseInterpolated));
+                            previewMenu.setAlpha(clampedReverseInterpolated);
+                            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                                float menuScale = 0.90f + 0.10f * clampedReverseInterpolated;
+                                previewMenu.setScaleX(menuScale);
+                                previewMenu.setScaleY(menuScale);
+                            } else {
+                                float menuScale = 0.95f + 0.05f * clampedReverseInterpolated;
+                                previewMenu.setScaleX(menuScale);
+                                previewMenu.setScaleY(menuScale);
+                            }
+                        }
                         previewBackgroundDrawable.setAlpha((int) (0x2e * clampedReverseInterpolated));
                         if (previewMenu == null) {
                             Theme.moveUpDrawable.setAlpha((int) (255 * clampedReverseInterpolated));
@@ -2551,7 +2644,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 onAnimationEndCheck(false);
                 setInnerTranslationX(0);
             });
-            configureFluidSpring();
+            configureFluidSpring(preview, open);
             currentSpringAnimation.start();
             return;
         }
@@ -2573,7 +2666,12 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     dt = 18;
                 }
                 lastFrameTime = newTime;
-                float duration = preview && open ? 190.0f : 150.0f;
+                float duration;
+                if (preview) {
+                    duration = (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? (open ? 250.0f : 210.0f) : (open ? 190.0f : 150.0f));
+                } else {
+                    duration = 150.0f;
+                }
                 animationProgress += dt / duration;
                 if (animationProgress > 1.0f) {
                     animationProgress = 1.0f;
@@ -2610,7 +2708,11 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 }
                 float interpolated;
                 if (preview) {
-                    if (open) {
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                        interpolated = open
+                                ? xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator().getInterpolation(animationProgress)
+                                : CubicBezierInterpolator.EASE_OUT_QUINT.getInterpolation(animationProgress);
+                    } else if (open) {
                         interpolated = overshootInterpolator.getInterpolation(animationProgress);
                     } else {
                         interpolated = CubicBezierInterpolator.EASE_OUT_QUINT.getInterpolation(animationProgress);
@@ -2622,13 +2724,26 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     float clampedInterpolated = MathUtils.clamp(interpolated, 0, 1);
                     containerView.setAlpha(clampedInterpolated);
                     if (preview) {
-                        containerView.setScaleX(0.7f + 0.3f * interpolated);
-                        containerView.setScaleY(0.7f + 0.3f * interpolated);
-                        if (previewMenu != null) {
-                            containerView.setTranslationY(dp(40) * (1f - interpolated));
-                            previewMenu.setTranslationY(-dp(40 + 30) * (1f - interpolated));
-                            previewMenu.setScaleX(0.95f + 0.05f * interpolated);
-                            previewMenu.setScaleY(0.95f + 0.05f * interpolated);
+                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                            float scale = 0.85f + 0.15f * interpolated;
+                            containerView.setScaleX(scale);
+                            containerView.setScaleY(scale);
+                            containerView.setTranslationY(dp(32) * (1f - interpolated));
+                            if (previewMenu != null) {
+                                previewMenu.setTranslationY(-dp(36 + 20) * (1f - interpolated));
+                                float menuScale = 0.90f + 0.10f * interpolated;
+                                previewMenu.setScaleX(menuScale);
+                                previewMenu.setScaleY(menuScale);
+                            }
+                        } else {
+                            containerView.setScaleX(0.7f + 0.3f * interpolated);
+                            containerView.setScaleY(0.7f + 0.3f * interpolated);
+                            if (previewMenu != null) {
+                                containerView.setTranslationY(dp(40) * (1f - interpolated));
+                                previewMenu.setTranslationY(-dp(40 + 30) * (1f - interpolated));
+                                previewMenu.setScaleX(0.95f + 0.05f * interpolated);
+                                previewMenu.setScaleY(0.95f + 0.05f * interpolated);
+                            }
                         }
                         previewBackgroundDrawable.setAlpha((int) (0x2e * clampedInterpolated));
                         Theme.moveUpDrawable.setAlpha((int) (255 * clampedInterpolated));
@@ -2641,8 +2756,21 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     float clampedReverseInterpolated = MathUtils.clamp(1f - interpolated, 0, 1);
                     containerViewBack.setAlpha(clampedReverseInterpolated);
                     if (preview) {
-                        containerViewBack.setScaleX(0.9f + 0.1f * (1.0f - interpolated));
-                        containerViewBack.setScaleY(0.9f + 0.1f * (1.0f - interpolated));
+                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                            float scale = 0.85f + 0.15f * clampedReverseInterpolated;
+                            containerViewBack.setScaleX(scale);
+                            containerViewBack.setScaleY(scale);
+                            containerViewBack.setTranslationY(dp(32) * (1f - clampedReverseInterpolated));
+                            if (previewMenu != null) {
+                                previewMenu.setTranslationY(-dp(36 + 20) * (1f - clampedReverseInterpolated));
+                                float menuScale = 0.90f + 0.10f * clampedReverseInterpolated;
+                                previewMenu.setScaleX(menuScale);
+                                previewMenu.setScaleY(menuScale);
+                            }
+                        } else {
+                            containerViewBack.setScaleX(0.9f + 0.1f * (1.0f - interpolated));
+                            containerViewBack.setScaleY(0.9f + 0.1f * (1.0f - interpolated));
+                        }
                         previewBackgroundDrawable.setAlpha((int) (0x2e * clampedReverseInterpolated));
                         if (previewMenu == null) {
                             Theme.moveUpDrawable.setAlpha((int) (255 * clampedReverseInterpolated));
@@ -2953,7 +3081,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         presentFragmentInternalRemoveOld(removeLast, currentFragment);
                         containerView.setTranslationX(0);
                     }
-                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && !preview) {
                         containerView.setScaleX(1.0f);
                         containerView.setScaleY(1.0f);
                         containerView.setClipToOutline(false);
@@ -2990,8 +3118,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                             containerView.setAlpha(0.0f);
                             containerView.setTranslationX(0.0f);
                             if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                                containerView.setScaleX(1.0f);
-                                containerView.setScaleY(1.0f);
+                                containerView.setScaleX(0.85f);
+                                containerView.setScaleY(0.85f);
+                                containerView.setTranslationY(dp(32));
                             } else {
                                 containerView.setScaleX(0.5f);
                                 containerView.setScaleY(0.5f);
@@ -3006,8 +3135,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         if (preview) {
                             containerView.setTranslationX(0.0f);
                             if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                                containerView.setScaleX(1.0f);
-                                containerView.setScaleY(1.0f);
+                                containerView.setScaleX(0.85f);
+                                containerView.setScaleY(0.85f);
+                                containerView.setTranslationY(dp(32));
                             } else {
                                 containerView.setScaleX(0.9f);
                                 containerView.setScaleY(0.9f);
@@ -3423,11 +3553,18 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 }
             }
 
-            if (!inPreviewMode) {
+            if (inPreviewMode) {
+                containerView.setVisibility(View.VISIBLE);
+                containerView.setScaleX(1.0f);
+                containerView.setScaleY(1.0f);
+                containerView.setTranslationX(0);
+                containerView.setTranslationY(0);
+                containerView.setAlpha(1.0f);
+            } else {
                 containerView.setVisibility(View.VISIBLE);
                 if (useSlideAnimation()) {
                     float widthNoPaddings = getWidth() - getPaddingLeft() - getPaddingRight();
-                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null) {
+                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null && !isInPreviewMode()) {
                         containerView.setTranslationX(-0.12f * widthNoPaddings);
                         containerView.setScaleX(0.94f);
                         containerView.setScaleY(0.94f);
@@ -3486,6 +3623,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             if (needAnimation) {
                 transitionAnimationStartTime = System.currentTimeMillis();
                 transitionAnimationInProgress = true;
+                if (inPreviewMode) {
+                    transitionAnimationPreviewMode = true;
+                }
                 layoutToIgnore = containerView;
                 final BaseFragment previousFragmentFinal = previousFragment;
                 currentFragment.setRemovingFromStack(true);
@@ -3503,6 +3643,8 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     if (inPreviewMode || transitionAnimationPreviewMode) {
                         containerViewBack.setScaleX(1.0f);
                         containerViewBack.setScaleY(1.0f);
+                        containerViewBack.setTranslationX(0);
+                        containerViewBack.setTranslationY(0);
                         inPreviewMode = false;
                         previewMenu = null;
                         transitionAnimationPreviewMode = false;
@@ -3523,6 +3665,12 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     currentFragment.setRemovingFromStack(false);
                     currentFragment.onTransitionAnimationEnd(false, true);
                     previousFragmentFinal.onTransitionAnimationEnd(true, true);
+                    if (previousFragmentFinal instanceof ViewPagerActivity) {
+                        BaseFragment visible = ((ViewPagerActivity) previousFragmentFinal).getCurrentVisibleFragment();
+                        if (visible != null) {
+                            visible.onTransitionAnimationEnd(true, true);
+                        }
+                    }
                     previousFragmentFinal.onBecomeFullyVisible();
                 };
                 AnimatorSet animation = null;
@@ -4499,12 +4647,24 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     }
 
     private void configureFluidSpring() {
+        configureFluidSpring(false, false);
+    }
+
+    private void configureFluidSpring(boolean preview, boolean open) {
         if (!xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() || currentSpringAnimation == null) return;
         xyz.nextalone.nagram.ui.fluid.FluidCapabilities.refresh();
         float scale = xyz.nextalone.nagram.ui.fluid.FluidCapabilities.motionScale(getContext());
-        currentSpringAnimation.getSpring()
-                .setStiffness(xyz.nextalone.nagram.ui.fluid.FluidTiming.stiffness(Math.max(.01f, scale)))
-                .setDampingRatio(xyz.nextalone.nagram.ui.fluid.FluidTiming.DAMPING_RATIO);
+        if (preview) {
+            float previewStiffness = xyz.nextalone.nagram.ui.fluid.FluidTiming.stiffness(Math.max(.01f, scale)) * (open ? 4.6f : 5.7f);
+            float damping = open ? 0.70f : 0.78f;
+            currentSpringAnimation.getSpring()
+                    .setStiffness(previewStiffness)
+                    .setDampingRatio(damping);
+        } else {
+            currentSpringAnimation.getSpring()
+                    .setStiffness(xyz.nextalone.nagram.ui.fluid.FluidTiming.stiffness(Math.max(.01f, scale)))
+                    .setDampingRatio(xyz.nextalone.nagram.ui.fluid.FluidTiming.DAMPING_RATIO);
+        }
         currentSpringAnimation.setMinimumVisibleChange(xyz.nextalone.nagram.ui.fluid.FluidTiming.MIN_VISIBLE_CHANGE * SPRING_MULTIPLIER);
         xyz.nextalone.nagram.ui.fluid.FluidCapabilities.track(getContext(), currentSpringAnimation);
     }

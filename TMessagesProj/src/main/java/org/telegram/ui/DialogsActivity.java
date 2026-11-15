@@ -7750,7 +7750,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (undoView[0] != null) {
             undoView[0].hide(true, 0);
         }
-        if (!isInPreviewMode() && blurredView != null && blurredView.getVisibility() == View.VISIBLE) {
+        if ((parentLayout == null || !parentLayout.isInPreviewMode()) && !isInPreviewMode() && blurredView != null && blurredView.getVisibility() == View.VISIBLE) {
             blurredView.setVisibility(View.GONE);
             blurredView.setBackground(null);
         }
@@ -9465,7 +9465,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (rightSlidingDialogContainer != null && rightSlidingDialogContainer.hasFragment()) {
             rightSlidingDialogContainer.getFragment().onTransitionAnimationEnd(isOpen, backward);
         } else {
-            if (isOpen && blurredView != null && blurredView.getVisibility() == View.VISIBLE) {
+            if ((isOpen || backward || parentLayout == null || !parentLayout.isInPreviewMode()) && blurredView != null && blurredView.getVisibility() == View.VISIBLE) {
                 blurredView.setVisibility(View.GONE);
                 blurredView.setBackground(null);
             }
