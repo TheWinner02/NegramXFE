@@ -228,13 +228,13 @@ public abstract class BaseFragment {
         sheetsStack.clear();
     }
 
-    protected org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode customGlassSource;
+    protected org.telegram.utils.glass.source.GlassSourceRenderNode customGlassSource;
 
-    public org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode getGlassSource() {
+    public org.telegram.utils.glass.source.GlassSourceRenderNode getGlassSource() {
         return customGlassSource;
     }
 
-    public void setCustomGlassSource(org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode source) {
+    public void setCustomGlassSource(org.telegram.utils.glass.source.GlassSourceRenderNode source) {
         this.customGlassSource = source;
     }
 

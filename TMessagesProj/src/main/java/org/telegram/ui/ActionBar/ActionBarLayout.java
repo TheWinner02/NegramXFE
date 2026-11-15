@@ -114,8 +114,9 @@ import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.blur3.DownscaleScrollableNoiseSuppressor;
 import org.telegram.ui.Components.blur3.ViewGroupPartRenderer;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
+import org.telegram.utils.glass.source.GlassSource;
+import org.telegram.utils.glass.source.GlassSourceRenderNode;
+import org.telegram.utils.glass.source.GlassSourceColor;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
 import org.telegram.ui.Components.chat.ViewPositionWatcher;
@@ -511,7 +512,27 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             }
         }
 
-        public static class SubSettingsFallbackColor extends BlurredBackgroundSourceColor {}
+        public static class SubSettingsFallbackColor implements GlassSource {
+            private final GlassSourceColor colorSource = new GlassSourceColor();
+
+            public void setColor(int color) {
+                colorSource.setColor(color);
+            }
+
+            public int getColor() {
+                return colorSource.getColor();
+            }
+
+            @Override
+            public void draw(@NonNull Canvas canvas, float left, float top, float right, float bottom) {
+                colorSource.draw(canvas, left, top, right, bottom);
+            }
+
+            @Override
+            public long getGenerationId() {
+                return colorSource.getGenerationId();
+            }
+        }
 
         @RequiresApi(Build.VERSION_CODES.S)
         private final class SubSettingsGlassUpdater {
@@ -519,7 +540,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             private final ViewGroup captureViewGroup;
             private final ActionBar actionBar;
             private final BaseFragment fragment;
-            private final BlurredBackgroundSourceRenderNode source;
+            private final GlassSourceRenderNode source;
             private final DownscaleScrollableNoiseSuppressor noiseSuppressor;
             private final ArrayList<RectF> positions = new ArrayList<>();
             private final ArrayList<RectF> positionsMerged = new ArrayList<>();
@@ -535,7 +556,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 SubSettingsFallbackColor fallbackColor = new SubSettingsFallbackColor();
                 fallbackColor.setColor(Theme.getColor(fragment.hasOwnBackground ? Theme.key_windowBackgroundWhite : Theme.key_windowBackgroundGray, fragment.getResourceProvider()));
 
-                this.source = new BlurredBackgroundSourceRenderNode(fallbackColor);
+                this.source = new GlassSourceRenderNode(fallbackColor);
                 this.source.setUnderSource(fallbackColor);
                 this.noiseSuppressor = new DownscaleScrollableNoiseSuppressor();
                 this.source.setScrollableNoiseSuppressor(noiseSuppressor, DownscaleScrollableNoiseSuppressor.DRAW_GLASS);

@@ -22,7 +22,7 @@ import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
+import org.telegram.utils.glass.source.GlassSourceColor;
 
 import tw.nekomimi.nekogram.NekoConfig;
 import xyz.nextalone.nagram.NaConfig;
@@ -37,7 +37,7 @@ import xyz.nextalone.nagram.NaConfig;
 public class FilterTabsPreviewCell extends FrameLayout implements NotificationCenter.NotificationCenterDelegate {
 
     private final FilterTabsView filterTabsView;
-    private final BlurredBackgroundSourceColor blurSource;
+    private final GlassSourceColor blurSource;
     private final HashMap<Integer, Integer> idsWithCounters = new HashMap<>();
     private final int counterSeed = Utilities.random.nextInt(40) + 20;
 
@@ -61,7 +61,7 @@ public class FilterTabsPreviewCell extends FrameLayout implements NotificationCe
         // so a BlurredBackgroundSourceColor is sufficient and gives identical pixels
         // to the real DialogsActivity rendering on devices without RenderNode-based
         // glass.
-        blurSource = new BlurredBackgroundSourceColor();
+        blurSource = new GlassSourceColor();
         blurSource.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         BlurredBackgroundDrawableViewFactory factory =
                 new BlurredBackgroundDrawableViewFactory(blurSource);

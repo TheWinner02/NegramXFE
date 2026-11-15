@@ -258,6 +258,8 @@ dependencies {
     implementation libs.play.services.vision
     implementation libs.play.services.wearable
     implementation libs.play.services.location
+    implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
+    implementation 'com.google.android.gms:play-services-wallet:19.1.0'
     implementation libs.isoparser
     implementation libs.language.id
     implementation libs.gson

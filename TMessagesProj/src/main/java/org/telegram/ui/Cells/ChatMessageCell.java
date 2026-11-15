@@ -1681,7 +1681,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public int timeTextWidth;
     public int timeX;
     public int signWidth;
-    CharSequence currentTimeString;
+    SpannableStringBuilder currentTimeString;
     boolean drawTime = true;
     boolean forceNotDrawTime;
     private Paint drillHolePaint;

@@ -4188,7 +4188,10 @@ public class SharedMediaLayout extends FrameLayout implements Theme.Colorable, N
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             selectedMessagesCountTextView.setText(LocaleController.formatPluralString("MessagesSelected", count), animated);
         } else {
-            selectedMessagesCountTextView.setText(Integer.toString(count), animated);
+            selectedMessagesCountTextView.setNumber(count, animated);
+        }
+        if (simpleActionBar != null) {
+            simpleActionBar.setActionModeCount(count, animated);
         }
         if (actionModeLayout != null) {
             actionModeLayout.requestLayout();
@@ -13336,13 +13339,6 @@ public class SharedMediaLayout extends FrameLayout implements Theme.Colorable, N
             checkSimpleMenuItems(true);
         } else {
             searchItem.setVisibility(visibility);
-        }
-    }
-
-    private void setSelectedMessagesCount(int count, boolean animated) {
-        selectedMessagesCountTextView.setNumber(count, animated);
-        if (simpleActionBar != null) {
-            simpleActionBar.setActionModeCount(count, animated);
         }
     }
 

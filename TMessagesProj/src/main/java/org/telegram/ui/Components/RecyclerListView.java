@@ -3618,7 +3618,7 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         setSections(isSectionView, isViewTypeSection, padding, roundRadius, this::drawBackgroundRect, topPadding);
     }
 
-    private void setSections(
+    public void setSections(
             Utilities.CallbackReturn<View, Boolean> isSectionView,
             Utilities.CallbackReturn<Integer, Boolean> isViewTypeSection,
             int padding,

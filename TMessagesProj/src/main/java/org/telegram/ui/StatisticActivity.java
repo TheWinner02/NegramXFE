@@ -3504,38 +3504,6 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
         updateHeaderOverlayHeight();
     }
 
-    private void checkUi_listPaddings() {
-        final int navbar = AndroidUtilities.navigationBarHeight;
-        final int statusbar = AndroidUtilities.statusBarHeight;
-
-        if (tabsView != null) {
-            tabsView.setTranslationY(-navbar);
-        }
-
-        final int expandedExtra = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()
-                && actionBar != null && actionBar.isM3LargeFlexible()
-                ? actionBar.getM3ExpandedExtraHeight()
-                : 0;
-        final int pt = ActionBar.getCurrentActionBarHeight() + statusbar + expandedExtra;
-        final int pb = (showTabs ? dp(DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS) : 0) + navbar;
-
-        if (recyclerListView != null) {
-            setListPadding(recyclerListView, pt, pb);
-        }
-        if (boostLayout != null) {
-            setListPadding(boostLayout.listView, pt, pb);
-        }
-        if (monetizationLayout != null) {
-            setListPadding(monetizationLayout.listView, pt, pb);
-        }
-    }
-
-    private void setListPadding(RecyclerView list, int top, int bottom) {
-        if (list.getPaddingTop() != top || list.getPaddingBottom() != bottom) {
-            list.setPadding(0, top, 0, bottom);
-        }
-    }
-
     private void updateHeaderOverlayHeight() {
         if (listTopOverlay == null) return;
         int height = mSystemInsets.top + ActionBar.getCurrentActionBarHeight() + dp(44);
@@ -3568,6 +3536,9 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
 
     private void checkUi_listPaddings() {
         int pt = ActionBar.getCurrentActionBarHeight();
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() && actionBar != null && actionBar.isM3LargeFlexible()) {
+            pt += actionBar.getM3ExpandedExtraHeight();
+        }
         updateHeaderOverlayHeight();
         int pb = showTabs ? AndroidUtilities.dp(DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS) : 0;
         AndroidUtilities.setViewLayoutMargins(avatarContainer.avatarImageView, 0, mSystemInsets.top + ((ActionBar.getCurrentActionBarHeight() - AndroidUtilities.dp(42.0f)) / 2), AndroidUtilities.dp(6.0f), 0);

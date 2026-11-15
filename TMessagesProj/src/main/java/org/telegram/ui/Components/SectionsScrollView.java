@@ -28,6 +28,7 @@ import android.widget.ScrollView;
 import androidx.annotation.NonNull;
 import androidx.core.graphics.ColorUtils;
 
+import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.DialogRadioCell;
@@ -56,7 +57,9 @@ public class SectionsScrollView extends ScrollView implements IBlur3Capture {
     private Theme.ResourcesProvider resourcesProvider;
     private LinearLayout contentView;
 
-    private final float sectionRadius = dp(16);
+    private float sectionRadius = dp(16);
+    private float[] sectionRadiusTop;
+    private float[] sectionRadiusBottom;
     private final Paint backgroundPaint = new Paint();
     private final Paint sectionPaint = new Paint();
     private final Paint bitmapPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);

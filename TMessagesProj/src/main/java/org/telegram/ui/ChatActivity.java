@@ -4543,11 +4543,6 @@ public class ChatActivity extends BaseFragment implements
             @Override
             protected boolean onAvatarClick() {
                 if (isTitleCentered() && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
-                    if (editTextItem != null && editTextItem.getTag() != null) {
-                        checkEditTextItemMenu();
-                        editTextItem.createView().performClick();
-                        return true;
-                    }
                     if (headerItem != null) {
                         if (attachItem != null && chatActivityEnterView.hasText() && TextUtils.isEmpty(chatActivityEnterView.getSlowModeTimer()) && (currentChat == null || ChatObject.canSendPlain(currentChat))) {
                             attachItem.createView().performClick();
@@ -8261,7 +8256,6 @@ public class ChatActivity extends BaseFragment implements
                 }
             }
         });
-        messagesSearchListView.addEdgeEffectListener(() -> invalidateMergedVisibleBlurredPositionsAndSources(BLUR_INVALIDATE_FLAG_SCROLL | BLUR_INVALIDATE_FLAG_CLIP));
         hashtagLoadingView = new FlickerLoadingView(context, themeDelegate);
         hashtagLoadingView.setViewType(FlickerLoadingView.DIALOG_CELL_TYPE);
         glassEngine.addScrolledView(messagesSearchListView);

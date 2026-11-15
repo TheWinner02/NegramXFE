@@ -81,8 +81,8 @@ import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProvider;
 import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode;
+import org.telegram.utils.glass.source.GlassSourceColor;
+import org.telegram.utils.glass.source.GlassSourceRenderNode;
 import org.telegram.ui.Components.chat.ViewPositionWatcher;
 import org.telegram.utils.glass.source.GlassSourceCrossfade;
 import org.telegram.ui.MainTabsLayout;
@@ -3312,10 +3312,6 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                     glassDrawable.draw(canvas);
                 }
             } else {
-                final int menuWidthWithPadding = menuWidth + ((hasForcedMenuWidth || hasForcedMenuMinWidth) ? (menuWidth > 0 ? p : 0) : (int) (p * animatorHasMenuItems.getFloatValue()));
-                final int rightOffset = lerp(menuWidthWithPadding, Math.max(menuWidthWithPadding, p + s), chatAvatarContainer == null ? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
-
-
                 final int leftDefault = lerp(hasBackButton ? s + p : 0, s + p, chatAvatarContainer == null? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
                 final int rightDefault = getWidth() - rightOffset;
                 final int widthDefault = rightDefault - leftDefault;
@@ -3345,30 +3341,31 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             }
         }
         if (glassDrawableBack != null && hasBackButton) {
-                int left = backButtonImageView.getLeft() + dp(10);
-                int right = backButtonImageView.getRight() + dp(10);
-                if (glassBackButtonIsRound) {
-                    int w = dp(40);
-                    int h = dp(40);
-                    left = (left + right - w) / 2;
-                    right = left + w;
-                    int cy = (t + b) / 2;
-                    t = cy - h / 2;
-                    b = cy + h / 2;
-                }
-                int insetX = (int) (morphProgress * dp(1.5f));
-                int insetY = (int) (morphProgress * dp(1.0f));
-                glassDrawableBack.setBounds(left + insetX, t + insetY, right - insetX, b - insetY);
-                glassDrawableBack.draw(canvas);
+            float morphProgress = 0f;
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                morphProgress = glassBackMorphHelper.getProgress();
+                float rad = AndroidUtilities.lerp(dp(20), dp(11), morphProgress);
+                glassDrawableBack.setRadius(rad);
             }
-            if (glassDrawableMenu != null && menu != null && menu.getItemCount() > 0 && menu.getVisibility() == View.VISIBLE) {
-                int left = menu.getLeft() - dp(10);
-                int right = menu.getRight() - dp(10);
-                int insetX = (int) (morphProgress * dp(1.5f));
-                int insetY = (int) (morphProgress * dp(1.0f));
-                glassDrawableMenu.setBounds(left + insetX, t + insetY, right - insetX, b - insetY);
-                glassDrawableMenu.draw(canvas);
+            int insetX = (int) (morphProgress * dp(1.5f));
+            int insetY = (int) (morphProgress * dp(1.0f));
+            glassDrawableBack.setBounds(0, t + insetY, s + p * 2 - insetX, b - insetY);
+            glassDrawableBack.draw(canvas);
+        }
+        if (glassDrawableMenu != null && menuWidth > 0 && !glassOnlyBack && !doNotDrawGlassMenu) {
+            float morphProgress = 0f;
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                morphProgress = glassMenuMorphHelper.getProgress();
+                float rad = AndroidUtilities.lerp(dp(20), dp(11), morphProgress);
+                glassDrawableMenu.setRadius(rad);
             }
+            int insetX = (int) (morphProgress * dp(1.5f));
+            int insetY = (int) (morphProgress * dp(1.0f));
+            glassDrawableMenu.setBounds(getWidth() - Math.max(s, menuWidth) - p * 2 + insetX, t + insetY, getWidth(), b - insetY);
+            float alphaFactor = hasForcedMenuWidth ? 1f : Math.max(animatorHasMenuItems.getFloatValue(), actionModeFactor);
+            glassDrawableMenu.setAlpha((int) (255 * alphaFactor));
+            glassDrawableMenu.draw(canvas);
+        }
         }
 
         if (!xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && blurredBackground && actionBarColor != Color.TRANSPARENT) {
@@ -3728,14 +3725,14 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 if (parentFragment.getFragmentView() instanceof ViewGroup) {
                     factory.setSourceRootView(new ViewPositionWatcher((ViewGroup) parentFragment.getFragmentView()), (ViewGroup) parentFragment.getFragmentView());
                 }
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                BlurredBackgroundSourceColor sourceColor = new BlurredBackgroundSourceColor();
+            } else if (Build.VERSION_CODES.Q <= Build.VERSION.SDK_INT) {
+                GlassSourceColor sourceColor = new GlassSourceColor();
                 sourceColor.setColor(getThemedColor(adaptive_topColorKey != 0 && adaptive_topColorKey != -1 ? adaptive_topColorKey : Theme.key_windowBackgroundGray));
-                BlurredBackgroundSourceRenderNode renderNodeSource = new BlurredBackgroundSourceRenderNode(sourceColor);
+                GlassSourceRenderNode renderNodeSource = new GlassSourceRenderNode(sourceColor);
                 renderNodeSource.setUnderSource(sourceColor);
                 factory = new BlurredBackgroundDrawableViewFactory(renderNodeSource);
             } else {
-                BlurredBackgroundSourceColor sourceColor = new BlurredBackgroundSourceColor();
+                GlassSourceColor sourceColor = new GlassSourceColor();
                 sourceColor.setColor(getThemedColor(adaptive_topColorKey != 0 && adaptive_topColorKey != -1 ? adaptive_topColorKey : Theme.key_windowBackgroundGray));
                 factory = new BlurredBackgroundDrawableViewFactory(sourceColor);
             }

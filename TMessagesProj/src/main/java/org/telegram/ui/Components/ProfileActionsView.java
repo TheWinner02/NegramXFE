@@ -11,11 +11,13 @@ import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.RadialGradient;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.RenderNode;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
@@ -27,6 +29,8 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityManager;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityNodeProvider;
+
+import org.telegram.ui.ProfileActivity;
 
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;

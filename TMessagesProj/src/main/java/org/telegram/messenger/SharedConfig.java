@@ -332,6 +332,7 @@ public class SharedConfig {
     public static boolean hasCameraCache;
     public static boolean showNotificationsForAllAccounts = true;
     public static boolean debugVideoQualities = false;
+    public static boolean shadowsInSections;
     public static int repeatMode;
     public static boolean allowBigEmoji;
     public static boolean useSystemEmoji;

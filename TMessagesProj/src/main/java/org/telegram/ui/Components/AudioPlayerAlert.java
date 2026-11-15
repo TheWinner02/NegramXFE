@@ -4113,26 +4113,15 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         optionsButton.redrawPopup(getThemedColor(Theme.key_actionBarDefaultSubmenuBackground));
     }
 
+    /** theme editor: colors this page shows (former ThemeDescription keys) */
     @Override
-    public void getThemeKeys(List<Integer> keys) {
-        super.getThemeKeys(keys);
-        keys.add(Theme.key_dialogBackground);
-        keys.add(Theme.key_windowBackgroundGray);
-        keys.add(Theme.key_player_button);
+    public void addThemeColorKeys(HashSet<Integer> keys) {
+        super.addThemeColorKeys(keys);
+        keys.add(Theme.key_divider);
+        keys.add(Theme.key_player_background);
         keys.add(Theme.key_player_progress);
-        keys.add(Theme.key_featuredStickers_addButtonPressed);
-        keys.add(Theme.key_inappPlayerClose);
-        keys.add(Theme.key_actionBarDefaultSubmenuItem);
-        keys.add(Theme.key_actionBarDefaultSubmenuItemIcon);
-        keys.add(Theme.key_featuredStickers_addButton);
-        keys.add(Theme.key_listSelector);
-        keys.add(Theme.key_actionBarDefaultSubmenuBackground);
-        keys.add(Theme.key_player_actionBarTitle);
-        keys.add(Theme.key_player_time);
-        keys.add(Theme.key_player_progressBackground);
-        keys.add(Theme.key_player_buttonActive);
-        keys.add(Theme.key_player_placeholder);
-        keys.add(Theme.key_player_placeholderBackground);
+        keys.add(Theme.key_player_progressCachedBackground);
+        keys.add(Theme.key_chat_inAudioProgress);
         keys.add(Theme.key_chat_inAudioSelectedProgress);
         keys.add(Theme.key_windowBackgroundWhiteGrayText2);
         keys.add(Theme.key_chat_inMediaIconSelected);
