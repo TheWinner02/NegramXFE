@@ -777,10 +777,18 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
                 if (fragment != null && messageObject != null) {
                     if (messageObject.isMusic()) {
                         final Activity activity = AndroidUtilities.findActivity(getContext());
+                        AudioPlayerAlert alert = null;
                         if (activity instanceof LaunchActivity) {
-                            new AudioPlayerAlert(activity, resourcesProvider).show();
+                            alert = new AudioPlayerAlert(activity, resourcesProvider);
                         } else if (AndroidUtilities.isContextSafe(LaunchActivity.instance)) {
-                            new AudioPlayerAlert(LaunchActivity.instance, resourcesProvider).show();
+                            alert = new AudioPlayerAlert(LaunchActivity.instance, resourcesProvider);
+                        }
+                        if (alert != null) {
+                            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                                xyz.nextalone.nagram.ui.fluid.FluidOrigins.handoff(FragmentContextView.this);
+                                alert.setFluidAnchorView(FragmentContextView.this);
+                            }
+                            alert.show();
                         }
                     } else {
                         long dialogId = 0;

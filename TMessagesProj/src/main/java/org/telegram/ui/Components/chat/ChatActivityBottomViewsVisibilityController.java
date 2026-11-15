@@ -14,7 +14,11 @@ public class ChatActivityBottomViewsVisibilityController implements ReplaceAnima
     private final ReplaceAnimator<Integer> replaceAnimator;
 
     public ChatActivityBottomViewsVisibilityController(Runnable onValuesChanged) {
-        this.replaceAnimator = new ReplaceAnimator<>(this, AnimatorUtils.DECELERATE_INTERPOLATOR, 240);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            this.replaceAnimator = new ReplaceAnimator<>(this, xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator(), 280);
+        } else {
+            this.replaceAnimator = new ReplaceAnimator<>(this, AnimatorUtils.DECELERATE_INTERPOLATOR, 240);
+        }
         this.onValuesChanged = onValuesChanged;
     }
 

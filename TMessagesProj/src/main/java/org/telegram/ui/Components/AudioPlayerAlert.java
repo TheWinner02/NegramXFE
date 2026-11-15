@@ -1775,6 +1775,20 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         }
     }
 
+    @Override
+    public void getFluidSurfaceBounds(android.graphics.RectF bounds) {
+        if (bounds == null || containerView == null) return;
+        int height = containerView.getHeight();
+        int width = containerView.getWidth();
+        int containerHeight = getContainerViewHeight();
+        if (containerHeight > 0 && height > 0) {
+            float top = Math.max(0, height - containerHeight + backgroundPaddingTop);
+            bounds.set(backgroundPaddingLeft, top, Math.max(backgroundPaddingLeft, width - backgroundPaddingLeft), height);
+        } else {
+            super.getFluidSurfaceBounds(bounds);
+        }
+    }
+
     private void startForwardRewindingSeek() {
         if (rewindingState == 1) {
             lastRewindingTime = System.currentTimeMillis();
@@ -2084,13 +2098,23 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
                 blurredView.setBackground(new BitmapDrawable(bitmapBg)));
 
             blurredView.setVisibility(View.VISIBLE);
-            blurredView.animate().alpha(1.0f).setDuration(180).setListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    blurredAnimationInProgress = false;
-                }
-            }).start();
-            bigAlbumConver.animate().scaleX(1f).scaleY(1f).setDuration(180).start();
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                blurredView.animate().alpha(1.0f).setDuration(280).setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator()).setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        blurredAnimationInProgress = false;
+                    }
+                }).start();
+                bigAlbumConver.animate().scaleX(1f).scaleY(1f).setDuration(280).setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator()).start();
+            } else {
+                blurredView.animate().alpha(1.0f).setDuration(180).setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        blurredAnimationInProgress = false;
+                    }
+                }).start();
+                bigAlbumConver.animate().scaleX(1f).scaleY(1f).setDuration(180).start();
+            }
         } else {
             if (blurredView.getVisibility() != View.VISIBLE) {
                 return;
@@ -2098,15 +2122,27 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             blurredView.setTag(null);
             if (animated) {
                 blurredAnimationInProgress = true;
-                blurredView.animate().alpha(0.0f).setDuration(180).setListener(new AnimatorListenerAdapter() {
-                    @Override
-                    public void onAnimationEnd(Animator animation) {
-                        blurredView.setVisibility(View.INVISIBLE);
-                        bigAlbumConver.setImageBitmap(null);
-                        blurredAnimationInProgress = false;
-                    }
-                }).start();
-                bigAlbumConver.animate().scaleX(0.9f).scaleY(0.9f).setDuration(180).start();
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                    blurredView.animate().alpha(0.0f).setDuration(220).setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator()).setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            blurredView.setVisibility(View.INVISIBLE);
+                            bigAlbumConver.setImageBitmap(null);
+                            blurredAnimationInProgress = false;
+                        }
+                    }).start();
+                    bigAlbumConver.animate().scaleX(0.9f).scaleY(0.9f).setDuration(220).setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator()).start();
+                } else {
+                    blurredView.animate().alpha(0.0f).setDuration(180).setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            blurredView.setVisibility(View.INVISIBLE);
+                            bigAlbumConver.setImageBitmap(null);
+                            blurredAnimationInProgress = false;
+                        }
+                    }).start();
+                    bigAlbumConver.animate().scaleX(0.9f).scaleY(0.9f).setDuration(180).start();
+                }
             } else {
                 blurredView.setAlpha(0.0f);
                 blurredView.setVisibility(View.INVISIBLE);

@@ -1065,6 +1065,11 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 actionModeAnimation.cancel();
             }
             actionModeAnimation = new AnimatorSet();
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                actionMode.setScaleY(1.0f);
+                actionMode.setTranslationY(-AndroidUtilities.dp(8));
+                animators.add(ObjectAnimator.ofFloat(actionMode, View.TRANSLATION_Y, -AndroidUtilities.dp(8), 0.0f));
+            }
             actionModeAnimation.playTogether(animators);
             if (backgroundUpdateListener != null) {
                 ValueAnimator alphaUpdate = ValueAnimator.ofFloat(0, 1);
@@ -1076,11 +1081,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 actionModeAnimation.playTogether(alphaUpdate);
             }
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                actionMode.setScaleY(1.0f);
-                actionMode.setTranslationY(-AndroidUtilities.dp(8));
-                animators.add(ObjectAnimator.ofFloat(actionMode, View.TRANSLATION_Y, -AndroidUtilities.dp(8), 0.0f));
-                actionModeAnimation.setDuration(260);
-                actionModeAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                actionModeAnimation.setDuration(280);
+                actionModeAnimation.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator());
             } else {
                 actionModeAnimation.setDuration(200);
             }
@@ -1240,6 +1242,10 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             actionModeAnimation.cancel();
         }
         actionModeAnimation = new AnimatorSet();
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            actionMode.setScaleY(1.0f);
+            animators.add(ObjectAnimator.ofFloat(actionMode, View.TRANSLATION_Y, 0.0f, -AndroidUtilities.dp(8)));
+        }
         actionModeAnimation.playTogether(animators);
         if (backgroundUpdateListener != null) {
             ValueAnimator alphaUpdate = ValueAnimator.ofFloat(0, 1);
@@ -1251,10 +1257,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             actionModeAnimation.playTogether(alphaUpdate);
         }
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-            actionMode.setScaleY(1.0f);
-            animators.add(ObjectAnimator.ofFloat(actionMode, View.TRANSLATION_Y, 0.0f, -AndroidUtilities.dp(8)));
             actionModeAnimation.setDuration(220);
-            actionModeAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            actionModeAnimation.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator());
         } else {
             actionModeAnimation.setDuration(200);
         }
