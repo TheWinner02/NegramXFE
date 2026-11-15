@@ -53,6 +53,7 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.TextureView;
+import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
@@ -187,6 +188,8 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
     private androidx.dynamicanimation.animation.SpringAnimation fluidCameraSpring;
     private float fluidCameraTarget, fluidCameraZoomAlpha;
     private boolean fluidCameraLocked, fluidCameraSeeking, fluidCameraNotifyOpened;
+    private VelocityTracker cameraVelocityTracker;
+    private xyz.nextalone.nagram.ui.fluid.FluidAnimator cameraReturnTransition;
 
     private float cameraOpenProgress;
     private int[] animateCameraValues = new int[5];
@@ -2015,6 +2018,10 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                     return false;
                 }
             }
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && cameraReturnTransition != null && cameraReturnTransition.isRunning()) {
+                cameraReturnTransition.abort();
+                cameraReturnTransition = null;
+            }
             if (!takingPhoto) {
                 maybeStartDraging = true;
                 // CameraView also dispatches this gesture in its own moving coordinate space.
@@ -2023,8 +2030,18 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                 zooming = false;
                 zoomWas = false;
                 pressed = true;
+                if (cameraVelocityTracker != null) {
+                    cameraVelocityTracker.clear();
+                } else {
+                    cameraVelocityTracker = VelocityTracker.obtain();
+                }
+                cameraVelocityTracker.addMovement(event);
             }
         } else if (action == MotionEvent.ACTION_POINTER_DOWN && event.getPointerCount() >= 2 && !takingPhoto) {
+            if (cameraVelocityTracker != null) {
+                cameraVelocityTracker.recycle();
+                cameraVelocityTracker = null;
+            }
             pinchStartDistance = (float) Math.hypot(event.getX(1) - event.getX(0), event.getY(1) - event.getY(0));
             maybeStartDraging = false;
             dragging = false;
@@ -2032,6 +2049,9 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             zoomWas = false;
             pressed = true;
         } else if (pressed) {
+            if (cameraVelocityTracker != null) {
+                cameraVelocityTracker.addMovement(event);
+            }
             if (action == MotionEvent.ACTION_MOVE) {
                 if (zooming && event.getPointerCount() >= 2) {
                     float newDistance = (float) Math.hypot(event.getX(1) - event.getX(0), event.getY(1) - event.getY(0));
@@ -2107,7 +2127,13 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                 if (dragging) {
                     dragging = false;
                     if (cameraView != null) {
-                        if (action == MotionEvent.ACTION_UP && Math.abs(cameraView.getTranslationY()) > cameraView.getMeasuredHeight() / 6.0f) {
+                        float velY = 0;
+                        if (cameraVelocityTracker != null) {
+                            cameraVelocityTracker.computeCurrentVelocity(1000);
+                            velY = cameraVelocityTracker.getYVelocity();
+                        }
+                        boolean flingDown = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && (cameraView.getTranslationY() > dp(20) && velY > dp(650));
+                        if (action == MotionEvent.ACTION_UP && (flingDown || Math.abs(cameraView.getTranslationY()) > cameraView.getMeasuredHeight() / 6.0f)) {
                             closeCamera(true);
                         } else {
                             AnimatorSet animatorSet = new AnimatorSet();
@@ -2119,17 +2145,29 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                                 ObjectAnimator.ofFloat(flashModeButton[0], View.ALPHA, 1.0f),
                                 ObjectAnimator.ofFloat(flashModeButton[1], View.ALPHA, 1.0f),
                                 ObjectAnimator.ofFloat(cameraPhotoRecyclerView, View.ALPHA, 1.0f));
-                            animatorSet.setDuration(250);
-                            animatorSet.setInterpolator(interpolator);
-                            animatorSet.start();
+                            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                                cameraReturnTransition = xyz.nextalone.nagram.ui.fluid.FluidAnimator.start(getContext(), animatorSet);
+                            } else {
+                                animatorSet.setDuration(250);
+                                animatorSet.setInterpolator(interpolator);
+                                animatorSet.start();
+                            }
                             cameraPanel.setTag(null);
                         }
+                    }
+                    if (cameraVelocityTracker != null) {
+                        cameraVelocityTracker.recycle();
+                        cameraVelocityTracker = null;
                     }
                 } else if (action == MotionEvent.ACTION_UP && cameraView != null && !zoomWas && !wasZooming) {
                     cameraView.getLocationOnScreen(viewPosition);
                     float viewX = event.getRawX() - viewPosition[0];
                     float viewY = event.getRawY() - viewPosition[1];
                     cameraView.focusToPoint((int) viewX, (int) viewY);
+                }
+                if (cameraVelocityTracker != null) {
+                    cameraVelocityTracker.recycle();
+                    cameraVelocityTracker = null;
                 }
             }
         }
@@ -3952,6 +3990,14 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         fluidCameraSeeking = false;
         fluidCameraNotifyOpened = false;
         unlockFluidCamera();
+        if (cameraVelocityTracker != null) {
+            cameraVelocityTracker.recycle();
+            cameraVelocityTracker = null;
+        }
+        if (cameraReturnTransition != null) {
+            cameraReturnTransition.abort();
+            cameraReturnTransition = null;
+        }
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.cameraInitied);
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.albumsDidLoad);
     }

@@ -1998,11 +1998,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         fluidBackProgress = value;
         if (!fluidBackPreview || containerView == null) return;
         float p = 1f - Math.max(0f, Math.min(1f, value));
-        // Move the native image/player; closePhoto then returns from this exact geometry.
-        scale = fluidBackScale * (1f - .12f * p);
+        // Keep content at 1.0x natural scale without squashing image textures
+        scale = fluidBackScale;
         translationX = fluidBackX;
-        translationY = fluidBackY + dp(32) * p;
-        containerView.setAlpha(fluidBackAlpha * (1f - .25f * p));
+        translationY = fluidBackY + dp(40) * p;
+        containerView.setAlpha(fluidBackAlpha * (1f - .2f * p));
         navigationBar.setAlpha(fluidBackNavigationAlpha * (1f - p));
         containerView.invalidate();
         invalidateBlur();
@@ -19330,14 +19330,25 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 AnimatorSet animatorSet = new AnimatorSet();
                 ValueAnimator progressAnimator = ValueAnimator.ofFloat(0, 1);
                 progressAnimator.addUpdateListener(animation -> clippingImageProgress = (float) animation.getAnimatedValue());
-                animatorSet.playTogether(
-                        progressAnimator,
-                        ObjectAnimator.ofFloat(containerView, View.SCALE_X, 0.9f),
-                        ObjectAnimator.ofFloat(containerView, View.SCALE_Y, 0.9f),
-                        ObjectAnimator.ofInt(backgroundDrawable, AnimationProperties.COLOR_DRAWABLE_ALPHA, 0),
-                        ObjectAnimator.ofFloat(containerView, View.ALPHA, 0.0f),
-                        ObjectAnimator.ofFloat(navigationBar, View.ALPHA, 0.0f)
-                );
+                if (UIStyleEngine.isFluid()) {
+                    float targetY = translationY != 0 ? (translationY > 0 ? translationY + AndroidUtilities.dp(80) : translationY - AndroidUtilities.dp(80)) : AndroidUtilities.dp(60);
+                    animatorSet.playTogether(
+                            progressAnimator,
+                            ObjectAnimator.ofFloat(containerView, View.TRANSLATION_Y, targetY),
+                            ObjectAnimator.ofInt(backgroundDrawable, AnimationProperties.COLOR_DRAWABLE_ALPHA, 0),
+                            ObjectAnimator.ofFloat(containerView, View.ALPHA, 0.0f),
+                            ObjectAnimator.ofFloat(navigationBar, View.ALPHA, 0.0f)
+                    );
+                } else {
+                    animatorSet.playTogether(
+                            progressAnimator,
+                            ObjectAnimator.ofFloat(containerView, View.SCALE_X, 0.9f),
+                            ObjectAnimator.ofFloat(containerView, View.SCALE_Y, 0.9f),
+                            ObjectAnimator.ofInt(backgroundDrawable, AnimationProperties.COLOR_DRAWABLE_ALPHA, 0),
+                            ObjectAnimator.ofFloat(containerView, View.ALPHA, 0.0f),
+                            ObjectAnimator.ofFloat(navigationBar, View.ALPHA, 0.0f)
+                    );
+                }
                 if (placeProvider != null) {
                     placeProvider.onPreClose();
                 }
@@ -19349,6 +19360,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     containerView.setLayerType(View.LAYER_TYPE_NONE, null);
                     animationInProgress = 0;
                     onPhotoClosed(object);
+                    if (UIStyleEngine.isFluid()) {
+                        containerView.setTranslationY(0f);
+                    }
                     containerView.setScaleX(1.0f);
                     containerView.setScaleY(1.0f);
                     MediaController.getInstance().tryResumePausedAudio();
@@ -20106,12 +20120,18 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 zooming = false;
                 moving = false;
             } else if (draggingDown) {
-                if (Math.abs(dragY - ev.getY()) > getContainerViewHeight() / 6.0f) {
-                    if (enableSwipeToPiP() && (dragY - ev.getY() > 0)) {
-                        switchToPip(true);
-                    } else {
-                        closePhoto(true, false);
-                    }
+                float velY = 0;
+                if (velocityTracker != null) {
+                    velocityTracker.computeCurrentVelocity(1000);
+                    velY = velocityTracker.getYVelocity();
+                }
+                boolean flingDown = UIStyleEngine.isFluid() && (ev.getY() - dragY > dp(20) && velY > dp(650));
+                boolean flingUpPiP = UIStyleEngine.isFluid() && enableSwipeToPiP() && (dragY - ev.getY() > dp(20) && velY < -dp(650));
+
+                if (flingUpPiP || (enableSwipeToPiP() && (dragY - ev.getY() > 0) && Math.abs(dragY - ev.getY()) > getContainerViewHeight() / 6.0f)) {
+                    switchToPip(true);
+                } else if (flingDown || Math.abs(dragY - ev.getY()) > getContainerViewHeight() / 6.0f) {
+                    closePhoto(true, false);
                 } else {
                     if (pickerView.getVisibility() == View.VISIBLE) {
                         toggleActionBar(true, true);
@@ -20197,6 +20217,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private void cancelMoveZoomAnimation() {
         if (imageMoveAnimation == null) {
             return;
+        }
+
+        if (UIStyleEngine.isFluid() && fluidImageMove != null) {
+            fluidImageMove.abort();
+            fluidImageMove = null;
         }
 
         float ts = scale + (animateToScale - scale) * animationValue;

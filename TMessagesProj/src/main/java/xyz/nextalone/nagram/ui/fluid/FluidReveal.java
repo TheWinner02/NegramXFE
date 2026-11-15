@@ -15,6 +15,7 @@ import xyz.nextalone.nagram.ui.UIStyleEngine;
 /** Reveals the actual native surface; neither children nor text are scaled or copied. */
 public final class FluidReveal implements FluidMotion {
     private final View view;
+    private final View origin;
     private final RectF source = new RectF(), frame = new RectF(), surface = new RectF();
     private final java.util.function.Consumer<RectF> surfaceBounds;
     private final ViewOutlineProvider originalOutline;
@@ -48,7 +49,7 @@ public final class FluidReveal implements FluidMotion {
     }
 
     public FluidReveal(View view, View origin, boolean fromBottom, java.util.function.Consumer<RectF> surfaceBounds) {
-        this.view = view; this.fromBottom = fromBottom; this.surfaceBounds = surfaceBounds;
+        this.view = view; this.origin = origin; this.fromBottom = fromBottom; this.surfaceBounds = surfaceBounds;
         originalOutline = view.getOutlineProvider(); originalClip = view.getClipToOutline();
         if (origin != null && origin.isAttachedToWindow()) {
             int[] xy = new int[2]; origin.getLocationOnScreen(xy);
@@ -67,6 +68,29 @@ public final class FluidReveal implements FluidMotion {
             else { restoreOutline(); runOpened(); }
         });
         view.addOnAttachStateChangeListener(detach);
+    }
+
+    private void updateSourcePosition() {
+        resolveSurfaceBounds();
+        float diameter = Math.min(AndroidUtilities.dp(56), Math.min(surface.width(), surface.height()));
+        float cx, cy;
+        if (origin != null && origin.isAttachedToWindow() && view.isAttachedToWindow()) {
+            int[] originXy = new int[2];
+            origin.getLocationOnScreen(originXy);
+            int[] viewXy = new int[2];
+            view.getLocationOnScreen(viewXy);
+            cx = originXy[0] + origin.getWidth() / 2f - viewXy[0];
+            cy = originXy[1] + origin.getHeight() / 2f - viewXy[1];
+        } else if (!source.isEmpty()) {
+            cx = source.centerX();
+            cy = source.centerY();
+        } else {
+            cx = surface.centerX();
+            cy = fromBottom ? surface.bottom - diameter / 2f : surface.centerY();
+        }
+        cx = Math.max(surface.left + diameter / 2f, Math.min(surface.right - diameter / 2f, cx));
+        cy = Math.max(surface.top + diameter / 2f, Math.min(surface.bottom - diameter / 2f, cy));
+        source.set(cx - diameter / 2f, cy - diameter / 2f, cx + diameter / 2f, cy + diameter / 2f);
     }
 
     private void resolveSurfaceBounds() {
@@ -101,15 +125,7 @@ public final class FluidReveal implements FluidMotion {
         pending = () -> {
             if (view.getWidth() == 0 || view.getHeight() == 0) return true;
             removePending();
-            int[] xy = new int[2]; view.getLocationOnScreen(xy);
-            resolveSurfaceBounds();
-            float diameter = Math.min(AndroidUtilities.dp(56), Math.min(surface.width(), surface.height()));
-            float cx = source.isEmpty() ? surface.centerX() : source.centerX() - xy[0];
-            float cy = source.isEmpty() ? (fromBottom ? surface.bottom - diameter / 2f : surface.centerY())
-                    : source.centerY() - xy[1];
-            cx = Math.max(surface.left + diameter / 2f, Math.min(surface.right - diameter / 2f, cx));
-            cy = Math.max(surface.top + diameter / 2f, Math.min(surface.bottom - diameter / 2f, cy));
-            source.set(cx - diameter / 2f, cy - diameter / 2f, cx + diameter / 2f, cy + diameter / 2f);
+            updateSourcePosition();
             started = true;
             if (!FluidCapabilities.isMotionEnabled(view.getContext())) {
                 render(1f); restoreOutline(); runOpened();
@@ -142,6 +158,7 @@ public final class FluidReveal implements FluidMotion {
         if (disposed) { if (completion != null) completion.run(); return; }
         closed = completion; closing = true;
         if (!started) { removePending(); finishClose(); return; }
+        updateSourcePosition();
         retarget(0f);
     }
     private void finishClose() {
@@ -178,6 +195,7 @@ public final class FluidReveal implements FluidMotion {
                 if (closing && closeCancelled == null || !isStarted() || !canPreview.getAsBoolean() || !FluidCapabilities.isMotionEnabled(view.getContext())) return;
                 if (closing && closeCancelled != null) closeCancelled.run();
                 closing = false; closed = null; seeking = true;
+                updateSourcePosition();
                 view.setOutlineProvider(outline); view.setClipToOutline(true);
                 preview = FluidPredictiveBack.spring(view.getContext(), spring, () -> isStarted() && !closing,
                         () -> progress, value -> render((float) value), () -> { retarget(1f); committed.run(); });
