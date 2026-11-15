@@ -70,5 +70,4 @@ public class TextInfoCell extends TextInfoPrivacyCell {
             FileLog.e(e);
         }
     }
-    }
 }

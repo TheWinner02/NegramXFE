@@ -10919,8 +10919,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     }
                 });
             }
-                }
-            }
             if (!crossfadeOnlineText && playProfileAnimation == 2) {
                 animators.add(ObjectAnimator.ofFloat(onlineTextView, View.ALPHA, 0.0f));
             }
@@ -12317,7 +12315,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         nameTextView.setRightDrawable2(getScamDrawable(user.scam ? 0 : 1));
                         nameTextViewRightDrawable2ContentDescription = LocaleController.getString(R.string.ScamMessage);
                     }
-                }
                 }
                 if (leftIcon == null && currentEncryptedChat == null && user.bot_verification_icon != 0) {
                     nameTextView.setLeftDrawableOutside(true);

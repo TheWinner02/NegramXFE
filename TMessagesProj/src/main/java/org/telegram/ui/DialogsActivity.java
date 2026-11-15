@@ -4252,7 +4252,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             } else if (initialDialogsType == DIALOGS_TYPE_BOT_REQUEST_PEER) {
                 ThemeBind.backgroundColor(viewPage.listView, Theme.key_windowBackgroundGray, getResourceProvider());
             }
-            }
             viewPage.dialogsItemAnimator = new DialogsItemAnimator(viewPage.listView) {
                 @Override
                 public void onRemoveStarting(RecyclerView.ViewHolder item) {

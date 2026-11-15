@@ -1547,7 +1547,6 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                             file = new File(filePath);
                         }
                     }
-                    }
                     preparePlayer(file);
                 }
                 isVideo = true;

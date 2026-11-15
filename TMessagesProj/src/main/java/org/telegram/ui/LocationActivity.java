@@ -616,7 +616,6 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
         if (ApplicationLoader.getMapsProvider() instanceof OSMDroidMapsProvider) {
             mapViewClip.addView(getAttributionOverlay(context), LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.BOTTOM, LocaleController.isRTL ? 0 : 4, 0, LocaleController.isRTL ? 4 : 0, 20));
         }
-        }
 
         locationButton = new ImageView(context);
         setMapButtonGlass(locationButton);

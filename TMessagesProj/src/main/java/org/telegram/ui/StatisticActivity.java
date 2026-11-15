@@ -3546,9 +3546,6 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
         }
         updateHeaderOverlayPosition();
     }
-        }
-        updateHeaderOverlayPosition();
-    }
 
     private void updateHeaderOverlayPosition() {
         if (listTopOverlay == null || transactionTabsOverlay == null) return;
@@ -3584,8 +3581,6 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
         if (monetizationLayout != null) {
             monetizationLayout.setScreenInsets(mSystemInsets.top, mSystemInsets.bottom, pb);
         }
-        checkUi_listPaddings();
-        updateHeaderOverlayHeight();
     }
 
     public void selectTab(int position, boolean animated) {

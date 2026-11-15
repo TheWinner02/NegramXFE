@@ -11385,7 +11385,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     }
                 }
             }
-            }
         }
 
         Boolean savedLooping = VideoPlayer.getLooping(currentMessageObject);

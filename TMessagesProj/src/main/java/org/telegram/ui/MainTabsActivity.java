@@ -1001,8 +1001,6 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         default GlassSourceRenderNode getFrostedGlassSource() {
             return null;
         }
-            return null;
-        }
     }
 
     @Override

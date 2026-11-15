@@ -14625,7 +14625,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         forwardVerifiedSpan.setSize((int) (Theme.chat_forwardNamePaint.getTextSize() * 0.95f));
         return forwardVerifiedSpan;
     }
-    }
 
     public int getMaxNameWidth() {
         if (documentAttachType == DOCUMENT_ATTACH_TYPE_STICKER || documentAttachType == DOCUMENT_ATTACH_TYPE_WALLPAPER || currentMessageObject.type == MessageObject.TYPE_ROUND_VIDEO) {

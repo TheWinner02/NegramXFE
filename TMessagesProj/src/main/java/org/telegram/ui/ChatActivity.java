@@ -12277,7 +12277,6 @@ public class ChatActivity extends BaseFragment implements
         Theme.setSelectorDrawableColor(background, color, false);
         Theme.setSelectorDrawableColor(background, Theme.AdaptiveRipple.calcRippleColor(color), true);
     }
-    }
 
     private void updatePagedownButtonsPosition() {
         if (sideControlsButtonsLayout != null) {
@@ -45527,14 +45526,32 @@ public class ChatActivity extends BaseFragment implements
                     File finalLocFile = locFile;
                     AlertUtil.showConfirm(getParentActivity(),
                             getString(R.string.ImportStickersList),
-                            getString(R.string.ImportStickersListAlert),
-                            () -> StickersHelper.importStickers(this, finalLocFile),
-                            null);
-                    handled = true;
-                }
-                boolean handled = false;
-                if (message.canPreviewDocument()) {
-                    PhotoViewer.getInstance().setParentActivity(ChatActivity.this, themeDelegate);
+                            R.drawable.msg_sticker, getString(R.string.Import), false, () -> {
+                                presentFragment(new StickersActivity(finalLocFile));
+                            });
+                } else if (message.getDocumentName().toLowerCase().endsWith(".nekox-settings.json")) {
+                    File finalLocFile = locFile;
+                    SettingsBackupHelper.importSettings(getParentActivity(), finalLocFile);
+                } else if (com.exteragram.messenger.plugins.PluginsController.isPlugin(message)) {
+                    com.exteragram.messenger.plugins.PluginsController.getInstance().showInstallDialog(ChatActivity.this, message);
+                } else {
+                    boolean handled = false;
+                    if (message.canPreviewDocument()) {
+                        PhotoViewer.getInstance().setParentActivity(ChatActivity.this, themeDelegate);
+                        PhotoViewer.getInstance().openPhoto(message, ChatActivity.this, message.type != 0 ? dialog_id : 0, message.type != 0 ? mergeDialogId : 0, message.type != 0 ? getTopicId() : 0, photoViewerProvider);
+                        handled = true;
+                    }
+                    if (MarkdownParser.isMarkdown(message) || MarkdownParser.isDiff(message)) {
+                        parseMarkdownAsync(message);
+                        handled = true;
+                    }
+                    if (!handled) {
+                        try {
+                            AndroidUtilities.openForView(message, getParentActivity(), themeDelegate, false);
+                        } catch (Exception e) {
+                            FileLog.e(e);
+                            alertUserOpenError(message);
+                        }
                     }
                 }
             }

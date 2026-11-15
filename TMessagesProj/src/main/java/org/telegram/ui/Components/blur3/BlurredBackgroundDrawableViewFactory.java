@@ -161,7 +161,6 @@ public class BlurredBackgroundDrawableViewFactory {
         if (isLiquidGlassEffectAllowed || xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             drawable.setLiquidGlassEffectAllowed();
         }
-        }
 
         drawable.setColorProvider(provider);
         drawable.setOutset(outsetX, outsetY);

@@ -1374,7 +1374,6 @@ public class ItemOptions {
                         ThemeBind.selectorBackground(item, Theme.createRadSelectorDrawable(Theme.getColor(Theme.key_dialogButtonSelector, resourcesProvider), topR, bottomR), null, ThemeBind.of(Theme.key_dialogButtonSelector), resourcesProvider);
                     }
                 }
-                }
             }
         }
     }

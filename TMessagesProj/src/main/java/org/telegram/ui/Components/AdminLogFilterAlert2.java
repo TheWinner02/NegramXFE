@@ -445,5 +445,4 @@ public class AdminLogFilterAlert2 extends BottomSheetWithRecyclerListView {
             FileLog.e(e);
         }
     }
-    }
 }

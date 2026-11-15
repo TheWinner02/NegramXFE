@@ -9390,55 +9390,6 @@ public class ChatActivityEnterView extends FrameLayout implements
                     }
 
                     if (attachLayout != null) {
-                        runningAnimation2 = new AnimatorSet();
-                        ArrayList<Animator> animators = new ArrayList<>();
-                        animators.add(ObjectAnimator.ofFloat(attachLayout, ATTACH_LAYOUT_ALPHA, 0.0f));
-                        animators.add(ObjectAnimator.ofFloat(attachLayout, View.SCALE_X, 0.5f));
-                        if (attachButtonAnimator != null) {
-                            attachButtonAnimator.cancel();
-                            attachButtonAnimator = null;
-                        }
-                        if (sideButtons != null) {
-                            sideButtons.showButton(ChatActivitySideControlsButtonsLayout.BUTTON_ATTACH, captionNearAttach && !recordShown, true);
-                            if (attachButton != null) {
-                                animators.add(ObjectAnimator.ofFloat(attachButton, View.ALPHA, attachButtonAlpha = attachInInput ? 1.0f : 0.0f));
-                                animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_X, attachInInput ? 1.0f : 0.5f));
-                                animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_Y, attachInInput ? 1.0f : 0.5f));
-                            }
-                        } else if (attachButton != null) {
-                            animators.add(ObjectAnimator.ofFloat(attachButton, View.ALPHA, attachButtonAlpha = 0.0f));
-                            animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_X, 0.5f));
-                            animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_Y, 0.5f));
-                        }
-                        boolean hasScheduled = delegate != null && delegate.hasScheduledMessages();
-                        scheduleButtonHidden = true;
-                        if (scheduledButton != null) {
-                            scheduledButton.setScaleY(1.0f);
-                            if (hasScheduled) {
-                                scheduledButton.setTag(null);
-                                animators.add(ObjectAnimator.ofFloat(scheduledButton, View.ALPHA, 0.0f));
-                                animators.add(ObjectAnimator.ofFloat(scheduledButton, View.SCALE_X, 0.0f));
-                                animators.add(animateScheduledTranslationX(0));
-                            } else {
-                                scheduledButton.setAlpha(0.0f);
-                                scheduledButton.setScaleX(0.0f);
-                                scheduledButton.setTranslationX(0);
-                            }
-                        }
-                        runningAnimation2.playTogether(animators);
-                        runningAnimation2.setDuration(100);
-                        runningAnimation2.addListener(new AnimatorListenerAdapter() {
-                            @Override
-                            public void onAnimationEnd(Animator animation) {
-                                if (animation.equals(runningAnimation2)) {
-                                    attachLayout.setVisibility(GONE);
-                                    if (hasScheduled && scheduledButton != null) {
-                                        scheduledButton.setVisibility(GONE);
-                                    }
-                                    runningAnimation2 = null;
-                                }
-                            }
-
                         if (!NekoConfig.useChatAttachMediaMenu.Bool() || isStories) {
                             runningAnimation2 = new AnimatorSet();
                             ArrayList<Animator> animators = new ArrayList<>();
@@ -9448,14 +9399,14 @@ public class ChatActivityEnterView extends FrameLayout implements
                                 attachButtonAnimator.cancel();
                                 attachButtonAnimator = null;
                             }
-                            if (sideButtons != null && (!NekoConfig.useChatAttachMediaMenu.Bool() || isStories)) {
-                                sideButtons.showButton(ChatActivitySideControlsButtonsLayout.BUTTON_ATTACH, captionNearAttach, true);
+                            if (sideButtons != null) {
+                                sideButtons.showButton(ChatActivitySideControlsButtonsLayout.BUTTON_ATTACH, captionNearAttach && !recordShown, true);
                                 if (attachButton != null) {
-                                    animators.add(ObjectAnimator.ofFloat(attachButton, View.ALPHA, attachButtonAlpha = captionNearAttach ? 0.0f : 1.0f));
-                                    animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_X, captionNearAttach ? 0.5f : 1.0f));
-                                    animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_Y, captionNearAttach ? 0.5f : 1.0f));
+                                    animators.add(ObjectAnimator.ofFloat(attachButton, View.ALPHA, attachButtonAlpha = attachInInput ? 1.0f : 0.0f));
+                                    animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_X, attachInInput ? 1.0f : 0.5f));
+                                    animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_Y, attachInInput ? 1.0f : 0.5f));
                                 }
-                            } else if (attachButton != null && (!NekoConfig.useChatAttachMediaMenu.Bool() || isStories)) {
+                            } else if (attachButton != null) {
                                 animators.add(ObjectAnimator.ofFloat(attachButton, View.ALPHA, attachButtonAlpha = 0.0f));
                                 animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_X, 0.5f));
                                 animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_Y, 0.5f));
@@ -9627,29 +9578,13 @@ public class ChatActivityEnterView extends FrameLayout implements
                                 delegate.onAttachButtonHidden();
                             }
                             updateFieldRight(0);
-                        }
-
-                        if (sideButtons != null && (!NekoConfig.useChatAttachMediaMenu.Bool() || isStories)) {
-                            sideButtons.showButton(ChatActivitySideControlsButtonsLayout.BUTTON_ATTACH, captionNearAttach && !recordShown, true);
-                            if (attachButton != null) {
-                                attachButton.setAlpha(attachButtonAlpha = attachInInput ? 1.0f : 0.0f);
-                                attachButton.setScaleX(attachInInput ? 1.0f : 0.5f);
-                                attachButton.setScaleY(attachInInput ? 1.0f : 0.5f);
-                            }
-                        } else if (attachButton != null) {
-                            attachButton.setAlpha(attachButtonAlpha = 0.0f);
-                            attachButton.setScaleX(0.5f);
-                            attachButton.setScaleY(0.5f);
-                        }
-                            }
-                            updateFieldRight(0);
 
                             if (sideButtons != null) {
-                                sideButtons.showButton(ChatActivitySideControlsButtonsLayout.BUTTON_ATTACH, captionNearAttach, true);
+                                sideButtons.showButton(ChatActivitySideControlsButtonsLayout.BUTTON_ATTACH, captionNearAttach && !recordShown, true);
                                 if (attachButton != null) {
-                                    attachButton.setAlpha(attachButtonAlpha = captionNearAttach ? 0.0f : 1.0f);
-                                    attachButton.setScaleX(captionNearAttach ? 0.5f : 1.0f);
-                                    attachButton.setScaleY(captionNearAttach ? 0.5f : 1.0f);
+                                    attachButton.setAlpha(attachButtonAlpha = attachInInput ? 1.0f : 0.0f);
+                                    attachButton.setScaleX(attachInInput ? 1.0f : 0.5f);
+                                    attachButton.setScaleY(attachInInput ? 1.0f : 0.5f);
                                 }
                             } else if (attachButton != null) {
                                 attachButton.setAlpha(attachButtonAlpha = 0.0f);

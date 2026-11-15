@@ -2505,6 +2505,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         layoutParams.bottomMargin += navigationBarHeight + additionNavigationBarHeight;
         contentView.addView(undoView, layoutParams);
         return undoView;
+    }
 
     @Override
     protected boolean useFadeDrawableForActionBar() {

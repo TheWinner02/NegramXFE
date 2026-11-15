@@ -1117,7 +1117,6 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         } else {
             actionMode.setBackgroundColor(Color.TRANSPARENT);
         }
-        }
         addView(actionMode, indexOfChild(backButtonImageView));
         final int rightPad = (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && glassMode) ? dp(12) : 0;
         actionMode.setPadding(0, occupyStatusBar ? AndroidUtilities.statusBarHeight : 0, rightPad, 0);

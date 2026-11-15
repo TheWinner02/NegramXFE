@@ -810,7 +810,6 @@ public class EmojiView extends FrameLayout implements
             if (shouldDrawBackground && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                 ThemeBind.backgroundColor(backgroundView, Theme.key_chat_emojiPanelBackground, EmojiView.this.resourcesProvider);
             }
-            }
             addView(backgroundView, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, searchFieldHeight));
 
             box = new FrameLayout(context);
@@ -990,7 +989,6 @@ public class EmojiView extends FrameLayout implements
                 categoriesListView.setDontOccupyWidth((int) (searchEditText.getPaint().measureText(searchEditText.getHint() + "")) + dp(16));
                 if (shouldDrawBackground && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
                     ThemeBind.backgroundColor(categoriesListView, ThemeBind.blendOver(Theme.key_chat_emojiPanelBackground, Theme.key_chat_emojiSearchBackground), EmojiView.this.resourcesProvider);
-                }
                 }
                 categoriesListView.setOnScrollIntoOccupiedWidth(scrolled -> {
                     searchEditText.setTranslationX(-Math.max(0, scrolled));
@@ -1973,7 +1971,6 @@ public class EmojiView extends FrameLayout implements
         final int emojiTabsColor = getThemedColor(Theme.key_chat_emojiPanelBackground);
         if (Color.alpha(emojiTabsColor) >= 0xFF && !xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass()) {
             ThemeBind.backgroundColor(emojiTabs, Theme.key_chat_emojiPanelBackground, resourcesProvider);
-        }
         }
         emojiAdapter.processEmoji(true);
         emojiTabs.updateEmojiPacks(getEmojipacks());
@@ -6120,7 +6117,6 @@ public class EmojiView extends FrameLayout implements
                     Theme.setSelectorDrawableColor(backspaceButton.getBackground(), getThemedColor(Theme.key_chat_emojiPanelBackground), false);
                     Theme.setSelectorDrawableColor(backspaceButton.getBackground(), getThemedColor(Theme.key_chat_emojiPanelBackground), true);
                 }
-            }
             }
         }
         if (stickerSettingsButton != null && iconFilterChanged) {

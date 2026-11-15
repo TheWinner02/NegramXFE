@@ -265,7 +265,6 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                     setBackground(themedBackground = Theme.createSimpleSelectorCircleDrawable(dp(48), color, pressedColor));
                 }
             }
-            }
         }
     }
 
