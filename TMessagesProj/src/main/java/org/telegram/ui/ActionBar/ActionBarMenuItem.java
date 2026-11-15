@@ -755,6 +755,13 @@ public class ActionBarMenuItem extends FrameLayout {
         cell.setTextAndIcon(text, icon, iconDrawable);
         cell.setMinimumWidth(AndroidUtilities.dp(196));
         cell.setTag(id);
+        boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
+        if (isM3) {
+            cell.setColors(
+                xyz.nextalone.nagram.ui.M3ColorRoles.get(xyz.nextalone.nagram.ui.M3ColorRoles.Role.ON_SURFACE, Theme.getColor(Theme.key_actionBarDefaultSubmenuItem, resourcesProvider)),
+                xyz.nextalone.nagram.ui.M3ColorRoles.get(xyz.nextalone.nagram.ui.M3ColorRoles.Role.ON_SURFACE, Theme.getColor(Theme.key_actionBarDefaultSubmenuItemIcon, resourcesProvider))
+            );
+        }
         popupLayout.addView(cell);
         LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) cell.getLayoutParams();
         if (LocaleController.isRTL) {
@@ -762,6 +769,12 @@ public class ActionBarMenuItem extends FrameLayout {
         }
         layoutParams.width = LayoutHelper.MATCH_PARENT;
         layoutParams.height = AndroidUtilities.dp(48);
+        if (isM3) {
+            layoutParams.leftMargin = AndroidUtilities.dp(4);
+            layoutParams.rightMargin = AndroidUtilities.dp(4);
+            layoutParams.topMargin = AndroidUtilities.dp(1);
+            layoutParams.bottomMargin = AndroidUtilities.dp(1);
+        }
         cell.setLayoutParams(layoutParams);
         if (dismiss) fluidTerminalItems.add(cell);
         cell.setOnClickListener(view -> {
@@ -797,6 +810,12 @@ public class ActionBarMenuItem extends FrameLayout {
         }
         layoutParams.width = LayoutHelper.MATCH_PARENT;
         layoutParams.height = AndroidUtilities.dp(48);
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+            layoutParams.leftMargin = AndroidUtilities.dp(4);
+            layoutParams.rightMargin = AndroidUtilities.dp(4);
+            layoutParams.topMargin = AndroidUtilities.dp(1);
+            layoutParams.bottomMargin = AndroidUtilities.dp(1);
+        }
         cell.setLayoutParams(layoutParams);
         cell.setOnClickListener(view -> {
             if (parentMenu != null) {
@@ -1107,7 +1126,7 @@ public class ActionBarMenuItem extends FrameLayout {
             }
             if (topView instanceof ActionBarMenuSubItem || topView instanceof LinearLayout) {
                 if (subMenuFactory != null) {
-                    float rad = xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(12);
+                    float rad = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(18) : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(12));
                     frameLayout.setBackground(subMenuFactory.create(popupLayout, true)
                         .setColorProvider(subMenuProvider)
                         .setRadius(rad)

@@ -367,6 +367,9 @@ public class ActionBarPopupWindow extends PopupWindow {
         }
 
         public void setBackgroundColor(int color) {
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
+                color = xyz.nextalone.nagram.ui.M3ColorRoles.surfaceContainer(color);
+            }
             if (backgroundColor != color && backgroundDrawable != null) {
                 if (!(backgroundDrawable instanceof BlurredBackgroundDrawable)) {
                     backgroundDrawable.setColorFilter(new PorterDuffColorFilter(backgroundColor = color, PorterDuff.Mode.MULTIPLY));
@@ -651,23 +654,25 @@ public class ActionBarPopupWindow extends PopupWindow {
                             glassStrokePaint.setColor(xyz.nextalone.nagram.ui.UIStyleEngine.getGlassStrokeColor(isDark));
                             canvas.drawRoundRect(m3ClipRect, cardRad, cardRad, glassStrokePaint);
                         }
-                    } else if (isIosGlass) {
+                    } else if (isM3 || isIosGlass) {
                         m3ClipPath.rewind();
                         m3ClipRect.set(AndroidUtilities.rectTmp2.left + bgPaddings.left, AndroidUtilities.rectTmp2.top + bgPaddings.top, AndroidUtilities.rectTmp2.right - bgPaddings.right, AndroidUtilities.rectTmp2.bottom - bgPaddings.bottom);
-                        float cardRad = xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius();
+                        float cardRad = isIosGlass ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(18);
                         m3ClipPath.addRoundRect(m3ClipRect, cardRad, cardRad, Path.Direction.CW);
                         canvas.save();
                         canvas.clipPath(m3ClipPath);
                         backgroundDrawable.draw(canvas);
                         canvas.restore();
-                        if (glassStrokePaint == null) {
-                            glassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-                            glassStrokePaint.setStyle(Paint.Style.STROKE);
-                            glassStrokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.6f));
+                        if (isIosGlass) {
+                            if (glassStrokePaint == null) {
+                                glassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                                glassStrokePaint.setStyle(Paint.Style.STROKE);
+                                glassStrokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.6f));
+                            }
+                            boolean isDark = Theme.isCurrentThemeDark();
+                            glassStrokePaint.setColor(xyz.nextalone.nagram.ui.UIStyleEngine.getGlassStrokeColor(isDark));
+                            canvas.drawRoundRect(m3ClipRect, cardRad, cardRad, glassStrokePaint);
                         }
-                        boolean isDark = Theme.isCurrentThemeDark();
-                        glassStrokePaint.setColor(xyz.nextalone.nagram.ui.UIStyleEngine.getGlassStrokeColor(isDark));
-                        canvas.drawRoundRect(m3ClipRect, cardRad, cardRad, glassStrokePaint);
                     } else {
                         backgroundDrawable.draw(canvas);
                     }

@@ -33879,7 +33879,7 @@ public class ChatActivity extends BaseFragment implements
 
             popupLayout.setBackground(scrimBlur3Factory.create(popupLayout, true)
                 .setColorProvider(BlurredBackgroundProviderImpl.messageMenuBackground(resourceProvider))
-                .setRadius(xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(12))
+                .setRadius(xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive() ? dp(18) : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getCardCornerRadius() : dp(12)))
                 .setPadding(dp(8))
                 .setHasPadding(true)
                 .setClipToOutline(true));
@@ -49629,11 +49629,12 @@ public class ChatActivity extends BaseFragment implements
                 return;
             }
 
+            boolean isM3 = xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive();
             scrimPopupContainerLayout.setClipToOutline(true);
-            scrimPopupContainerLayout.setOutlineProvider(ViewOutlineProviderImpl.boundsWithPaddingRoundRect(dp(8), dp(12)));
+            scrimPopupContainerLayout.setOutlineProvider(ViewOutlineProviderImpl.boundsWithPaddingRoundRect(dp(8), dp(isM3 ? 18 : 12)));
             scrimPopupContainerLayout.setBackground(scrimBlur3Factory.create(scrimPopupContainerLayout, true)
                 .setColorProvider(BlurredBackgroundProviderImpl.scrimMenuBackground(resourceProvider))
-                .setRadius(dp(12))
+                .setRadius(dp(isM3 ? 18 : 12))
                 .setPadding(dp(8))
                 .setHasPadding(true));
 

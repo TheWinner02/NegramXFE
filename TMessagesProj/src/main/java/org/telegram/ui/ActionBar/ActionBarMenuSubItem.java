@@ -94,8 +94,15 @@ public class ActionBarMenuSubItem extends FrameLayout implements Theme.Colorable
         }
         textColor = getThemedColor(Theme.key_actionBarDefaultSubmenuItem);
         iconColor = getThemedColor(Theme.key_actionBarDefaultSubmenuItemIcon);
+        if (isM3) {
+            textColor = xyz.nextalone.nagram.ui.M3ColorRoles.get(xyz.nextalone.nagram.ui.M3ColorRoles.Role.ON_SURFACE, textColor);
+            iconColor = xyz.nextalone.nagram.ui.M3ColorRoles.get(xyz.nextalone.nagram.ui.M3ColorRoles.Role.ON_SURFACE, iconColor);
+        }
         iconColorMode = PorterDuff.Mode.MULTIPLY;
         selectorColor = getThemedColor(Theme.key_dialogButtonSelector);
+        if (isM3) {
+            selectorColor = Theme.multAlpha(textColor, .10f);
+        }
         themedTextColor = textColor;
         themedIconColor = iconColor;
         themedSelectorColor = selectorColor;
@@ -501,31 +508,32 @@ public class ActionBarMenuSubItem extends FrameLayout implements Theme.Colorable
     protected void dispatchDraw(Canvas canvas) {
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isMaterial3Expressive()) {
             float progress = pressedMorphProgress.getProgress();
+            float topR = AndroidUtilities.lerp(top ? dp(16) : dp(4), dp(16), progress);
+            float bottomR = AndroidUtilities.lerp(bottom ? dp(16) : dp(4), dp(16), progress);
+            float gap = AndroidUtilities.lerp(dp(1.5f), dp(3.5f), progress);
+
+            morphClipRect.set(dp(5), gap, getMeasuredWidth() - dp(5), getMeasuredHeight() - gap);
+            morphRadii[0] = morphRadii[1] = topR;
+            morphRadii[2] = morphRadii[3] = topR;
+            morphRadii[4] = morphRadii[5] = bottomR;
+            morphRadii[6] = morphRadii[7] = bottomR;
+
+            morphClipPath.rewind();
+            morphClipPath.addRoundRect(morphClipRect, morphRadii, android.graphics.Path.Direction.CW);
+
+            int cardColor = Theme.isCurrentThemeDark() ? 0x24ffffff : 0x10000000;
+            morphBgPaint.setColor(cardColor);
+            canvas.drawPath(morphClipPath, morphBgPaint);
+
             if (progress > 0 || isPressed()) {
-                float topR = AndroidUtilities.lerp(top ? dp(16) : dp(4), dp(16), progress);
-                float bottomR = AndroidUtilities.lerp(bottom ? dp(16) : dp(4), dp(16), progress);
-                float gap = AndroidUtilities.lerp(dp(1.5f), dp(3.5f), progress);
-
-                morphClipRect.set(dp(5), gap, getMeasuredWidth() - dp(5), getMeasuredHeight() - gap);
-                morphRadii[0] = morphRadii[1] = topR;
-                morphRadii[2] = morphRadii[3] = topR;
-                morphRadii[4] = morphRadii[5] = bottomR;
-                morphRadii[6] = morphRadii[7] = bottomR;
-
-                morphClipPath.rewind();
-                morphClipPath.addRoundRect(morphClipRect, morphRadii, android.graphics.Path.Direction.CW);
-
-                float alpha = Math.max(progress * 0.25f, isPressed() ? 0.25f : 0f);
-                morphBgPaint.setColor(Theme.multAlpha(selectorColor, alpha));
+                morphBgPaint.setColor(Theme.multAlpha(selectorColor, Math.max(progress * 0.35f, isPressed() ? 0.35f : 0f)));
                 canvas.drawPath(morphClipPath, morphBgPaint);
-
-                canvas.save();
-                canvas.clipPath(morphClipPath);
-                super.dispatchDraw(canvas);
-                canvas.restore();
-            } else {
-                super.dispatchDraw(canvas);
             }
+
+            canvas.save();
+            canvas.clipPath(morphClipPath);
+            super.dispatchDraw(canvas);
+            canvas.restore();
         } else {
             super.dispatchDraw(canvas);
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() && !bottom) {
