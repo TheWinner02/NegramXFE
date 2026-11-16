@@ -109,6 +109,17 @@
  * use the same interruptible RecyclerView scroller rather than the input-locking fast-row handoff;
  * reduced motion places the new category directly, and panel detach stops the old scroll.
  *
+ * <p>Profile controls use the shared Fluid timeline for the floating write button and media
+ * header controls. Header shadow follows the same progress rather than a second delayed phase.
+ * Replaced or destroyed owners revoke their completion callbacks before cancelling their native
+ * AnimatorSets, while preserving FluidAnimator's listener to stop the tracked spring.
+ *
+ * <p>The audio player's enlarged cover and its backdrop share one tracked spring. Reversing
+ * a cover tap retains position and velocity; a fresh tap during return reopens the preview.
+ * Delayed blur results are scoped to the active preview generation. Sheet dismissal stops local
+ * physics while retaining the outgoing cover; detach releases its image and backdrop. Reduced
+ * motion and non-animated closures settle immediately without a separate alpha/scale timeline.
+ *
  * <p>Other UI styles retain their original motion. Gesture displacement, playback timelines,
  * indeterminate loading loops and specialized content transitions are not globally time-warped.
  */
