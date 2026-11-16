@@ -8,6 +8,9 @@
  * <p>ActionBarLayout retains its navigation, lifecycle and predictive-Back renderers, using Fluid
  * physics. Its legacy time watchdog cannot cut off a still-running Fluid spring. Content-specific
  * shared avatar/media transitions keep their existing geometry and ownership.
+ * Page morphs resolve their origin once per gesture, so list updates cannot move the return
+ * destination mid-flight. Generic origins share the recycled-row guard with sheets; avatar/title
+ * handoffs require a captured matching dialog row. Settling or cancelling releases the frozen origin.
  *
  * <p>BottomSheet uses the real-view FluidTransform when a live origin is available, otherwise
  * FluidReveal clips the native surface. SurfaceView/TextureView content stays in its native
@@ -85,6 +88,12 @@
  * identity; a missing/offscreen source produces an unanchored return rather than targeting a
  * recycled row. Shared header alpha is restored on completion and detach. Preview, sheet,
  * replacement, split-pane and unrelated navigation paths retain their existing presentation.
+ *
+ * <p>Navigation, preview returns, drawer and action-mode surfaces share FluidTiming. Drawer
+ * springs are tracked for policy changes during movement; disabling motion still delivers native
+ * completion callbacks. Search, profile, topics and pager entrances use the same reduced-motion
+ * completion path instead of falling back to a timed animation. System/insets-driven keyboard
+ * motion retains the IME clock; standalone app panels can use the tracked Fluid timeline.
  *
  * <p>Other UI styles retain their original motion. Gesture displacement, playback timelines,
  * indeterminate loading loops and specialized content transitions are not globally time-warped.

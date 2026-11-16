@@ -154,7 +154,6 @@ import xyz.nextalone.nagram.NaConfig;
 import android.animation.AnimatorSet;
 import xyz.nextalone.nagram.ui.UIStyleEngine;
 import xyz.nextalone.nagram.ui.fluid.FluidAnimator;
-import xyz.nextalone.nagram.ui.fluid.FluidCapabilities;
 
 public class TopicsFragment extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, ChatActivityInterface, RightSlidingDialogContainer.BaseFragmentWithFullscreen, MainTabsActivity.TabFragmentDelegate {
 
@@ -2263,7 +2262,7 @@ public class TopicsFragment extends BaseFragment implements NotificationCenter.N
         });
         searchAnimator.setDuration(200);
         searchAnimator.setInterpolator(CubicBezierInterpolator.DEFAULT);
-        if (UIStyleEngine.isFluid() && FluidCapabilities.isMotionEnabled(getParentActivity())) {
+        if (UIStyleEngine.isFluid()) {
             AnimatorSet set = new AnimatorSet();
             set.play(searchAnimator);
             fluidSearchAnimator = FluidAnimator.start(getParentActivity(), set);

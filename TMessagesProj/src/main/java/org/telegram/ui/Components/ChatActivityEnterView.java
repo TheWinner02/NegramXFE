@@ -1199,7 +1199,12 @@ public class ChatActivityEnterView extends FrameLayout implements
         @Override
         public void run() {
             if (panelAnimation != null && !panelAnimation.isRunning()) {
-                panelAnimation.start();
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && windowInsetsInAppController == null && !keyboardVisible) {
+                    xyz.nextalone.nagram.ui.fluid.FluidAnimator.start(getContext(), panelAnimation);
+                } else {
+                    // Insets-driven panels follow the system keyboard clock.
+                    panelAnimation.start();
+                }
             }
         }
     };
@@ -14030,13 +14035,8 @@ public class ChatActivityEnterView extends FrameLayout implements
                             currentView.setTranslationY(currentHeight - previousHeight);
                             panelAnimation.playTogether(ObjectAnimator.ofFloat(currentView, View.TRANSLATION_Y, currentHeight - previousHeight, 0));
                         }
-                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                            panelAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
-                            panelAnimation.setDuration(320);
-                        } else {
-                            panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
-                            panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
-                        }
+                        panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
+                        panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
                         panelAnimation.addListener(new AnimatorListenerAdapter() {
                             @Override
                             public void onAnimationEnd(Animator animation) {
@@ -14096,13 +14096,8 @@ public class ChatActivityEnterView extends FrameLayout implements
                             } else {
                                 panelAnimation.playTogether(ObjectAnimator.ofFloat(emojiView, View.TRANSLATION_Y, emojiView.getMeasuredHeight()));
                             }
-                            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                                panelAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
-                                panelAnimation.setDuration(320);
-                            } else {
-                                panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
-                                panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
-                            }
+                            panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
+                            panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
                             notificationsLocker.lock();
                             panelAnimation.addListener(new AnimatorListenerAdapter() {
                                 @Override
@@ -14148,13 +14143,8 @@ public class ChatActivityEnterView extends FrameLayout implements
                         } else {
                             panelAnimation.playTogether(ObjectAnimator.ofFloat(botKeyboardView, View.TRANSLATION_Y, botKeyboardView.getMeasuredHeight()));
                         }
-                        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                            panelAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
-                            panelAnimation.setDuration(320);
-                        } else {
-                            panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
-                            panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
-                        }
+                        panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
+                        panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
                         panelAnimation.addListener(new AnimatorListenerAdapter() {
                             @Override
                             public void onAnimationEnd(Animator animation) {
@@ -14550,13 +14540,8 @@ public class ChatActivityEnterView extends FrameLayout implements
                             } else {
                                 panelAnimation.playTogether(ObjectAnimator.ofFloat(currentView, View.TRANSLATION_Y, emojiPadding - oldHeight, 0));
                             }
-                            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                                panelAnimation.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
-                                panelAnimation.setDuration(320);
-                            } else {
-                                panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
-                                panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
-                            }
+                            panelAnimation.setInterpolator(AdjustPanLayoutHelper.keyboardInterpolator);
+                            panelAnimation.setDuration(AdjustPanLayoutHelper.keyboardDuration);
                             panelAnimation.addListener(new AnimatorListenerAdapter() {
                                 @Override
                                 public void onAnimationEnd(Animator animation) {

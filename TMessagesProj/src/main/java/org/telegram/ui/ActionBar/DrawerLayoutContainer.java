@@ -244,6 +244,7 @@ public class DrawerLayoutContainer extends FrameLayout {
             drawerSpring = new SpringAnimation(this, DRAWER_POSITION);
             drawerSpring.setSpring(FluidTiming.springForce(FluidCapabilities.motionScale(getContext())));
             drawerSpring.setMinimumVisibleChange(0.5f);
+            FluidCapabilities.track(getContext(), drawerSpring);
             drawerSpring.addEndListener((animation, canceled, value, velocity) -> {
                 if (!canceled) {
                     boolean opened = value > (drawerLayout != null ? drawerLayout.getMeasuredWidth() / 2f : 0);
@@ -330,14 +331,8 @@ public class DrawerLayoutContainer extends FrameLayout {
                 currentAnimation = null;
             }
             ensureDrawerSpring();
-            float scale = FluidCapabilities.motionScale(getContext());
-            float baseStiff = FluidTiming.stiffness(scale);
-            drawerSpring.getSpring().setStiffness(fast ? baseStiff * 1.35f : baseStiff);
             drawerSpring.getSpring().setDampingRatio(FluidTiming.DAMPING_RATIO);
-            drawerSpring.animateToFinalPosition(drawerLayout.getMeasuredWidth());
-            if (scale <= 0f) {
-                drawerSpring.skipToEnd();
-            }
+            FluidTiming.animate(getContext(), drawerSpring, drawerLayout.getMeasuredWidth());
             return;
         }
 
@@ -370,14 +365,8 @@ public class DrawerLayoutContainer extends FrameLayout {
                 currentAnimation = null;
             }
             ensureDrawerSpring();
-            float scale = FluidCapabilities.motionScale(getContext());
-            float baseStiff = FluidTiming.stiffness(scale);
-            drawerSpring.getSpring().setStiffness(fast ? baseStiff * 1.35f : baseStiff);
             drawerSpring.getSpring().setDampingRatio(FluidTiming.DAMPING_RATIO);
-            drawerSpring.animateToFinalPosition(0f);
-            if (scale <= 0f) {
-                drawerSpring.skipToEnd();
-            }
+            FluidTiming.animate(getContext(), drawerSpring, 0f);
             return;
         }
 

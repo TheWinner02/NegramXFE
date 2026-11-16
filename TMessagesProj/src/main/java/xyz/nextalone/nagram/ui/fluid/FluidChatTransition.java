@@ -7,6 +7,8 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.ColorDrawable;
 import android.text.StaticLayout;
+import android.text.Layout;
+import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -14,6 +16,7 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.ActionBar.SimpleTextView;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.DialogCell;
 import org.telegram.ui.ChatActivity;
@@ -32,6 +35,7 @@ public final class FluidChatTransition {
     private final WeakReference<BaseFragment> list;
     private final WeakReference<BaseFragment> target;
     private final WeakReference<View> sourceView;
+    private final FluidSourceGuard sourceGuard;
     private final long dialogId;
     private final long topicId;
     private final boolean isTopic;
@@ -48,11 +52,13 @@ public final class FluidChatTransition {
     private View hiddenAvatar, hiddenTitle;
     private float avatarAlpha, titleAlpha;
     private boolean unanchoredReturn;
+    private boolean openingOriginResolved, returningOriginResolved;
 
     private FluidChatTransition(BaseFragment list, BaseFragment target, View sourceView, long dialogId, long topicId, boolean isTopic, boolean isChatOrTopic) {
         this.list = new WeakReference<>(list);
         this.target = new WeakReference<>(target);
         this.sourceView = sourceView != null ? new WeakReference<>(sourceView) : null;
+        this.sourceGuard = sourceView == null ? null : new FluidSourceGuard(sourceView);
         this.dialogId = dialogId;
         this.topicId = topicId;
         this.isTopic = isTopic;
@@ -97,6 +103,9 @@ public final class FluidChatTransition {
                     if (captured) return result;
                 }
             }
+            // An unrelated or clipped dialog row must not bypass identity/visibility
+            // checks by becoming a generic page anchor.
+            if (row instanceof DialogCell) return null;
         }
 
         // Generic page morph transition (Profile, Settings, EditChat, Sub-pages, etc.)
@@ -120,15 +129,22 @@ public final class FluidChatTransition {
 
     /** Reacquire by dialog identity, never by a RecyclerView position or a recycled row reference. */
     public void refreshOrigin(ViewGroup host, View listContainer, boolean returning) {
+        // Resolve once per opening/return gesture. List updates during a gesture must not
+        // move its destination or switch to the fallback halfway through the morph.
+        if (returning ? returningOriginResolved : openingOriginResolved) return;
         BaseFragment owner = list.get();
-        if (owner == null || owner.getFragmentView() == null || !owner.getFragmentView().isAttachedToWindow()) return;
+        if (owner == null || owner.getFragmentView() == null || !owner.getFragmentView().isAttachedToWindow()
+                || !owner.getFragmentView().isLaidOut()) return;
+        if (returning) returningOriginResolved = true;
+        else openingOriginResolved = true;
         if (isChatOrTopic) {
             DialogCell row = findRow(owner.getFragmentView(), 0);
             boolean found = row != null && captureRow(host, row, listContainer.getTranslationX(), listContainer.getTranslationY());
             if (returning && !found && owner.getFragmentView().isLaidOut()) unanchoredReturn = true;
         } else {
             View src = sourceView != null ? sourceView.get() : null;
-            boolean found = src != null && src.isAttachedToWindow() && src.isShown() && captureGeneric(host, src, listContainer.getTranslationX(), listContainer.getTranslationY());
+            boolean found = src != null && sourceGuard != null && sourceGuard.valid()
+                    && src.isAttachedToWindow() && src.isShown() && captureGeneric(host, src, listContainer.getTranslationX(), listContainer.getTranslationY());
             if (returning && !found && owner.getFragmentView().isLaidOut()) unanchoredReturn = true;
         }
     }
@@ -210,7 +226,7 @@ public final class FluidChatTransition {
         }
         View avatar = header == null ? null : header.getAvatarImageView();
         View title = header == null ? null : header.getTitleTextView();
-        boolean sharedHeader = avatar != null && title != null && avatar.getWidth() > 0 && title.getWidth() > 0;
+        boolean sharedHeader = isChatOrTopic && !originAvatar.isEmpty() && avatar != null && title != null && avatar.getWidth() > 0 && title.getWidth() > 0;
         if (sharedHeader) {
             bounds(host, child, avatar, targetAvatar);
             bounds(host, child, title, targetTitle);
@@ -255,23 +271,60 @@ public final class FluidChatTransition {
             avatar.draw(canvas);
             avatar.setAlpha(0f);
             canvas.restoreToCount(av);
-            float tx = mix(unanchoredReturn ? targetTitle.left : titleX, targetTitle.left, p);
-            float ty = mix(unanchoredReturn ? targetTitle.top : titleY, targetTitle.top, p);
-            if (!unanchoredReturn && sourceTitle != null && p < 1f) {
-                int text = canvas.saveLayerAlpha(tx, ty, tx + sourceTitle.getWidth(), ty + sourceTitle.getHeight(), (int) (255f * (1f - p)));
-                canvas.translate(tx, ty);
-                sourceTitle.draw(canvas);
-                canvas.restoreToCount(text);
-            }
-            int text = canvas.saveLayerAlpha(tx, ty, tx + title.getWidth(), ty + title.getHeight(), (int) (255f * (unanchoredReturn ? 1f : p)));
-            canvas.translate(tx, ty);
-            title.setAlpha(1f);
-            title.draw(canvas);
-            title.setAlpha(0f);
-            canvas.restoreToCount(text);
+            drawSharedTitle(canvas, title, p);
         }
         canvas.restoreToCount(save);
         return result;
+    }
+
+    private void drawSharedTitle(Canvas canvas, View title, float p) {
+        SimpleTextView textView = title instanceof SimpleTextView ? (SimpleTextView) title : null;
+        Layout layout = textView == null ? null : textView.getLayout();
+        boolean anchored = !unanchoredReturn && sourceTitle != null && sourceTitle.getLineCount() > 0;
+        float sourceBaseline = anchored ? sourceTitle.getLineBaseline(0) : 0f;
+        // The chat title has top padding; its View origin is not its text baseline.
+        float targetBaseline = layout != null && layout.getLineCount() > 0
+                ? title.getPaddingTop() + layout.getLineBaseline(0) : sourceBaseline;
+        float sourceLeft = anchored ? sourceTitle.getLineLeft(0) : 0f;
+        float targetLeft = layout != null && layout.getLineCount() > 0
+                ? textView.getLayoutX() + layout.getLineLeft(0) : 0f;
+        float baseline = mix(anchored ? titleY + sourceBaseline : targetTitle.top + targetBaseline,
+                targetTitle.top + targetBaseline, p);
+        float left = mix(anchored ? titleX + sourceLeft : targetTitle.left + targetLeft,
+                targetTitle.left + targetLeft, p);
+        boolean sameTitle = anchored && layout != null
+                && TextUtils.equals(sourceTitle.getText(), textView.getText());
+        if (sameTitle) {
+            // One live title follows the shared baseline. Crossfading two differently padded
+            // layouts produced a visible duplicate, especially while predictive Back was held.
+            float targetSize = textView.getTextPaint().getTextSize();
+            float scale = targetSize > 0f ? mix(sourceTitle.getPaint().getTextSize() / targetSize, 1f, p) : 1f;
+            drawTitle(canvas, title, left - targetLeft * scale, baseline - targetBaseline * scale, scale, 1f);
+            return;
+        }
+        if (anchored && p < 1f) {
+            float x = left - sourceLeft, y = baseline - sourceBaseline;
+            int text = canvas.saveLayerAlpha(x, y, x + sourceTitle.getWidth(), y + sourceTitle.getHeight(),
+                    (int) (255f * (1f - p)));
+            canvas.translate(x, y);
+            sourceTitle.draw(canvas);
+            canvas.restoreToCount(text);
+        }
+        drawTitle(canvas, title, left - targetLeft, baseline - targetBaseline, 1f, anchored ? p : 1f);
+    }
+
+    private void drawTitle(Canvas canvas, View title, float x, float y, float scale, float alpha) {
+        int text = canvas.saveLayerAlpha(x, y, x + title.getWidth() * scale, y + title.getHeight() * scale,
+                (int) (255f * alpha));
+        canvas.translate(x, y);
+        canvas.scale(scale, scale);
+        title.setAlpha(1f);
+        try {
+            title.draw(canvas);
+        } finally {
+            title.setAlpha(0f);
+            canvas.restoreToCount(text);
+        }
     }
 
     private void bounds(ViewGroup host, View container, View view, RectF out) {
@@ -284,9 +337,7 @@ public final class FluidChatTransition {
 
     private void hideHeader(View avatar, View title) {
         if (hiddenAvatar != avatar || hiddenTitle != title) {
-            boolean fallback = unanchoredReturn;
-            restore();
-            unanchoredReturn = fallback;
+            restoreHeader();
             hiddenAvatar = avatar; hiddenTitle = title;
             avatarAlpha = avatar.getAlpha(); titleAlpha = title.getAlpha();
         }
@@ -294,10 +345,15 @@ public final class FluidChatTransition {
     }
 
     public void restore() {
+        restoreHeader();
+        unanchoredReturn = false;
+        openingOriginResolved = returningOriginResolved = false;
+    }
+
+    private void restoreHeader() {
         if (hiddenAvatar != null) hiddenAvatar.setAlpha(avatarAlpha);
         if (hiddenTitle != null) hiddenTitle.setAlpha(titleAlpha);
         hiddenAvatar = hiddenTitle = null;
-        unanchoredReturn = false;
     }
 
     private static float mix(float a, float b, float p) { return a + (b - a) * p; }

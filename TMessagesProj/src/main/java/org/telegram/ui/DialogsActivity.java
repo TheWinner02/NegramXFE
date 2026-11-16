@@ -1605,13 +1605,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                                 checkListLoad(viewPages[0]);
                             }
                         });
-                        if (UIStyleEngine.isFluid() && FluidCapabilities.isMotionEnabled(getParentActivity())) {
-                            fluidTabsAnimator = FluidAnimator.start(getParentActivity(), tabsAnimation);
-                        } else {
-                            tabsAnimation.start();
-                        }
                         tabsAnimationInProgress = true;
                         startedTracking = false;
+                        AnimatorSet animation = tabsAnimation;
+                        if (UIStyleEngine.isFluid()) {
+                            FluidAnimator motion = FluidAnimator.start(getParentActivity(), animation);
+                            if (tabsAnimation == animation) fluidTabsAnimator = motion;
+                        } else {
+                            animation.start();
+                        }
                     } else {
                         maybeStartTracking = false;
                         actionBar.setEnabled(true);
@@ -8079,8 +8081,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
             });
             notificationsLocker.lock();
-            if (UIStyleEngine.isFluid() && FluidCapabilities.isMotionEnabled(getParentActivity())) {
-                fluidSearchAnimator = FluidAnimator.start(getParentActivity(), searchAnimator);
+            if (UIStyleEngine.isFluid()) {
+                AnimatorSet animation = searchAnimator;
+                FluidAnimator motion = FluidAnimator.start(getParentActivity(), animation);
+                if (searchAnimator == animation) fluidSearchAnimator = motion;
             } else {
                 searchAnimator.start();
             }

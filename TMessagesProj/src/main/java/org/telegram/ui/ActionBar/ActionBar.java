@@ -1080,12 +1080,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 });
                 actionModeAnimation.playTogether(alphaUpdate);
             }
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                actionModeAnimation.setDuration(280);
-                actionModeAnimation.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator());
-            } else {
-                actionModeAnimation.setDuration(200);
-            }
+            actionModeAnimation.setDuration(200);
             actionModeAnimation.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationStart(Animator animation) {
@@ -1126,7 +1121,11 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                     }
                 }
             });
-            actionModeAnimation.start();
+            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                xyz.nextalone.nagram.ui.fluid.FluidAnimator.start(getContext(), actionModeAnimation);
+            } else {
+                actionModeAnimation.start();
+            }
             if (backButtonImageView != null) {
                 Drawable drawable = backButtonImageView.getDrawable();
                 if (drawable instanceof BackDrawable) {
@@ -1256,12 +1255,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             });
             actionModeAnimation.playTogether(alphaUpdate);
         }
-        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-            actionModeAnimation.setDuration(220);
-            actionModeAnimation.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator());
-        } else {
-            actionModeAnimation.setDuration(200);
-        }
+        actionModeAnimation.setDuration(200);
         actionModeAnimation.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
@@ -1284,7 +1278,11 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 }
             }
         });
-        actionModeAnimation.start();
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            xyz.nextalone.nagram.ui.fluid.FluidAnimator.start(getContext(), actionModeAnimation);
+        } else {
+            actionModeAnimation.start();
+        }
         if (!isSearchFieldVisible) {
             if (titleTextView[0] != null) {
                 titleTextView[0].setVisibility(VISIBLE);

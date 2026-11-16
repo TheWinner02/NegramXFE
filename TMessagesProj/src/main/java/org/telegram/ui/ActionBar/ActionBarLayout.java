@@ -63,6 +63,7 @@ import androidx.core.math.MathUtils;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.dynamicanimation.animation.FloatValueHolder;
+import androidx.dynamicanimation.animation.FloatPropertyCompat;
 import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
 
@@ -1472,11 +1473,6 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     @Override
     protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
         FluidChatTransition fluidChat = fluidChatTransition();
-        if (transitionAnimationInProgress || startedTracking || animationInProgress || predictiveBackInProgress) {
-            android.util.Log.d("FluidMotion", "drawChild: child=" + (child == containerView ? "containerView" : (child == containerViewBack ? "containerViewBack" : child.getClass().getSimpleName()))
-                    + " fluidChat=" + (fluidChat != null)
-                    + " transX=" + child.getTranslationX());
-        }
         if (fluidChat != null && (child == containerView || child == containerViewBack)
                 && (transitionAnimationInProgress || startedTracking || animationInProgress || predictiveBackInProgress)) {
             View chatView = fluidChat.chatView();
@@ -2039,6 +2035,8 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         }
         if (isInPreviewMode()) {
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                if (fluidPreviewBackSpring != null) fluidPreviewBackSpring.cancel();
+                fluidPreviewBackOrigin = fluidPreviewBackProgress;
                 predictiveBackPreview = true;
                 predictiveBackHasProgress = false;
                 predictiveBackInProgress = true;
@@ -2081,42 +2079,71 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         return true;
     }
 
+    private SpringAnimation fluidPreviewBackSpring;
+    private float fluidPreviewBackProgress, fluidPreviewBackOrigin;
+
+    private void renderFluidPreviewBack(float value) {
+        fluidPreviewBackProgress = value;
+        if (!isInPreviewMode()) return;
+        float interpolated = MathUtils.clamp(value, 0f, 1f);
+        float downY = AndroidUtilities.dp(24) * interpolated;
+        float alpha = 1.0f - interpolated * 0.25f;
+        float scale = 1.0f - interpolated * 0.08f;
+        if (containerView != null) {
+            View card = (fragmentsStack.isEmpty()) ? null : fragmentsStack.get(fragmentsStack.size() - 1).fragmentView;
+            float pivotY = card != null && card.getHeight() > 0 ? (card.getY() + card.getHeight() / 2f) : (containerView.getHeight() / 2f);
+            containerView.setPivotX(containerView.getWidth() / 2f);
+            containerView.setPivotY(pivotY);
+            containerView.setTranslationY(downY);
+            containerView.setAlpha(alpha);
+            containerView.setScaleX(scale);
+            containerView.setScaleY(scale);
+        }
+        if (previewMenu != null) {
+            previewMenu.setPivotX(previewMenu.getWidth() / 2f);
+            previewMenu.setPivotY(0);
+            previewMenu.setTranslationY(AndroidUtilities.dp(12) * interpolated);
+            previewMenu.setAlpha(alpha);
+            previewMenu.setScaleX(scale);
+            previewMenu.setScaleY(scale);
+        }
+        if (previewBackgroundDrawable != null) {
+            previewBackgroundDrawable.setAlpha((int) (0x2e * (1.0f - interpolated * 0.35f)));
+        }
+        if (fragmentsStack.size() > 1) {
+            BaseFragment bgFragment = fragmentsStack.get(fragmentsStack.size() - 2);
+            if (bgFragment != null) {
+                bgFragment.onTransitionAnimationProgress(false, 1.0f - interpolated * 0.35f);
+            }
+        }
+        invalidate();
+    }
+
+    private void cancelFluidPreviewBack() {
+        if (fluidPreviewBackSpring != null) fluidPreviewBackSpring.cancel();
+        fluidPreviewBackProgress = fluidPreviewBackOrigin = 0f;
+    }
+
+    private void returnFluidPreview() {
+        if (fluidPreviewBackSpring == null) {
+            fluidPreviewBackSpring = new SpringAnimation(this,
+                    new FloatPropertyCompat<ActionBarLayout>("fluidPreviewBack") {
+                        @Override public float getValue(ActionBarLayout layout) { return layout.fluidPreviewBackProgress; }
+                        @Override public void setValue(ActionBarLayout layout, float value) { layout.renderFluidPreviewBack(value); }
+                    });
+            fluidPreviewBackSpring.setSpring(xyz.nextalone.nagram.ui.fluid.FluidTiming.springForce(1f));
+            fluidPreviewBackSpring.setMinimumVisibleChange(xyz.nextalone.nagram.ui.fluid.FluidTiming.MIN_VISIBLE_CHANGE);
+            xyz.nextalone.nagram.ui.fluid.FluidCapabilities.track(getContext(), fluidPreviewBackSpring);
+        }
+        xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(getContext(), fluidPreviewBackSpring, 0f);
+    }
+
     public void onBackProgress(float t) {
         if (!predictiveInput) return;
         if (predictiveBackPreview) {
             predictiveBackHasProgress = t > 0;
             float interpolated = CubicBezierInterpolator.StandardDecelerate.getInterpolation(t);
-            float downY = AndroidUtilities.dp(24) * interpolated;
-            float alpha = 1.0f - interpolated * 0.25f;
-            float scale = 1.0f - interpolated * 0.08f;
-            if (containerView != null) {
-                View card = (fragmentsStack.isEmpty()) ? null : fragmentsStack.get(fragmentsStack.size() - 1).fragmentView;
-                float pivotY = card != null && card.getHeight() > 0 ? (card.getY() + card.getHeight() / 2f) : (containerView.getHeight() / 2f);
-                containerView.setPivotX(containerView.getWidth() / 2f);
-                containerView.setPivotY(pivotY);
-                containerView.setTranslationY(downY);
-                containerView.setAlpha(alpha);
-                containerView.setScaleX(scale);
-                containerView.setScaleY(scale);
-            }
-            if (previewMenu != null) {
-                previewMenu.setPivotX(previewMenu.getWidth() / 2f);
-                previewMenu.setPivotY(0);
-                previewMenu.setTranslationY(AndroidUtilities.dp(12) * interpolated);
-                previewMenu.setAlpha(alpha);
-                previewMenu.setScaleX(scale);
-                previewMenu.setScaleY(scale);
-            }
-            if (previewBackgroundDrawable != null) {
-                previewBackgroundDrawable.setAlpha((int) (0x2e * (1.0f - interpolated * 0.35f)));
-            }
-            if (fragmentsStack.size() > 1) {
-                BaseFragment bgFragment = fragmentsStack.get(fragmentsStack.size() - 2);
-                if (bgFragment != null) {
-                    bgFragment.onTransitionAnimationProgress(false, 1.0f - interpolated * 0.35f);
-                }
-            }
-            invalidate();
+            renderFluidPreviewBack(fluidPreviewBackOrigin + (1f - fluidPreviewBackOrigin) * interpolated);
             return;
         }
         final float dx;
@@ -2148,24 +2175,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         if (predictiveBackPreview) {
             predictiveBackPreview = false;
             predictiveBackInProgress = false;
-            if (containerView != null) {
-                containerView.animate().translationY(0f).alpha(1.0f).scaleX(1.0f).scaleY(1.0f).setDuration(220)
-                        .setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator()).start();
-            }
-            if (previewMenu != null) {
-                previewMenu.animate().translationY(0f).alpha(1.0f).scaleX(1.0f).scaleY(1.0f).setDuration(220)
-                        .setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator()).start();
-            }
-            if (previewBackgroundDrawable != null) {
-                previewBackgroundDrawable.setAlpha(0x2e);
-            }
-            if (fragmentsStack.size() > 1) {
-                BaseFragment bgFragment = fragmentsStack.get(fragmentsStack.size() - 2);
-                if (bgFragment != null) {
-                    bgFragment.onTransitionAnimationProgress(false, 1.0f);
-                }
-            }
-            invalidate();
+            returnFluidPreview();
             return;
         }
         animateBackEndAnimation(true, 0f);
@@ -2359,6 +2369,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     }
 
     private void onAnimationEndCheck(boolean byCheck) {
+        cancelFluidPreviewBack();
         restoreFluidChatHeaders();
         onCloseAnimationEnd();
         onOpenAnimationEnd();
@@ -2479,6 +2490,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     }
 
     private void startLayoutAnimation(final boolean open, final boolean first, final boolean preview) {
+        cancelFluidPreviewBack();
         if (first) {
             animationProgress = 0.0f;
             lastFrameTime = System.nanoTime() / 1000000;
@@ -2650,7 +2662,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 onAnimationEndCheck(false);
                 setInnerTranslationX(0);
             });
-            configureFluidSpring(preview, open);
+            configureFluidSpring();
             currentSpringAnimation.start();
             return;
         }
@@ -2906,7 +2918,6 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 && xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext())) {
             FluidChatTransition motion = FluidChatTransition.capture(this, currentFragment,
                     fragment, FluidOrigins.take(getContext()));
-            android.util.Log.d("FluidMotion", "capture returned motion=" + motion);
             if (motion != null) fluidChatTransitions.put(fragment, motion);
         }
 
@@ -3452,6 +3463,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
     @Override
     public void expandPreviewFragment() {
+        cancelFluidPreviewBack();
         previewOpenAnimationInProgress = true;
         inPreviewMode = false;
 
@@ -3539,6 +3551,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
     @Override
     public void expandPreviewInto(BaseFragment newFragment) {
+        cancelFluidPreviewBack();
         if (newFragment == null) {
             expandPreviewFragment();
             return;
@@ -4739,6 +4752,8 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
     @Override
     protected void onDetachedFromWindow() {
+        if (fluidPreviewBackSpring != null && isInPreviewMode()) renderFluidPreviewBack(0f);
+        cancelFluidPreviewBack();
         restoreFluidChatHeaders();
         super.onDetachedFromWindow();
         attached = false;
@@ -4951,24 +4966,12 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     }
 
     private void configureFluidSpring() {
-        configureFluidSpring(false, false);
-    }
-
-    private void configureFluidSpring(boolean preview, boolean open) {
         if (!xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() || currentSpringAnimation == null) return;
         xyz.nextalone.nagram.ui.fluid.FluidCapabilities.refresh();
         float scale = xyz.nextalone.nagram.ui.fluid.FluidCapabilities.motionScale(getContext());
-        if (preview) {
-            float previewStiffness = xyz.nextalone.nagram.ui.fluid.FluidTiming.stiffness(Math.max(.01f, scale)) * (open ? 1.4f : 1.6f);
-            float damping = open ? 0.70f : 0.78f;
-            currentSpringAnimation.getSpring()
-                    .setStiffness(previewStiffness)
-                    .setDampingRatio(damping);
-        } else {
-            currentSpringAnimation.getSpring()
-                    .setStiffness(xyz.nextalone.nagram.ui.fluid.FluidTiming.stiffness(Math.max(.01f, scale)))
-                    .setDampingRatio(xyz.nextalone.nagram.ui.fluid.FluidTiming.DAMPING_RATIO);
-        }
+        currentSpringAnimation.getSpring()
+                .setStiffness(xyz.nextalone.nagram.ui.fluid.FluidTiming.stiffness(Math.max(.01f, scale)))
+                .setDampingRatio(xyz.nextalone.nagram.ui.fluid.FluidTiming.DAMPING_RATIO);
         currentSpringAnimation.setMinimumVisibleChange(xyz.nextalone.nagram.ui.fluid.FluidTiming.MIN_VISIBLE_CHANGE * SPRING_MULTIPLIER);
         xyz.nextalone.nagram.ui.fluid.FluidCapabilities.track(getContext(), currentSpringAnimation);
     }

@@ -43,7 +43,10 @@ public final class FluidAnimator {
         animator.setDuration(TIMELINE);
         animator.setInterpolator(new LinearInterpolator());
         if (FluidCapabilities.motionScale(context) <= 0f) {
-            animator.end();
+            // AnimatorSet.end() before start() need not initialize values or deliver its
+            // parent callbacks. Start and finish in this UI turn so owners always unlock.
+            animator.start();
+            if (animator.isStarted()) animator.end();
         } else {
             animator.start();
             animator.pause();

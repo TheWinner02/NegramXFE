@@ -390,7 +390,6 @@ import tw.nekomimi.nekogram.utils.ShareUtil;
 import xyz.nextalone.nagram.NaConfig;
 import xyz.nextalone.nagram.ui.UIStyleEngine;
 import xyz.nextalone.nagram.ui.fluid.FluidAnimator;
-import xyz.nextalone.nagram.ui.fluid.FluidCapabilities;
 
 public class ProfileActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, DialogsActivity.DialogsActivityDelegate, SharedMediaLayout.SharedMediaPreloaderDelegate, ImageUpdater.ImageUpdaterDelegate, SharedMediaLayout.Delegate, MainTabsActivity.TabFragmentDelegate {
     private RecyclerListView listView;
@@ -10786,7 +10785,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             animatorSet.setInterpolator(playProfileAnimation == 2 ? CubicBezierInterpolator.DEFAULT : new DecelerateInterpolator());
         }
 
-        if (UIStyleEngine.isFluid() && FluidCapabilities.isMotionEnabled(getParentActivity())) {
+        if (UIStyleEngine.isFluid()) {
             AndroidUtilities.runOnUIThread(() -> {
                 if (getParentActivity() != null) {
                     fluidTransition = FluidAnimator.start(getParentActivity(), animatorSet);

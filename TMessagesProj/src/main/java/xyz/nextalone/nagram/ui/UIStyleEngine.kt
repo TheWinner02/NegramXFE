@@ -20,7 +20,7 @@ object UIStyleEngine {
         PathInterpolatorCompat.create(0.25f, 1.0f, 0.5f, 1.0f)
     }
 
-    // Fluid Spring Interpolator (Natural Easing, 0.82 Damping)
+    // Legacy fixed-duration easing for adapters that do not expose physical spring progress.
     @JvmStatic
     val fluidSpringInterpolator: Interpolator by lazy {
         PathInterpolatorCompat.create(0.22f, 1.0f, 0.36f, 1.0f)

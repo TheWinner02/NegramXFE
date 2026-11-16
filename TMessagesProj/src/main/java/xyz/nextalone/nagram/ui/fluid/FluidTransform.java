@@ -30,7 +30,7 @@ import java.lang.ref.WeakReference;
 public final class FluidTransform implements FluidMotion {
 
     private final WeakReference<View> sourceRef;
-    private final SourceGuard sourceGuard;
+    private final FluidSourceGuard sourceGuard;
     private WeakReference<View> targetRef;
     private final WeakReference<Window> windowRef;
     private final WeakReference<BottomSheet> bottomSheetRef;
@@ -88,7 +88,7 @@ public final class FluidTransform implements FluidMotion {
         this.windowRef = new WeakReference<>(bottomSheet.getWindow());
         this.targetRef = new WeakReference<>(bottomSheet.getContainerView() != null ? bottomSheet.getContainerView() : bottomSheet.getContainer());
         this.sourceRef = new WeakReference<>(source);
-        this.sourceGuard = new SourceGuard(source);
+        this.sourceGuard = new FluidSourceGuard(source);
     }
 
     private FluidTransform(Window window, View target, View source) {
@@ -96,7 +96,7 @@ public final class FluidTransform implements FluidMotion {
         this.windowRef = new WeakReference<>(window);
         this.targetRef = new WeakReference<>(target);
         this.sourceRef = new WeakReference<>(source);
-        this.sourceGuard = new SourceGuard(source);
+        this.sourceGuard = new FluidSourceGuard(source);
     }
 
     public void open(Runnable completion) {
@@ -394,39 +394,6 @@ public final class FluidTransform implements FluidMotion {
                 else committed.run();
             }
         };
-    }
-
-    /** A recycled row must not become the destination of an unrelated item's return. */
-    private static final class SourceGuard {
-        private final WeakReference<androidx.recyclerview.widget.RecyclerView> recycler;
-        private final WeakReference<View> row;
-        private final WeakReference<androidx.recyclerview.widget.RecyclerView.Adapter> adapter;
-        private final long itemId;
-        private final int position;
-        private final boolean stable;
-        SourceGuard(View source) {
-            View child = source;
-            while (child != null && child.getParent() instanceof View
-                    && !(child.getParent() instanceof androidx.recyclerview.widget.RecyclerView)) child = (View) child.getParent();
-            androidx.recyclerview.widget.RecyclerView list = child != null && child.getParent() instanceof androidx.recyclerview.widget.RecyclerView
-                    ? (androidx.recyclerview.widget.RecyclerView) child.getParent() : null;
-            recycler = new WeakReference<>(list); row = new WeakReference<>(list == null ? null : child);
-            androidx.recyclerview.widget.RecyclerView.Adapter data = list == null ? null : list.getAdapter();
-            adapter = new WeakReference<>(data); stable = data != null && data.hasStableIds();
-            androidx.recyclerview.widget.RecyclerView.ViewHolder holder = list == null ? null : list.getChildViewHolder(child);
-            itemId = holder == null ? -1L : holder.getItemId();
-            position = holder == null ? -1 : holder.getAdapterPosition();
-        }
-        boolean valid() {
-            View child = row.get();
-            androidx.recyclerview.widget.RecyclerView list = recycler.get();
-            if (position == -1 && itemId == -1L) return child == null && list == null;
-            if (list == null || child == null || child.getParent() != list || adapter.get() != list.getAdapter()) return false;
-            androidx.recyclerview.widget.RecyclerView.ViewHolder holder = list.getChildViewHolder(child);
-            int currentPosition = holder.getAdapterPosition();
-            return currentPosition != androidx.recyclerview.widget.RecyclerView.NO_POSITION
-                    && (stable ? holder.getItemId() == itemId : currentPosition == position);
-        }
     }
 
     /**
