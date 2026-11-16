@@ -103,6 +103,7 @@ import java.util.WeakHashMap;
 
 import xyz.nextalone.nagram.ui.fluid.FluidChatTransition;
 import xyz.nextalone.nagram.ui.fluid.FluidOrigins;
+import xyz.nextalone.nagram.ui.fluid.FluidNavigationProfile;
 
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.utils.AndroidUtil;
@@ -142,6 +143,23 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         BaseFragment current = fragmentsStack.get(fragmentsStack.size() - 1);
         FluidChatTransition motion = fluidChatTransitions.get(current);
         return motion != null && motion.matches(fragmentsStack.get(fragmentsStack.size() - 2), current) ? motion : null;
+    }
+
+    private FluidNavigationProfile fluidNavigationProfile() {
+        int depth = fragmentsStack == null ? 0 : fragmentsStack.size();
+        if (depth < 2 || isSheet || isLayersLayout || isRightLayout) return FluidNavigationProfile.PAGE;
+        BaseFragment from = fragmentsStack.get(depth - 2), to = fragmentsStack.get(depth - 1);
+        boolean peerConversation = from instanceof ChatActivity && to instanceof ChatActivity
+                || from instanceof TopicsFragment && to instanceof TopicsFragment;
+        return FluidNavigationProfile.resolve(peerConversation, depth);
+    }
+
+    private void applyFluidBackground(View background, float width, float covered) {
+        FluidNavigationProfile profile = fluidNavigationProfile();
+        background.setTranslationX(profile.backgroundTranslation(width, covered));
+        float scale = profile.backgroundScale(covered);
+        background.setScaleX(scale);
+        background.setScaleY(scale);
     }
 
     private void restoreFluidChatHeaders() {
@@ -1495,7 +1513,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         if (scrimPaint == null) {
                             scrimPaint = new Paint();
                         }
-                        scrimPaint.setColor((int) (0x26 * progress) << 24);
+                        scrimPaint.setColor((int) (0x26 * fluidNavigationProfile().scrimFactor * progress) << 24);
                         canvas.drawRect(0, 0, getWidth(), getHeight(), scrimPaint);
                     }
                     canvas.restoreToCount(save);
@@ -1635,7 +1653,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 }
             } else if (child == bottomChild) {
                 float opacity = MathUtils.clamp(widthOffset / (float) width, 0, 0.8f);
-                scrimPaint.setColor(Color.argb((int) (120 * opacity), 0x00, 0x00, 0x00));
+                float depth = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && !isInPreviewMode()
+                        ? fluidNavigationProfile().scrimFactor : 1f;
+                scrimPaint.setColor(Color.argb((int) (120 * depth * opacity), 0x00, 0x00, 0x00));
                 if (overrideWidthOffset != -1 || isCloseAnimation) {
                     canvas.drawRect(0, top, getWidth(), getHeight() * 1.5f, scrimPaint);
                 } else {
@@ -1796,7 +1816,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
             containerViewBack.setClipToOutline(false);
             containerViewBack.setElevation(0);
         }
-        if (useActionBarCrossfade()) {
+        // Ending an anchored return can change crossfade ownership. Re-record the bars
+        // even when the newly exposed edge no longer uses the crossfade renderer.
+        if (useActionBarCrossfade() || xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
             invalidateActionBars();
         }
     }
@@ -1808,9 +1830,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         containerViewBack.setVisibility(View.VISIBLE);
         beginTrackingSent = false;
         if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null) {
-            containerViewBack.setScaleX(0.94f);
-            containerViewBack.setScaleY(0.94f);
-            containerViewBack.setTranslationX(-0.12f * containerView.getMeasuredWidth());
+            applyFluidBackground(containerViewBack, containerView.getMeasuredWidth(), 1f);
             containerViewBack.setOutlineProvider(fluidOutlineProvider);
             containerViewBack.setClipToOutline(true);
             containerView.setOutlineProvider(fluidOutlineProvider);
@@ -1926,10 +1946,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                             if (useSlideAnimation()) {
                                 if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null && !isInPreviewMode()) {
                                     float progress = MathUtils.clamp((float) dx / containerView.getMeasuredWidth(), 0f, 1f);
-                                    containerViewBack.setTranslationX(-(1f - progress) * 0.12f * containerView.getMeasuredWidth());
-                                    float backScale = 0.94f + progress * 0.06f;
-                                    containerViewBack.setScaleX(backScale);
-                                    containerViewBack.setScaleY(backScale);
+                                    applyFluidBackground(containerViewBack, containerView.getMeasuredWidth(), 1f - progress);
                                 } else {
                                     containerViewBack.setTranslationX(-(containerView.getMeasuredWidth() - dx) * 0.35f);
                                 }
@@ -2154,10 +2171,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     : width * .35f * CubicBezierInterpolator.StandardDecelerate.getInterpolation(t);
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null && !isInPreviewMode()) {
                 float p = MathUtils.clamp(dx / Math.max(1f, width), 0f, 1f);
-                containerViewBack.setTranslationX(-(1f - p) * 0.12f * width);
-                float backScale = 0.94f + p * 0.06f;
-                containerViewBack.setScaleX(backScale);
-                containerViewBack.setScaleY(backScale);
+                applyFluidBackground(containerViewBack, width, 1f - p);
             } else {
                 containerViewBack.setTranslationX(-(containerView.getMeasuredWidth() - dx) * 0.35f);
             }
@@ -2236,10 +2250,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null && !isInPreviewMode()) {
                     float width = containerView.getMeasuredWidth();
                     containerView.setTranslationX(progress * width);
-                    containerViewBack.setTranslationX(-(1f - progress) * 0.12f * width);
-                    float backScale = 0.94f + progress * 0.06f;
-                    containerViewBack.setScaleX(backScale);
-                    containerViewBack.setScaleY(backScale);
+                    applyFluidBackground(containerViewBack, width, 1f - progress);
                 } else {
                     containerView.setTranslationX(progress * containerView.getMeasuredWidth());
                     containerViewBack.setTranslationX(-(containerView.getMeasuredWidth() - progress * containerView.getMeasuredWidth()) * 0.35f);
@@ -2404,7 +2415,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         containerViewBack.setScaleY(1.0f);
         containerViewBack.setTranslationX(0);
         containerViewBack.setTranslationY(0);
-        if (useActionBarCrossfade()) {
+        // Ending an anchored return can change crossfade ownership. Re-record the bars
+        // even when the newly exposed edge no longer uses the crossfade renderer.
+        if (useActionBarCrossfade() || xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
             invalidateActionBars();
         }
     }
@@ -2596,10 +2609,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null) {
                         float progress = clampedInterpolated;
                         containerView.setTranslationX((1.0f - progress) * widthNoPaddings);
-                        containerViewBack.setTranslationX(-progress * 0.12f * widthNoPaddings);
-                        float backScale = 1.0f - progress * 0.06f;
-                        containerViewBack.setScaleX(backScale);
-                        containerViewBack.setScaleY(backScale);
+                        applyFluidBackground(containerViewBack, widthNoPaddings, progress);
                         containerView.setScaleX(1.0f);
                         containerView.setScaleY(1.0f);
                         setInnerTranslationX((1.0f - progress) * widthNoPaddings);
@@ -2646,10 +2656,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         invalidate();
                     } else if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null) {
                         containerViewBack.setTranslationX(interpolated * widthNoPaddings);
-                        containerView.setTranslationX(-(1f - interpolated) * 0.12f * widthNoPaddings);
-                        float enterScale = 0.94f + interpolated * 0.06f;
-                        containerView.setScaleX(enterScale);
-                        containerView.setScaleY(enterScale);
+                        applyFluidBackground(containerView, widthNoPaddings, 1f - interpolated);
                         setInnerTranslationX(interpolated * widthNoPaddings);
                     } else {
                         containerViewBack.setTranslationX(interpolated * widthNoPaddings);
@@ -3859,9 +3866,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 if (useSlideAnimation()) {
                     float widthNoPaddings = getWidth() - getPaddingLeft() - getPaddingRight();
                     if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && fluidChatTransition() == null && !isInPreviewMode()) {
-                        containerView.setTranslationX(-0.12f * widthNoPaddings);
-                        containerView.setScaleX(0.94f);
-                        containerView.setScaleY(0.94f);
+                        applyFluidBackground(containerView, widthNoPaddings, 1f);
                         containerView.setOutlineProvider(fluidOutlineProvider);
                         containerView.setClipToOutline(true);
                         containerViewBack.setOutlineProvider(fluidOutlineProvider);

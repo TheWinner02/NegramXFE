@@ -95,6 +95,11 @@
  * completion path instead of falling back to a timed animation. System/insets-driven keyboard
  * motion retains the IME clock; standalone app panels can use the tracked Fluid timeline.
  *
+ * <p>FluidNavigationProfile distinguishes page depth, nested details and peer conversation changes.
+ * It modulates background parallax, scale and dimming without changing the shared spring,
+ * foreground travel or live origins. Opening, touch Back, predictive Back and cancellation resolve
+ * the same stack edge and use the same background geometry. Previews retain their own depth.
+ *
  * <p>Other UI styles retain their original motion. Gesture displacement, playback timelines,
  * indeterminate loading loops and specialized content transitions are not globally time-warped.
  */
