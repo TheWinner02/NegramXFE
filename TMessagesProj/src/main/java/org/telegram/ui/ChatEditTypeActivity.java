@@ -10,6 +10,9 @@ package org.telegram.ui;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -527,13 +530,15 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
             }
 
             ValueAnimator translateAnimator;
+            AnimatorSet fluidTranslateAnimator;
             int prevHeight = -1;
 
             @Override
             protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
                 super.onLayout(changed, left, top, right, bottom);
 
-                if (prevHeight != -1 && linearLayout != null) {
+                boolean fluid = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid();
+                if (prevHeight != -1 && linearLayout != null && (!fluid || prevHeight != getHeight())) {
                     ArrayList<View> viewsToTranslate = new ArrayList<>();
                     boolean passedMe = false;
                     for (int i = 0; i < linearLayout.getChildCount(); ++i) {
@@ -546,6 +551,15 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
                     }
 
                     float diff = prevHeight - getHeight();
+                    float[] starts = new float[viewsToTranslate.size()];
+                    for (int i = 0; i < starts.length; i++) {
+                        starts[i] = diff + (fluid ? viewsToTranslate.get(i).getTranslationY() : 0f);
+                    }
+                    if (fluidTranslateAnimator != null) {
+                        AnimatorSet old = fluidTranslateAnimator;
+                        fluidTranslateAnimator = null;
+                        old.cancel();
+                    }
                     if (translateAnimator != null) {
                         translateAnimator.cancel();
                     }
@@ -555,20 +569,37 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
                         for (int i = 0; i < viewsToTranslate.size(); ++i) {
                             View view = viewsToTranslate.get(i);
                             if (view != null) {
-                                view.setTranslationY(diff * t);
+                                view.setTranslationY(starts[i] * t);
                             }
                         }
                     });
-                    if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                        translateAnimator.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator());
-                        translateAnimator.setDuration(280);
+                    if (fluid) {
+                        // Apply the new layout delta to the current visual positions before
+                        // the first frame; repeated validation can then reverse without a jump.
+                        for (int i = 0; i < starts.length; i++) viewsToTranslate.get(i).setTranslationY(starts[i]);
+                        AnimatorSet motion = new AnimatorSet();
+                        motion.playTogether(translateAnimator);
+                        fluidTranslateAnimator = motion;
+                        motion.addListener(new AnimatorListenerAdapter() {
+                            @Override public void onAnimationEnd(Animator animation) {
+                                if (fluidTranslateAnimator == animation) fluidTranslateAnimator = null;
+                            }
+                        });
+                        prevHeight = getHeight();
+                        xyz.nextalone.nagram.ui.fluid.FluidAnimator.start(getContext(), motion);
                     } else {
                         translateAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
                         translateAnimator.setDuration(350);
+                        translateAnimator.start();
                     }
-                    translateAnimator.start();
                 }
                 prevHeight = getHeight();
+            }
+
+            @Override
+            protected void onDetachedFromWindow() {
+                if (fluidTranslateAnimator != null) fluidTranslateAnimator.end();
+                super.onDetachedFromWindow();
             }
         };
         checkTextView.setBottomPadding(6);

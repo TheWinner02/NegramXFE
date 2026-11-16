@@ -437,6 +437,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        cancelHistoryMotion();
         if (imageUpdater != null) {
             imageUpdater.clear();
         }
@@ -2636,11 +2637,20 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
     }
 
     private ValueAnimator updateHistoryShowAnimator;
+    private AnimatorSet fluidHistoryAnimator;
+
+    private void cancelHistoryMotion() {
+        ValueAnimator previous = updateHistoryShowAnimator;
+        AnimatorSet motion = fluidHistoryAnimator;
+        updateHistoryShowAnimator = null;
+        fluidHistoryAnimator = null;
+        if (motion != null) motion.cancel();
+        if (previous != null) previous.cancel();
+    }
+
     private void updateHistoryShow(boolean show, boolean animated) {
         final boolean finalShow = show;
-        if (updateHistoryShowAnimator != null) {
-            updateHistoryShowAnimator.cancel();
-        }
+        cancelHistoryMotion();
         if (historyCell.getAlpha() <= 0 && !show) {
             historyCell.setVisibility(View.GONE);
             updateColorCell();
@@ -2691,6 +2701,8 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             updateHistoryShowAnimator.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
+                    if (updateHistoryShowAnimator != animation) return;
+                    updateHistoryShowAnimator = null;
                     historyCell.setVisibility(finalShow ? View.VISIBLE : View.GONE);
                     for (int i = 0; i < nextViews.size(); ++i) {
                         nextViews.get(i).setTranslationY(0);
@@ -2698,13 +2710,20 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 }
             });
             if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                updateHistoryShowAnimator.setDuration(280);
-                updateHistoryShowAnimator.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator());
+                AnimatorSet motion = new AnimatorSet();
+                motion.playTogether(updateHistoryShowAnimator);
+                fluidHistoryAnimator = motion;
+                motion.addListener(new AnimatorListenerAdapter() {
+                    @Override public void onAnimationEnd(Animator animation) {
+                        if (fluidHistoryAnimator == animation) fluidHistoryAnimator = null;
+                    }
+                });
+                xyz.nextalone.nagram.ui.fluid.FluidAnimator.start(historyCell.getContext(), motion);
             } else {
                 updateHistoryShowAnimator.setDuration(320);
                 updateHistoryShowAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                updateHistoryShowAnimator.start();
             }
-            updateHistoryShowAnimator.start();
         } else {
             historyCell.setAlpha(show ? 1f : 0f);
             historyCell.setTranslationY(-historyCell.getHeight() / 2f * (show ? 0 : 1f));

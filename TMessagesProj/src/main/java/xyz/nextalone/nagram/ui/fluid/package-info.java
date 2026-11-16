@@ -120,6 +120,11 @@
  * physics while retaining the outgoing cover; detach releases its image and backdrop. Reduced
  * motion and non-animated closures settle immediately without a separate alpha/scale timeline.
  *
+ * <p>Chat editing history options and type-validation layout changes use the Fluid timeline.
+ * History replacement revokes stale visibility callbacks; validation ignores unchanged heights
+ * and adds each new layout delta to the current translated position. Detach settles local layout
+ * offsets, while fragment teardown cancels the history owner and its tracked timeline.
+ *
  * <p>Other UI styles retain their original motion. Gesture displacement, playback timelines,
  * indeterminate loading loops and specialized content transitions are not globally time-warped.
  */
