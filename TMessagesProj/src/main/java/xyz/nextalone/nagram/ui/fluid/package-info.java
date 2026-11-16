@@ -100,6 +100,15 @@
  * foreground travel or live origins. Opening, touch Back, predictive Back and cancellation resolve
  * the same stack edge and use the same background geometry. Previews retain their own depth.
  *
+ * <p>EmojiTabsStrip drives its moving indicator, selected icons and expanding category strip
+ * with FluidAnimator instead of separate fixed durations. Replacing a selection cancels the
+ * owning together-timeline, stale icon callbacks cannot overwrite the new selection, and detach
+ * settles local UI before panel reuse. Hardware emoji preparation retains its immediate path;
+ * keyboard and gesture-driven panel geometry continue to use their native clocks.
+ * Fluid category taps replace an active grid scroll instead of being discarded. Distant targets
+ * use the same interruptible RecyclerView scroller rather than the input-locking fast-row handoff;
+ * reduced motion places the new category directly, and panel detach stops the old scroll.
+ *
  * <p>Other UI styles retain their original motion. Gesture displacement, playback timelines,
  * indeterminate loading loops and specialized content transitions are not globally time-warped.
  */

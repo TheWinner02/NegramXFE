@@ -2,6 +2,7 @@ package org.telegram.ui.Components;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -50,6 +51,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import tw.nekomimi.nekogram.NekoConfig;
+import xyz.nextalone.nagram.ui.UIStyleEngine;
+import xyz.nextalone.nagram.ui.fluid.FluidAnimator;
 
 public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
 
@@ -94,6 +97,7 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
     private int packsIndexStart;
 
     private ValueAnimator selectAnimator;
+    private AnimatorSet fluidSelectAnimator;
     private float selectT = 0f;
     private float selectAnimationT = 0f;
     private int selected = 0;
@@ -733,6 +737,10 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
             }
         }
         if (wasSelected != selected) {
+            if (fluidSelectAnimator != null) {
+                fluidSelectAnimator.cancel();
+                fluidSelectAnimator = null;
+            }
             if (selectAnimator != null) {
                 selectAnimator.cancel();
             }
@@ -744,9 +752,14 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
                     selectT = AndroidUtilities.lerp(from, to, selectAnimationT);
                     contentView.invalidate();
                 });
-                selectAnimator.setDuration(xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? 360 : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 320 : 350));
-                selectAnimator.setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator() : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : CubicBezierInterpolator.EASE_OUT_QUINT));
-                selectAnimator.start();
+                if (UIStyleEngine.isFluid()) {
+                    fluidSelectAnimator = startFluidMotion(this, selectAnimator);
+                } else {
+                    selectAnimator.setDuration(UIStyleEngine.isIosLiquidGlass() ? 320 : 350);
+                    selectAnimator.setInterpolator(UIStyleEngine.isIosLiquidGlass()
+                            ? UIStyleEngine.getIosSpringInterpolator() : CubicBezierInterpolator.EASE_OUT_QUINT);
+                    selectAnimator.start();
+                }
             } else {
                 selectAnimationT = 1f;
                 selectT = AndroidUtilities.lerp(from, to, selectAnimationT);
@@ -810,6 +823,28 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
             case 7: return LocaleController.getString(R.string.Emoji8);
             default: return null;
         }
+    }
+
+    /** One together-timeline; owners cancel the set before replacing its child animator. */
+    private static AnimatorSet startFluidMotion(View owner, ValueAnimator timeline) {
+        AnimatorSet animation = new AnimatorSet();
+        animation.playTogether(timeline);
+        View.OnAttachStateChangeListener detach = new View.OnAttachStateChangeListener() {
+            @Override public void onViewAttachedToWindow(View view) {}
+            @Override public void onViewDetachedFromWindow(View view) {
+                // These timelines only render local UI. Settle it before a recycled panel
+                // is reused, and let the native end listener stop the tracked spring.
+                animation.end();
+            }
+        };
+        animation.addListener(new AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(Animator animator) {
+                owner.removeOnAttachStateChangeListener(detach);
+            }
+        });
+        owner.addOnAttachStateChangeListener(detach);
+        FluidAnimator.start(owner.getContext(), animation);
+        return animation;
     }
 
     public class EmojiTabButton extends ViewGroup {
@@ -1364,6 +1399,7 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
         private float selectT;
         private boolean selected;
         private ValueAnimator selectAnimator;
+        private AnimatorSet fluidSelectAnimator;
 
         public void updateSelect(boolean selected, boolean animated) {
             if (imageView != null && imageView.getImageReceiver().getImageDrawable() == null && !isGlassDesign) {
@@ -1373,10 +1409,13 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
                 return;
             }
             this.selected = selected;
-            if (selectAnimator != null) {
-                selectAnimator.cancel();
-                selectAnimator = null;
+            ValueAnimator previous = selectAnimator;
+            selectAnimator = null;
+            if (fluidSelectAnimator != null) {
+                fluidSelectAnimator.cancel();
+                fluidSelectAnimator = null;
             }
+            if (previous != null) previous.cancel();
 
             if (!selected) {
                 stopAnimation();
@@ -1391,23 +1430,33 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
                 selectAnimator.addListener(new AnimatorListenerAdapter() {
                     @Override
                     public void onAnimationEnd(Animator animation) {
-                        if (updateButtonDrawables && !round) {
-                            if (selected || forceSelector) {
-                                if (getBackground() == null) {
-                                    setBackground(Theme.createRadSelectorDrawable(selectorColor(), 8, 8));
-                                }
-                            } else {
-                                setBackground(null);
-                            }
-                        }
+                        if (selectAnimator != animation) return;
+                        updateSelectionBackground();
                     }
                 });
-                selectAnimator.setDuration(HwEmojis.isHwEnabledOrPreparing() ? 0 : 350);
-                selectAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
-                selectAnimator.start();
+                if (UIStyleEngine.isFluid() && !HwEmojis.isHwEnabledOrPreparing()) {
+                    fluidSelectAnimator = startFluidMotion(this, selectAnimator);
+                } else {
+                    selectAnimator.setDuration(HwEmojis.isHwEnabledOrPreparing() ? 0 : 350);
+                    selectAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                    selectAnimator.start();
+                }
             } else {
                 selectT = selected ? 1f : 0f;
                 updateColor();
+                if (UIStyleEngine.isFluid()) updateSelectionBackground();
+            }
+        }
+
+        private void updateSelectionBackground() {
+            if (updateButtonDrawables && !round) {
+                if (selected || forceSelector) {
+                    if (getBackground() == null) {
+                        setBackground(Theme.createRadSelectorDrawable(selectorColor(), 8, 8));
+                    }
+                } else {
+                    setBackground(null);
+                }
             }
         }
 
@@ -1527,6 +1576,7 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
         }
 
         private boolean shown = forceTabsShow;
+        private AnimatorSet fluidShowAnimator;
         private float showT = forceTabsShow ? 1f : 0f;
 
         public void show(boolean show, boolean animated) {
@@ -1538,6 +1588,10 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
                 scrollTo(0);
             }
 
+            if (fluidShowAnimator != null) {
+                fluidShowAnimator.cancel();
+                fluidShowAnimator = null;
+            }
             if (showAnimator != null) {
                 showAnimator.cancel();
             }
@@ -1550,9 +1604,13 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
                     updateButtonsVisibility();
                     EmojiTabsStrip.this.contentView.invalidate();
                 });
-                showAnimator.setDuration(475);
-                showAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
-                showAnimator.start();
+                if (UIStyleEngine.isFluid()) {
+                    fluidShowAnimator = startFluidMotion(this, showAnimator);
+                } else {
+                    showAnimator.setDuration(475);
+                    showAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                    showAnimator.start();
+                }
             } else {
                 showT = show ? 1f : 0f;
                 invalidate();

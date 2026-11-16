@@ -1875,7 +1875,10 @@ public class EmojiView extends FrameLayout implements
             @Override
             protected boolean onTabClick(int index) {
                 if (emojiSmoothScrolling) {
-                    return false;
+                    if (!xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) return false;
+                    // A new category owns the scroll immediately, including its tab indicator.
+                    emojiGridView.stopScroll();
+                    emojiSmoothScrolling = false;
                 }
                 if (emojiSearchAdapter != null) {
                     emojiSearchAdapter.search(null);
@@ -5004,9 +5007,23 @@ public class EmojiView extends FrameLayout implements
     }
 
     private void scrollEmojisToPosition(int p, int offset) {
+        boolean fluid = xyz.nextalone.nagram.ui.UIStyleEngine.isFluid();
+        if (fluid) {
+            emojiGridView.stopScroll();
+            emojiSmoothScrolling = false;
+            if (!SharedConfig.animationsEnabled()
+                    || !xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext())) {
+                emojiLayoutManager.scrollToPositionWithOffset(p, offset);
+                updateEmojiTabsPosition(p);
+                return;
+            }
+        }
         View view = emojiLayoutManager.findViewByPosition(p);
         int firstPosition = emojiLayoutManager.findFirstVisibleItemPosition();
-        if ((view == null && Math.abs(p - firstPosition) > emojiLayoutManager.getSpanCount() * 9f) || !SharedConfig.animationsEnabled()) {
+        // Fluid uses the RecyclerView's interruptible scroller even for distant categories.
+        // The fast-scroll helper temporarily disables input and cannot be retargeted safely
+        // while it is waiting for its layout/old-row handoff.
+        if (!fluid && ((view == null && Math.abs(p - firstPosition) > emojiLayoutManager.getSpanCount() * 9f) || !SharedConfig.animationsEnabled())) {
             emojiScrollHelper.setScrollDirection(emojiLayoutManager.findFirstVisibleItemPosition() < p ? RecyclerAnimationScrollHelper.SCROLL_DIRECTION_DOWN : RecyclerAnimationScrollHelper.SCROLL_DIRECTION_UP);
             emojiScrollHelper.scrollToPosition(p, offset, false, true);
         } else {
@@ -6343,6 +6360,10 @@ public class EmojiView extends FrameLayout implements
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() && emojiGridView != null) {
+            emojiGridView.stopScroll();
+            emojiSmoothScrolling = false;
+        }
         if (colorPickerView != null && colorPickerView.isShowing()) {
             colorPickerView.dismiss();
         }
