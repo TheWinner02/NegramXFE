@@ -61,6 +61,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.core.content.FileProvider;
 import androidx.core.graphics.ColorUtils;
+import androidx.dynamicanimation.animation.FloatPropertyCompat;
 import androidx.dynamicanimation.animation.FloatValueHolder;
 import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
@@ -192,6 +193,9 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
     private ActionBarMenuItem addItem;
     private ActionBarMenuItem searchItem;
     private boolean blurredAnimationInProgress;
+    private SpringAnimation albumCoverSpring;
+    private float albumCoverProgress;
+    private int albumCoverBlurGeneration;
     private View[] buttons = new View[7];
     private SpringAnimation seekBarBufferSpring;
     private final Path iosCardPath = new Path();
@@ -1725,10 +1729,20 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         blurredView = new FrameLayout(context) {
             @Override
             public boolean onTouchEvent(MotionEvent event) {
-                if (blurredView.getTag() != null) {
+                if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+                    if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                        showAlbumCover(blurredView.getTag() == null, true);
+                    }
+                } else if (blurredView.getTag() != null) {
                     showAlbumCover(false, true);
                 }
                 return true;
+            }
+
+            @Override
+            protected void onDetachedFromWindow() {
+                super.onDetachedFromWindow();
+                if (albumCoverSpring != null) stopFluidAlbumCover(true);
             }
         };
         blurredView.setAlpha(0.0f);
@@ -2087,6 +2101,10 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
     }
 
     private void showAlbumCover(boolean show, boolean animated) {
+        if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
+            showFluidAlbumCover(show, animated);
+            return;
+        }
         if (show) {
             if (blurredView.getVisibility() == View.VISIBLE || blurredAnimationInProgress) {
                 return;
@@ -2098,23 +2116,13 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
                 blurredView.setBackground(new BitmapDrawable(bitmapBg)));
 
             blurredView.setVisibility(View.VISIBLE);
-            if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                blurredView.animate().alpha(1.0f).setDuration(280).setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator()).setListener(new AnimatorListenerAdapter() {
-                    @Override
-                    public void onAnimationEnd(Animator animation) {
-                        blurredAnimationInProgress = false;
-                    }
-                }).start();
-                bigAlbumConver.animate().scaleX(1f).scaleY(1f).setDuration(280).setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator()).start();
-            } else {
-                blurredView.animate().alpha(1.0f).setDuration(180).setListener(new AnimatorListenerAdapter() {
-                    @Override
-                    public void onAnimationEnd(Animator animation) {
-                        blurredAnimationInProgress = false;
-                    }
-                }).start();
-                bigAlbumConver.animate().scaleX(1f).scaleY(1f).setDuration(180).start();
-            }
+            blurredView.animate().alpha(1.0f).setDuration(180).setListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    blurredAnimationInProgress = false;
+                }
+            }).start();
+            bigAlbumConver.animate().scaleX(1f).scaleY(1f).setDuration(180).start();
         } else {
             if (blurredView.getVisibility() != View.VISIBLE) {
                 return;
@@ -2122,27 +2130,15 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             blurredView.setTag(null);
             if (animated) {
                 blurredAnimationInProgress = true;
-                if (xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()) {
-                    blurredView.animate().alpha(0.0f).setDuration(220).setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator()).setListener(new AnimatorListenerAdapter() {
-                        @Override
-                        public void onAnimationEnd(Animator animation) {
-                            blurredView.setVisibility(View.INVISIBLE);
-                            bigAlbumConver.setImageBitmap(null);
-                            blurredAnimationInProgress = false;
-                        }
-                    }).start();
-                    bigAlbumConver.animate().scaleX(0.9f).scaleY(0.9f).setDuration(220).setInterpolator(xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator()).start();
-                } else {
-                    blurredView.animate().alpha(0.0f).setDuration(180).setListener(new AnimatorListenerAdapter() {
-                        @Override
-                        public void onAnimationEnd(Animator animation) {
-                            blurredView.setVisibility(View.INVISIBLE);
-                            bigAlbumConver.setImageBitmap(null);
-                            blurredAnimationInProgress = false;
-                        }
-                    }).start();
-                    bigAlbumConver.animate().scaleX(0.9f).scaleY(0.9f).setDuration(180).start();
-                }
+                blurredView.animate().alpha(0.0f).setDuration(180).setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        blurredView.setVisibility(View.INVISIBLE);
+                        bigAlbumConver.setImageBitmap(null);
+                        blurredAnimationInProgress = false;
+                    }
+                }).start();
+                bigAlbumConver.animate().scaleX(0.9f).scaleY(0.9f).setDuration(180).start();
             } else {
                 blurredView.setAlpha(0.0f);
                 blurredView.setVisibility(View.INVISIBLE);
@@ -2150,6 +2146,78 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
                 bigAlbumConver.setScaleX(0.9f);
                 bigAlbumConver.setScaleY(0.9f);
             }
+        }
+    }
+
+    private void renderFluidAlbumCover(float value) {
+        albumCoverProgress = value;
+        float progress = Math.max(0f, Math.min(1f, value));
+        blurredView.setAlpha(progress);
+        bigAlbumConver.setScaleX(.9f + .1f * progress);
+        bigAlbumConver.setScaleY(.9f + .1f * progress);
+    }
+
+    private void settleFluidAlbumCover() {
+        boolean show = blurredView.getTag() != null;
+        renderFluidAlbumCover(show ? 1f : 0f);
+        blurredAnimationInProgress = false;
+        if (!show) {
+            albumCoverBlurGeneration++;
+            blurredView.setVisibility(View.INVISIBLE);
+            bigAlbumConver.setImageBitmap(null);
+            blurredView.setBackground(null);
+        }
+    }
+
+    private void showFluidAlbumCover(boolean show, boolean animated) {
+        if (isDismissed()) return;
+        boolean visible = blurredView.getVisibility() == View.VISIBLE;
+        if ((show && blurredView.getTag() != null) || (!show && !visible)) return;
+        blurredView.setTag(show ? 1 : null);
+        if (show) {
+            bigAlbumConver.setImageBitmap(coverContainer.getImageReceiver().getBitmap());
+            blurredView.setVisibility(View.VISIBLE);
+            if (!visible) {
+                int generation = ++albumCoverBlurGeneration;
+                ScrimOptions.makeGlobalBlurBitmaps((bitmapBg, bitmapOptions) -> {
+                    if (!isDismissed() && generation == albumCoverBlurGeneration
+                            && blurredView.getVisibility() == View.VISIBLE) {
+                        blurredView.setBackground(new BitmapDrawable(bitmapBg));
+                    }
+                });
+            }
+        }
+        if (albumCoverSpring == null) {
+            albumCoverSpring = new SpringAnimation(this, new FloatPropertyCompat<AudioPlayerAlert>("fluidAlbumCover") {
+                @Override public float getValue(AudioPlayerAlert owner) { return owner.albumCoverProgress; }
+                @Override public void setValue(AudioPlayerAlert owner, float value) { owner.renderFluidAlbumCover(value); }
+            });
+            albumCoverSpring.setSpring(xyz.nextalone.nagram.ui.fluid.FluidTiming.springForce(
+                    xyz.nextalone.nagram.ui.fluid.FluidCapabilities.motionScale(getContext())));
+            albumCoverSpring.setMinimumVisibleChange(xyz.nextalone.nagram.ui.fluid.FluidTiming.MIN_VISIBLE_CHANGE);
+            xyz.nextalone.nagram.ui.fluid.FluidCapabilities.track(getContext(), albumCoverSpring);
+            albumCoverSpring.addEndListener((animation, cancelled, value, velocity) -> {
+                if (!cancelled && !isDismissed()) settleFluidAlbumCover();
+            });
+        }
+        if (!animated || !xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext())) {
+            albumCoverSpring.cancel();
+            settleFluidAlbumCover();
+        } else {
+            blurredAnimationInProgress = true;
+            // Retarget this spring: a reversal keeps both current position and velocity.
+            xyz.nextalone.nagram.ui.fluid.FluidTiming.animate(getContext(), albumCoverSpring, show ? 1f : 0f);
+        }
+    }
+
+    private void stopFluidAlbumCover(boolean releaseViews) {
+        albumCoverBlurGeneration++;
+        if (albumCoverSpring != null) albumCoverSpring.cancel();
+        blurredAnimationInProgress = false;
+        // Keep the current cover visible while the enclosing sheet transforms out.
+        if (releaseViews) {
+            blurredView.setTag(null);
+            settleFluidAlbumCover();
         }
     }
 
@@ -2378,6 +2446,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
 
     @Override
     public void dismiss() {
+        if (albumCoverSpring != null) stopFluidAlbumCover(false);
         super.dismiss();
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.messagePlayingDidReset);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.messagePlayingPlayStateChanged);

@@ -2448,6 +2448,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             fluidTransition.abort();
             fluidTransition = null;
         }
+        stopProfileControlAnimations();
         if (topAvatarContainer != null) {
             topAvatarContainer.onDestroy();
         }
@@ -8189,16 +8190,40 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
     };
 
+    private void startProfileControlMotion(AnimatorSet animation) {
+        if (UIStyleEngine.isFluid()) {
+            FluidAnimator.start(fragmentView != null ? fragmentView.getContext() : null, animation);
+        } else {
+            animation.start();
+        }
+    }
+
+    private void stopProfileControlAnimations() {
+        // Revoke ownership before cancel(): native cancellation also delivers end callbacks.
+        // Keep FluidAnimator's listener installed so it can stop its tracked spring.
+        AnimatorSet write = writeButtonAnimation;
+        AnimatorSet header = headerAnimatorSet;
+        AnimatorSet shadow = headerShadowAnimatorSet;
+        writeButtonAnimation = headerAnimatorSet = headerShadowAnimatorSet = null;
+        if (write != null) write.cancel();
+        if (header != null) header.cancel();
+        if (shadow != null) shadow.cancel();
+    }
+
     private void setMediaHeaderVisible(boolean visible) {
         if (mediaHeaderVisible == visible) {
             return;
         }
         mediaHeaderVisible = visible;
         if (headerAnimatorSet != null) {
-            headerAnimatorSet.cancel();
+            AnimatorSet old = headerAnimatorSet;
+            headerAnimatorSet = null;
+            old.cancel();
         }
         if (headerShadowAnimatorSet != null) {
-            headerShadowAnimatorSet.cancel();
+            AnimatorSet old = headerShadowAnimatorSet;
+            headerShadowAnimatorSet = null;
+            old.cancel();
         }
         ActionBarMenuItem mediaSearchItem = sharedMediaLayout.getSearchItem();
         ImageView mediaOptionsItem = sharedMediaLayout.getSearchOptionsItem();
@@ -8261,8 +8286,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         if (myProfile)
             animators.add(ObjectAnimator.ofFloat(onlineTextView[3], View.ALPHA, visible ? 0.0f : 1.0f));
         animators.add(ObjectAnimator.ofFloat(mediaCounterTextView, View.ALPHA, visible ? 1.0f : 0.0f));
-        if (visible) {
-            animators.add(ObjectAnimator.ofFloat(this, HEADER_SHADOW, 0.0f));
+        if (visible || UIStyleEngine.isFluid()) {
+            animators.add(ObjectAnimator.ofFloat(this, HEADER_SHADOW, visible ? 0.0f : 1.0f));
         }
         if (storyView != null || giftsView != null) {
             ValueAnimator va = ValueAnimator.ofFloat(0, 1);
@@ -8278,48 +8303,49 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         headerAnimatorSet.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                if (headerAnimatorSet != null) {
-                    if (mediaHeaderVisible) {
-                        if (callItemVisible) {
-                            callItem.setVisibility(View.GONE);
-                        }
-                        if (videoCallItemVisible) {
-                            videoCallItem.setVisibility(View.GONE);
-                        }
-                        if (editItemVisible) {
-                            editItem.setVisibility(View.GONE);
-                        }
-                        otherItem.setVisibility(View.GONE);
-                    } else {
-                        if (sharedMediaLayout.isSearchItemVisible()) {
-                            mediaSearchItem.setVisibility(View.VISIBLE);
-                        }
+                if (headerAnimatorSet != animation) return;
+                if (mediaHeaderVisible) {
+                    if (callItemVisible) {
+                        callItem.setVisibility(View.GONE);
+                    }
+                    if (videoCallItemVisible) {
+                        videoCallItem.setVisibility(View.GONE);
+                    }
+                    if (editItemVisible) {
+                        editItem.setVisibility(View.GONE);
+                    }
+                    otherItem.setVisibility(View.GONE);
+                } else {
+                    if (sharedMediaLayout.isSearchItemVisible()) {
+                        mediaSearchItem.setVisibility(View.VISIBLE);
+                    }
 
-                        sharedMediaLayout.photoVideoOptionsItem.setVisibility(View.INVISIBLE);
+                    sharedMediaLayout.photoVideoOptionsItem.setVisibility(View.INVISIBLE);
 
+                    if (!UIStyleEngine.isFluid()) {
                         headerShadowAnimatorSet = new AnimatorSet();
                         headerShadowAnimatorSet.playTogether(ObjectAnimator.ofFloat(ProfileActivity.this, HEADER_SHADOW, 1.0f));
                         headerShadowAnimatorSet.setDuration(100);
                         headerShadowAnimatorSet.addListener(new AnimatorListenerAdapter() {
                             @Override
                             public void onAnimationEnd(Animator animation) {
-                                headerShadowAnimatorSet = null;
+                                if (headerShadowAnimatorSet == animation) headerShadowAnimatorSet = null;
                             }
                         });
                         headerShadowAnimatorSet.start();
                     }
                 }
                 updateStoriesViewBounds(false);
-                headerAnimatorSet = null;
+                if (headerAnimatorSet == animation) headerAnimatorSet = null;
             }
 
             @Override
             public void onAnimationCancel(Animator animation) {
-                headerAnimatorSet = null;
+                if (headerAnimatorSet == animation) headerAnimatorSet = null;
             }
         });
         headerAnimatorSet.setDuration(150);
-        headerAnimatorSet.start();
+        startProfileControlMotion(headerAnimatorSet);
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.needCheckSystemBarColors, true);
         if (topAvatarContainer != null) {
             if (mediaHeaderVisible && mediaCounterTextView != null && mediaCounterTextView.getText() != null) {
@@ -8728,21 +8754,21 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     if (animated) {
                         writeButtonAnimation = new AnimatorSet();
                         if (writeButtonVisible) {
-                            writeButtonAnimation.setInterpolator(UIStyleEngine.isFluid() ? UIStyleEngine.getBouncyInterpolator() : new DecelerateInterpolator());
+                            writeButtonAnimation.setInterpolator(new DecelerateInterpolator());
                             writeButtonAnimation.playTogether(
                                     ObjectAnimator.ofFloat(writeButton, View.SCALE_X, 1.0f),
                                     ObjectAnimator.ofFloat(writeButton, View.SCALE_Y, 1.0f),
                                     ObjectAnimator.ofFloat(writeButton, View.ALPHA, 1.0f)
                             );
                         } else {
-                            writeButtonAnimation.setInterpolator(UIStyleEngine.isFluid() ? UIStyleEngine.getFluidSpringInterpolator() : new AccelerateInterpolator());
+                            writeButtonAnimation.setInterpolator(new AccelerateInterpolator());
                             writeButtonAnimation.playTogether(
                                     ObjectAnimator.ofFloat(writeButton, View.SCALE_X, 0.2f),
                                     ObjectAnimator.ofFloat(writeButton, View.SCALE_Y, 0.2f),
                                     ObjectAnimator.ofFloat(writeButton, View.ALPHA, 0.0f)
                             );
                         }
-                        writeButtonAnimation.setDuration(UIStyleEngine.isFluid() ? 220 : 150);
+                        writeButtonAnimation.setDuration(150);
                         writeButtonAnimation.addListener(new AnimatorListenerAdapter() {
                             @Override
                             public void onAnimationEnd(Animator animation) {
@@ -8751,7 +8777,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 }
                             }
                         });
-                        writeButtonAnimation.start();
+                        startProfileControlMotion(writeButtonAnimation);
                     } else {
                         writeButton.setScaleX(writeButtonVisible ? 1.0f : 0.2f);
                         writeButton.setScaleY(writeButtonVisible ? 1.0f : 0.2f);
