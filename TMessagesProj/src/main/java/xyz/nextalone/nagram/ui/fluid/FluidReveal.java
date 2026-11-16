@@ -1,6 +1,7 @@
 package xyz.nextalone.nagram.ui.fluid;
 
 import android.graphics.Outline;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.view.MotionEvent;
 import android.view.View;
@@ -16,6 +17,9 @@ import xyz.nextalone.nagram.ui.UIStyleEngine;
 public final class FluidReveal implements FluidMotion {
     private final View view;
     private final View origin;
+    private final FluidSourceGuard originGuard;
+    private final Rect visibleOrigin = new Rect();
+    private final int[] originLocation = new int[2], viewLocation = new int[2];
     private final RectF source = new RectF(), frame = new RectF(), surface = new RectF();
     private final java.util.function.Consumer<RectF> surfaceBounds;
     private final ViewOutlineProvider originalOutline;
@@ -50,11 +54,8 @@ public final class FluidReveal implements FluidMotion {
 
     public FluidReveal(View view, View origin, boolean fromBottom, java.util.function.Consumer<RectF> surfaceBounds) {
         this.view = view; this.origin = origin; this.fromBottom = fromBottom; this.surfaceBounds = surfaceBounds;
+        originGuard = origin == null ? null : new FluidSourceGuard(origin);
         originalOutline = view.getOutlineProvider(); originalClip = view.getClipToOutline();
-        if (origin != null && origin.isAttachedToWindow()) {
-            int[] xy = new int[2]; origin.getLocationOnScreen(xy);
-            source.set(xy[0], xy[1], xy[0] + origin.getWidth(), xy[1] + origin.getHeight());
-        }
         spring = new SpringAnimation(this, new FloatPropertyCompat<FluidReveal>("fluidSurface") {
             @Override public float getValue(FluidReveal host) { return host.progress; }
             @Override public void setValue(FluidReveal host, float value) { host.render(value); }
@@ -74,16 +75,13 @@ public final class FluidReveal implements FluidMotion {
         resolveSurfaceBounds();
         float diameter = Math.min(AndroidUtilities.dp(56), Math.min(surface.width(), surface.height()));
         float cx, cy;
-        if (origin != null && origin.isAttachedToWindow() && view.isAttachedToWindow()) {
-            int[] originXy = new int[2];
-            origin.getLocationOnScreen(originXy);
-            int[] viewXy = new int[2];
-            view.getLocationOnScreen(viewXy);
-            cx = originXy[0] + origin.getWidth() / 2f - viewXy[0];
-            cy = originXy[1] + origin.getHeight() / 2f - viewXy[1];
-        } else if (!source.isEmpty()) {
-            cx = source.centerX();
-            cy = source.centerY();
+        if (origin != null && originGuard.valid() && origin.isAttachedToWindow() && origin.isShown()
+                && view.isAttachedToWindow() && origin.getGlobalVisibleRect(visibleOrigin)
+                && visibleOrigin.width() > 0 && visibleOrigin.height() > 0) {
+            origin.getLocationOnScreen(originLocation);
+            view.getLocationOnScreen(viewLocation);
+            cx = originLocation[0] + origin.getWidth() / 2f - viewLocation[0];
+            cy = originLocation[1] + origin.getHeight() / 2f - viewLocation[1];
         } else {
             cx = surface.centerX();
             cy = fromBottom ? surface.bottom - diameter / 2f : surface.centerY();

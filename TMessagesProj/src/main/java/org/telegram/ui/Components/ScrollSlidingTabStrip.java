@@ -38,6 +38,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 import androidx.core.graphics.ColorUtils;
+import androidx.dynamicanimation.animation.FloatPropertyCompat;
+import androidx.dynamicanimation.animation.SpringAnimation;
+import xyz.nextalone.nagram.ui.UIStyleEngine;
+import xyz.nextalone.nagram.ui.fluid.FluidCapabilities;
+import xyz.nextalone.nagram.ui.fluid.FluidTiming;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.DocumentObject;
@@ -88,8 +93,11 @@ public class ScrollSlidingTabStrip extends HorizontalScrollView {
 
     private int currentPosition;
     private AnimatedFloat currentPositionAnimated = new AnimatedFloat(this,
-            xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? 360 : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? 320 : 350),
-            xyz.nextalone.nagram.ui.UIStyleEngine.isFluid() ? xyz.nextalone.nagram.ui.UIStyleEngine.getFluidSpringInterpolator() : (xyz.nextalone.nagram.ui.UIStyleEngine.isIosLiquidGlass() ? xyz.nextalone.nagram.ui.UIStyleEngine.getIosSpringInterpolator() : CubicBezierInterpolator.EASE_OUT_QUINT));
+            UIStyleEngine.isIosLiquidGlass() ? 320 : 350,
+            UIStyleEngine.isIosLiquidGlass() ? UIStyleEngine.getIosSpringInterpolator() : CubicBezierInterpolator.EASE_OUT_QUINT);
+    private SpringAnimation fluidPositionSpring;
+    private float fluidPosition, fluidFrom, fluidTarget, fluidStretchStart;
+    private boolean fluidPositionInitialized;
     private RectF leftTabBounds = new RectF();
     private RectF rightTabBounds = new RectF();
     private RectF tabBounds = new RectF();
@@ -222,6 +230,10 @@ public class ScrollSlidingTabStrip extends HorizontalScrollView {
         futureTabsPositions.clear();
         tabCount = 0;
         currentPosition = 0;
+        if (UIStyleEngine.isFluid() || fluidPositionSpring != null) {
+            settleFluidIndicator();
+            fluidPositionInitialized = false;
+        }
         animateFromPosition = false;
     }
 
@@ -763,7 +775,10 @@ public class ScrollSlidingTabStrip extends HorizontalScrollView {
         float selectedAlpha = showSelectedAlpha.set(showSelected ? 1 : 0);
 
         if (!(isInEditMode() || tabCount == 0) && indicatorHeight >= 0) {
-            float position = currentPositionAnimated.set(currentPosition);
+            boolean fluid = UIStyleEngine.isFluid();
+            if (fluid) updateFluidIndicator();
+            float position = fluid ? Math.max(0f, Math.min(tabsContainer.getChildCount() - 1f, fluidPosition))
+                    : currentPositionAnimated.set(currentPosition);
             int floorPosition = (int) Math.floor(position);
             int ceilPosition =  (int) Math.ceil(position);
 
@@ -800,8 +815,10 @@ public class ScrollSlidingTabStrip extends HorizontalScrollView {
             }
 
             float sz = AndroidUtilities.dp(30);
-            float w = sz * (1.25f - .25f * Math.abs(.5f - currentPositionAnimated.getTransitionProgressInterpolated()) * 2);
-            float h = sz * (.9f + .1f * Math.abs(.5f - currentPositionAnimated.getTransitionProgressInterpolated()) * 2);
+            float stretch = fluid ? fluidIndicatorStretch()
+                    : 1f - Math.abs(.5f - currentPositionAnimated.getTransitionProgressInterpolated()) * 2;
+            float w = sz * (1f + .25f * stretch);
+            float h = sz * (1f - .1f * stretch);
             float expandProgressInterpolated = CubicBezierInterpolator.EASE_IN.getInterpolation(expandProgress);
             w = AndroidUtilities.lerp(w, textWidth + AndroidUtilities.dp(10), expandProgressInterpolated);
             cy += AndroidUtilities.lerp(0, AndroidUtilities.dp(26), expandProgressInterpolated);
@@ -849,6 +866,59 @@ public class ScrollSlidingTabStrip extends HorizontalScrollView {
         requestLayout();
     }
 
+    private float fluidIndicatorStretch() {
+        float distance = fluidTarget - fluidFrom;
+        float p = Math.abs(distance) < .0001f ? 1f
+                : Math.max(0f, Math.min(1f, (fluidPosition - fluidFrom) / distance));
+        return Math.max(fluidStretchStart * (1f - p), 1f - Math.abs(.5f - p) * 2f);
+    }
+
+    private void settleFluidIndicator() {
+        if (fluidPositionSpring != null) fluidPositionSpring.cancel();
+        fluidPosition = fluidFrom = fluidTarget = currentPosition;
+        fluidStretchStart = 0f;
+        fluidPositionInitialized = true;
+        invalidate();
+    }
+
+    private void updateFluidIndicator() {
+        if (!fluidPositionInitialized || !isAttachedToWindow() || !FluidCapabilities.isMotionEnabled(getContext())) {
+            settleFluidIndicator();
+            return;
+        }
+        if (fluidTarget == currentPosition) return;
+        float stretch = fluidIndicatorStretch();
+        fluidFrom = fluidPosition;
+        fluidTarget = currentPosition;
+        fluidStretchStart = stretch;
+        if (fluidPositionSpring == null) {
+            fluidPositionSpring = new SpringAnimation(this, new FloatPropertyCompat<ScrollSlidingTabStrip>("fluidTabPosition") {
+                @Override public float getValue(ScrollSlidingTabStrip strip) { return strip.fluidPosition; }
+                @Override public void setValue(ScrollSlidingTabStrip strip, float value) {
+                    strip.fluidPosition = value;
+                    strip.invalidate();
+                }
+            });
+            fluidPositionSpring.setSpring(FluidTiming.springForce(FluidCapabilities.motionScale(getContext())));
+            fluidPositionSpring.setMinimumVisibleChange(FluidTiming.MIN_VISIBLE_CHANGE);
+            FluidCapabilities.track(getContext(), fluidPositionSpring);
+            fluidPositionSpring.addEndListener((animation, cancelled, value, velocity) -> {
+                if (!cancelled) {
+                    fluidPosition = fluidFrom = fluidTarget;
+                    fluidStretchStart = 0f;
+                    invalidate();
+                }
+            });
+        }
+        FluidTiming.animate(getContext(), fluidPositionSpring, fluidTarget);
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        if (fluidPositionSpring != null) settleFluidIndicator();
+        super.onDetachedFromWindow();
+    }
+
     public int getCurrentPosition() {
         return currentPosition;
     }
@@ -856,6 +926,7 @@ public class ScrollSlidingTabStrip extends HorizontalScrollView {
     public void cancelPositionAnimation() {
         animateFromPosition = false;
         positionAnimationProgress = 1.0f;
+        if (UIStyleEngine.isFluid()) settleFluidIndicator();
     }
 
     public void onPageScrolled(int position, int first) {
@@ -873,6 +944,7 @@ public class ScrollSlidingTabStrip extends HorizontalScrollView {
             animateFromPosition = false;
         }
         currentPosition = position;
+        if (UIStyleEngine.isFluid()) updateFluidIndicator();
         if (position >= tabsContainer.getChildCount()) {
             return;
         }
@@ -898,6 +970,7 @@ public class ScrollSlidingTabStrip extends HorizontalScrollView {
 
     public void setCurrentPosition(int currentPosition) {
         this.currentPosition = currentPosition;
+        if (UIStyleEngine.isFluid()) updateFluidIndicator();
     }
 
     public void setIndicatorHeight(int value) {

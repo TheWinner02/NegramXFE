@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Rect;
 import android.graphics.drawable.ColorDrawable;
 import android.view.MotionEvent;
 import android.view.View;
@@ -31,6 +32,7 @@ public final class FluidTransform implements FluidMotion {
 
     private final WeakReference<View> sourceRef;
     private final FluidSourceGuard sourceGuard;
+    private final Rect visibleOrigin = new Rect();
     private WeakReference<View> targetRef;
     private final WeakReference<Window> windowRef;
     private final WeakReference<BottomSheet> bottomSheetRef;
@@ -99,6 +101,11 @@ public final class FluidTransform implements FluidMotion {
         this.sourceGuard = new FluidSourceGuard(source);
     }
 
+    private boolean validOrigin(View origin) {
+        return origin != null && origin.isAttachedToWindow() && origin.isShown() && sourceGuard.valid()
+                && origin.getGlobalVisibleRect(visibleOrigin) && !visibleOrigin.isEmpty();
+    }
+
     public void open(Runnable completion) {
         if (disposed) return;
         onOpenComplete = completion;
@@ -142,7 +149,7 @@ public final class FluidTransform implements FluidMotion {
 
             if (disposed) return true;
             View origin = sourceRef.get();
-            if (origin == null || !origin.isAttachedToWindow() || !origin.isShown() || !sourceGuard.valid()) {
+            if (!validOrigin(origin)) {
                 restoreTarget();
                 if (progressListener != null) progressListener.onProgress(1f);
                 runOpenComplete();
@@ -205,7 +212,7 @@ public final class FluidTransform implements FluidMotion {
         View origin = sourceRef.get();
         View target = targetRef.get();
 
-        if (!started || bridge == null || origin == null || !origin.isAttachedToWindow() || !sourceGuard.valid()
+        if (!started || bridge == null
                 || !FluidCapabilities.isMotionEnabled(host != null ? host.getContext() : null)) {
             render(0f);
             dispose();
@@ -216,7 +223,7 @@ public final class FluidTransform implements FluidMotion {
 
         closing = true;
         if (!spring.isRunning() && target != null) {
-            bridge.capture(origin, target);
+            bridge.capture(validOrigin(origin) ? origin : null, target);
         }
         if (target != null) {
             target.setAlpha(0f);
@@ -340,8 +347,7 @@ public final class FluidTransform implements FluidMotion {
             public void start() {
                 View origin = sourceRef.get();
                 View target = targetRef.get();
-                if (closing && onCloseCancelled == null || !canPreview.getAsBoolean() || !started || disposed || bridge == null || origin == null || target == null
-                        || !origin.isAttachedToWindow() || !sourceGuard.valid()
+                if (closing && onCloseCancelled == null || !canPreview.getAsBoolean() || !started || disposed || bridge == null || target == null
                         || !FluidCapabilities.isMotionEnabled(host != null ? host.getContext() : null)) {
                     return;
                 }
@@ -349,7 +355,7 @@ public final class FluidTransform implements FluidMotion {
                 closing = false;
                 onDismissComplete = null;
                 seeking = true;
-                if (!spring.isRunning()) bridge.capture(origin, target);
+                if (!spring.isRunning()) bridge.capture(validOrigin(origin) ? origin : null, target);
                 preview = FluidPredictiveBack.spring(
                         host.getContext(),
                         spring,
@@ -462,8 +468,18 @@ public final class FluidTransform implements FluidMotion {
         }
 
         private void updateOrigin(View origin) {
-            origin.getLocationOnScreen(location);
-            start.set(location[0], location[1], location[0] + origin.getWidth(), location[1] + origin.getHeight());
+            if (origin != null) {
+                origin.getLocationOnScreen(location);
+                start.set(location[0], location[1], location[0] + origin.getWidth(), location[1] + origin.getHeight());
+            } else {
+                // A missing/recycled opener keeps an animated, neutral return. Never draw
+                // its new contents or jump straight to dismissal after an adapter update.
+                float diameter = Math.min(AndroidUtilities.dp(56), Math.min(end.width(), end.height()));
+                float cx = end.centerX();
+                boolean sheet = bottomSheetRef != null && bottomSheetRef.get() != null;
+                float cy = sheet ? end.bottom - diameter / 2f : end.centerY();
+                start.set(cx - diameter / 2f, cy - diameter / 2f, cx + diameter / 2f, cy + diameter / 2f);
+            }
             sourceRadius = Math.min(start.width(), start.height()) / 2f;
 
             float dx = start.centerX() - end.centerX();
@@ -535,7 +551,7 @@ public final class FluidTransform implements FluidMotion {
 
             // Draw origin view (native size, fading out gently)
             float outgoing = 1f - smooth(0.015f, 0.08f, alphaProgress);
-            if (origin != null && outgoing > 0f) {
+            if (outgoing > 0f && validOrigin(origin)) {
                 int alpha = Math.round(outgoing * sourceAlpha * 255f);
                 sourceBody.set(
                         start.centerX() - origin.getWidth() / 2f - 1f,

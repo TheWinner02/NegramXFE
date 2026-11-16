@@ -125,6 +125,17 @@
  * and adds each new layout delta to the current translated position. Detach settles local layout
  * offsets, while fragment teardown cancels the history owner and its tracked timeline.
  *
+ * <p>Shared reveal and morph returns validate the live opener, including offscreen rows and
+ * same-position rebinds in adapters without stable IDs. Missing origins retain a neutral animated
+ * return within the current surface; recycled content never becomes the shared source. Non-stable
+ * adapters share a weakly owned update observer instead of registering one for every transition.
+ *
+ * <p>Background press expansion and release use the same tracked timing and system motion scale.
+ * ScrollSlidingTabStrip uses a retargetable position spring, preserving current deformation when
+ * selection changes during movement. Detach and reduced motion settle the indicator immediately.
+ * Chat bottom-bar replacement keeps native priority and visibility bookkeeping while Fluid drives
+ * its manual timeline. Replacement cancels the previous clock and chat destruction revokes callbacks.
+ *
  * <p>Other UI styles retain their original motion. Gesture displacement, playback timelines,
  * indeterminate loading loops and specialized content transitions are not globally time-warped.
  */

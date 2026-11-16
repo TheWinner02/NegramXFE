@@ -3707,6 +3707,7 @@ public class ChatActivity extends BaseFragment implements
 
     @Override
     public void onFragmentDestroy() {
+        bottomViewsVisibilityController.destroy();
         super.onFragmentDestroy();
         if (messageMetricsView != null) {
             messageMetricsView.finish();
