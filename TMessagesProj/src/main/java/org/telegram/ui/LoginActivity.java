@@ -8487,6 +8487,13 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         private int generation, requestId, retryAttempt;
         private Runnable refreshRunnable;
         private final TextView retryView;
+        private long flowStartedAt;
+
+        private void traceQr(String event) {
+            // Authentication diagnostics only: never include QR payloads, passwords or user IDs.
+            android.util.Log.i("QrLogin", "flow=" + generation + " elapsedMs="
+                    + (android.os.SystemClock.elapsedRealtime() - flowStartedAt) + " " + event);
+        }
 
         public LoginActivityQrView(Context context) {
             super(context);
@@ -8555,6 +8562,8 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 return;
             }
             active = waitingForEvent = true;
+            flowStartedAt = android.os.SystemClock.elapsedRealtime();
+            traceQr("start");
             retryAttempt = 0;
             getNotificationCenter().addObserver(this, NotificationCenter.updateLoginToken);
             boolean backend = getConnectionsManager().isTestBackend();
@@ -8588,6 +8597,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         }
 
         private void stopFlow() {
+            if (active) traceQr("stop");
             active = false;
             generation++;
             stopTokenUpdates();
@@ -8605,6 +8615,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             refreshRunnable = () -> {
                 refreshRunnable = null;
                 if (!isCurrent(owner) || !waitingForEvent) return;
+                traceQr(expireQr ? "timer.expiry" : "timer.retry");
                 if (expireQr) qrView.setData(null);
                 exportLoginToken(false);
             };
@@ -8614,6 +8625,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         public void exportLoginToken(boolean show) {
             if (!active || !waitingForEvent || getContext() == null) return;
             if (requestInFlight) {
+                traceQr("export.coalesced");
                 refreshPending = true;
                 return;
             }
@@ -8621,6 +8633,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             retryView.setVisibility(GONE);
             retryView.setEnabled(true);
             requestInFlight = true;
+            traceQr("export.start");
             final int owner = generation;
             TLRPC.TL_auth_exportLoginToken req = new TLRPC.TL_auth_exportLoginToken();
             req.api_hash = NekoXConfig.currentAppHash();
@@ -8631,6 +8644,8 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             }
             requestId = getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
                 if (!isCurrent(owner)) return;
+                traceQr("export.response=" + (response == null ? "null" : response.getClass().getSimpleName())
+                        + " errorCode=" + (error == null ? 0 : error.code));
                 requestInFlight = false;
                 requestId = 0;
                 if (error != null) {
@@ -8639,6 +8654,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     retryAttempt = 0;
                     TLRPC.TL_auth_loginToken token = (TLRPC.TL_auth_loginToken) response;
                     long remaining = token.expires - (long) getConnectionsManager().getCurrentTime();
+                    traceQr("token.ready remainingSeconds=" + remaining);
                     if (remaining > 0 && token.token != null && token.token.length > 0) {
                         qrView.setData("tg://login?token=" + Base64.encodeToString(token.token, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING));
                         scheduleRefresh(remaining * 1000L, true);
@@ -8657,12 +8673,15 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     qrView.setData(null);
                     showDoneButton(true, true);
                     TLRPC.TL_auth_loginTokenMigrateTo token = (TLRPC.TL_auth_loginTokenMigrateTo) response;
+                    traceQr("import.start");
                     ConnectionsManager.native_moveToDatacenter(currentAccount, token.dc_id);
                     TLRPC.TL_auth_importLoginToken request = new TLRPC.TL_auth_importLoginToken();
                     request.token = token.token;
                     requestInFlight = true;
                     requestId = getConnectionsManager().sendRequest(request, (result, failure) -> AndroidUtilities.runOnUIThread(() -> {
                         if (!isCurrent(owner)) return;
+                        traceQr("import.response=" + (result == null ? "null" : result.getClass().getSimpleName())
+                                + " errorCode=" + (failure == null ? 0 : failure.code));
                         requestId = 0;
                         requestInFlight = false;
                         if (failure != null) handleError(failure.text, failure.code, owner);
@@ -8688,6 +8707,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             postDelayed(() -> {
                 if (!isCurrent(owner)) return;
                 showDoneButton(false, true);
+                traceQr("authorization.complete");
                 active = false;
                 generation++;
                 onAuthSuccess((TLRPC.TL_auth_authorization) result.authorization);
@@ -8700,10 +8720,12 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             qrView.setData(null);
             showDoneButton(false, true);
             if ("SESSION_PASSWORD_NEEDED".equals(text)) {
+                traceQr("password.start");
                 requestInFlight = true;
                 TL_account.getPassword req = new TL_account.getPassword();
                 requestId = getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
                     if (!isCurrent(owner)) return;
+                    traceQr("password.response errorCode=" + (error == null ? 0 : error.code));
                     requestId = 0;
                     requestInFlight = false;
                     if (error != null) {
@@ -8740,12 +8762,16 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             retryView.setText((flood ? getString(R.string.FloodWait) : getString(R.string.ErrorOccurred)) + "\n" + getString(R.string.Retry));
             retryView.setEnabled(!flood);
             retryView.setVisibility(VISIBLE);
+            traceQr("retry errorCode=" + code + " automatic=" + (flood || code < 0 || code >= 500) + " delayMs=" + delay);
             if (flood || code < 0 || code >= 500) scheduleRefresh(delay, false);
         }
 
         @Override
         public void didReceivedNotification(int id, int account, Object... args) {
-            if (id == NotificationCenter.updateLoginToken && waitingForEvent && retryView.isEnabled()) exportLoginToken(false);
+            if (id == NotificationCenter.updateLoginToken) {
+                traceQr("updateLoginToken waiting=" + waitingForEvent);
+                if (waitingForEvent && retryView.isEnabled()) exportLoginToken(false);
+            }
         }
     }
 

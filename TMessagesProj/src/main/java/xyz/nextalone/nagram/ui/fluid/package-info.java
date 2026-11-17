@@ -136,6 +136,18 @@
  * Chat bottom-bar replacement keeps native priority and visibility bookkeeping while Fluid drives
  * its manual timeline. Replacement cancels the previous clock and chat destruction revokes callbacks.
  *
+ * <p>Settings lists defer their resume-time full rebind while returning from a covered page.
+ * FluidSettingsRefresh applies the pending refresh when the page is fully visible, preserving
+ * the guarded row identity throughout normal and predictive return motion. Initial entry and
+ * ordinary foreground resume still refresh immediately; other styles retain native timing.
+ *
+ * <p>Settings navigation propagates its origin context into nested pages. When a settings
+ * adapter rebinds on resume, FluidSettingsAnchor can reacquire the exact source descendant from
+ * a visible row with the same adapter, position, cell kind and primary title. Changed values do
+ * not invalidate the entry; removed, ambiguous, differently labelled or offscreen entries retain
+ * the neutral fallback. This recovery only affects return geometry; opening and the shared
+ * spring remain unchanged. Chat/topic identity handling stays separate from settings recovery.
+ *
  * <p>Other UI styles retain their original motion. Gesture displacement, playback timelines,
  * indeterminate loading loops and specialized content transitions are not globally time-warped.
  */

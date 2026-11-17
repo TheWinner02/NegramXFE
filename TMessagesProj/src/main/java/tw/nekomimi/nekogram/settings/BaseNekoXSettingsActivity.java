@@ -256,13 +256,28 @@ public class BaseNekoXSettingsActivity extends BaseFragment {
     protected void onActionBarItemClick(int id) {
     }
 
+    private final xyz.nextalone.nagram.ui.fluid.FluidSettingsRefresh fluidSettingsRefresh =
+            new xyz.nextalone.nagram.ui.fluid.FluidSettingsRefresh(() -> {
+                if (getListAdapter() != null) getListAdapter().notifyDataSetChanged();
+            });
+
+    @Override
+    public void onBecomeFullyHidden() {
+        super.onBecomeFullyHidden();
+        fluidSettingsRefresh.onHidden();
+    }
+
+    @Override
+    public void onBecomeFullyVisible() {
+        super.onBecomeFullyVisible();
+        fluidSettingsRefresh.onVisible();
+    }
+
     @SuppressLint("NotifyDataSetChanged")
     @Override
     public void onResume() {
         super.onResume();
-        if (getListAdapter() != null) {
-            getListAdapter().notifyDataSetChanged();
-        }
+        fluidSettingsRefresh.onResume();
     }
 
     @Override

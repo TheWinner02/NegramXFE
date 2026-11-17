@@ -56,17 +56,23 @@ final class FluidSourceGuard {
         position = holder == null ? -1 : holder.getAdapterPosition();
     }
     boolean valid() {
+        return invalidReason() == null;
+    }
+
+    /** Diagnostic codes only; never include row text or account data. */
+    String invalidReason() {
         View child = row.get();
         androidx.recyclerview.widget.RecyclerView list = recycler.get();
-        if (!inRecycler) return true;
-        if (epoch != null && epoch.version != version) return false;
-        if ((position == -1 && itemId == -1L) || (stable && itemId == -1L)) return false;
-        if (list == null || child == null || child.getParent() != list || adapter.get() != list.getAdapter()) return false;
+        if (!inRecycler) return null;
+        if (epoch != null && epoch.version != version) return "adapter_updated";
+        if ((position == -1 && itemId == -1L) || (stable && itemId == -1L)) return "unbound_origin";
+        if (list == null || child == null) return "origin_collected";
+        if (child.getParent() != list) return "row_detached";
+        if (adapter.get() != list.getAdapter()) return "adapter_replaced";
         androidx.recyclerview.widget.RecyclerView.ViewHolder holder = list.getChildViewHolder(child);
-        if (holder == null) return false;
+        if (holder == null) return "holder_missing";
         int currentPosition = holder.getAdapterPosition();
-        return currentPosition != androidx.recyclerview.widget.RecyclerView.NO_POSITION
-                && (stable ? holder.getItemId() == itemId : currentPosition == position);
+        if (currentPosition == androidx.recyclerview.widget.RecyclerView.NO_POSITION) return "position_pending";
+        return (stable ? holder.getItemId() == itemId : currentPosition == position) ? null : "row_rebound";
     }
 }
-

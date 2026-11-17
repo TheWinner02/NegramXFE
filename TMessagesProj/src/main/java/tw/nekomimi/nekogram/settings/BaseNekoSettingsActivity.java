@@ -278,13 +278,28 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
 
     protected abstract String getActionBarTitle();
 
+    private final xyz.nextalone.nagram.ui.fluid.FluidSettingsRefresh fluidSettingsRefresh =
+            new xyz.nextalone.nagram.ui.fluid.FluidSettingsRefresh(() -> {
+                if (listAdapter != null) listAdapter.notifyDataSetChanged();
+            });
+
+    @Override
+    public void onBecomeFullyHidden() {
+        super.onBecomeFullyHidden();
+        fluidSettingsRefresh.onHidden();
+    }
+
+    @Override
+    public void onBecomeFullyVisible() {
+        super.onBecomeFullyVisible();
+        fluidSettingsRefresh.onVisible();
+    }
+
     @SuppressLint("NotifyDataSetChanged")
     @Override
     public void onResume() {
         super.onResume();
-        if (listAdapter != null) {
-            listAdapter.notifyDataSetChanged();
-        }
+        fluidSettingsRefresh.onResume();
     }
 
     protected boolean hasWhiteActionBar() {

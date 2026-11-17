@@ -36,6 +36,8 @@ public final class FluidChatTransition {
     private final WeakReference<BaseFragment> target;
     private final WeakReference<View> sourceView;
     private final FluidSourceGuard sourceGuard;
+    private final boolean settingsNavigation;
+    private final FluidSettingsAnchor settingsAnchor;
     private final long dialogId;
     private final long topicId;
     private final boolean isTopic;
@@ -54,7 +56,7 @@ public final class FluidChatTransition {
     private boolean unanchoredReturn;
     private boolean openingOriginResolved, returningOriginResolved;
 
-    private FluidChatTransition(BaseFragment list, BaseFragment target, View sourceView, long dialogId, long topicId, boolean isTopic, boolean isChatOrTopic) {
+    private FluidChatTransition(BaseFragment list, BaseFragment target, View sourceView, long dialogId, long topicId, boolean isTopic, boolean isChatOrTopic, boolean settingsNavigation) {
         this.list = new WeakReference<>(list);
         this.target = new WeakReference<>(target);
         this.sourceView = sourceView != null ? new WeakReference<>(sourceView) : null;
@@ -63,9 +65,16 @@ public final class FluidChatTransition {
         this.topicId = topicId;
         this.isTopic = isTopic;
         this.isChatOrTopic = isChatOrTopic;
+        this.settingsNavigation = settingsNavigation && !isChatOrTopic;
+        this.settingsAnchor = this.settingsNavigation ? FluidSettingsAnchor.capture(sourceView) : null;
     }
 
     public static FluidChatTransition capture(ViewGroup host, BaseFragment list, BaseFragment target, View touched) {
+        return capture(host, list, target, touched, false);
+    }
+
+    public static FluidChatTransition capture(ViewGroup host, BaseFragment list, BaseFragment target, View touched, boolean inheritedSettings) {
+        boolean settingsNavigation = inheritedSettings || FluidSettingsAnchor.isRoot(list);
         if (!UIStyleEngine.isFluid() || list == null || target == null || list.getCurrentAccount() != target.getCurrentAccount()) {
             return null;
         }
@@ -98,7 +107,7 @@ public final class FluidChatTransition {
             if (row instanceof DialogCell && row.getWidth() > 0 && row.getHeight() > 0) {
                 DialogCell cell = (DialogCell) row;
                 if (cell.getDialogId() == dialogId && (!isTopic || (cell.forumTopic != null && cell.forumTopic.id == topicId))) {
-                    FluidChatTransition result = new FluidChatTransition(list, target, cell, dialogId, topicId, isTopic, true);
+                    FluidChatTransition result = new FluidChatTransition(list, target, cell, dialogId, topicId, isTopic, true, settingsNavigation);
                     boolean captured = result.captureRow(host, cell, 0f, 0f);
                     if (captured) return result;
                 }
@@ -110,12 +119,16 @@ public final class FluidChatTransition {
 
         // Generic page morph transition (Profile, Settings, EditChat, Sub-pages, etc.)
         if (touched != null && touched.isAttachedToWindow() && touched.getWidth() > 0 && touched.getHeight() > 0) {
-            FluidChatTransition result = new FluidChatTransition(list, target, touched, dialogId, topicId, isTopic, false);
+            FluidChatTransition result = new FluidChatTransition(list, target, touched, dialogId, topicId, isTopic, false, settingsNavigation);
             if (result.captureGeneric(host, touched, 0f, 0f)) {
                 return result;
             }
         }
         return null;
+    }
+
+    public boolean isSettingsNavigation() {
+        return settingsNavigation;
     }
 
     public boolean matches(BaseFragment previous, BaseFragment current) {
@@ -145,6 +158,23 @@ public final class FluidChatTransition {
             View src = sourceView != null ? sourceView.get() : null;
             boolean found = src != null && sourceGuard != null && sourceGuard.valid()
                     && src.isAttachedToWindow() && src.isShown() && captureGeneric(host, src, listContainer.getTranslationX(), listContainer.getTranslationY());
+            boolean reacquired = false;
+            if (returning && !found && settingsAnchor != null) {
+                View rebound = settingsAnchor.resolve();
+                found = rebound != null && captureGeneric(host, rebound, listContainer.getTranslationX(), listContainer.getTranslationY());
+                reacquired = found;
+            }
+            if (returning) {
+                String reason = reacquired ? "settings_identity" : sourceGuard == null ? "guard_missing" : sourceGuard.invalidReason();
+                if (reason == null) {
+                    reason = src == null ? "source_collected" : !src.isAttachedToWindow() ? "source_detached"
+                            : !src.isShown() ? "source_hidden" : !found ? "source_not_visible" : "valid";
+                }
+                BaseFragment destination = target.get();
+                android.util.Log.i("FluidNavigation", "return target="
+                        + (destination == null ? "released" : destination.getClass().getSimpleName())
+                        + " origin=" + reason + " anchored=" + found);
+            }
             if (returning && !found && owner.getFragmentView().isLaidOut()) unanchoredReturn = true;
         }
     }

@@ -2923,8 +2923,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 && fragment != null && !(fragment instanceof EmptyBaseFragment)
                 && xyz.nextalone.nagram.ui.UIStyleEngine.isFluid()
                 && xyz.nextalone.nagram.ui.fluid.FluidCapabilities.isMotionEnabled(getContext())) {
+            FluidChatTransition previousMotion = fluidChatTransition();
             FluidChatTransition motion = FluidChatTransition.capture(this, currentFragment,
-                    fragment, FluidOrigins.take(getContext()));
+                    fragment, FluidOrigins.take(getContext()), previousMotion != null && previousMotion.isSettingsNavigation());
             if (motion != null) fluidChatTransitions.put(fragment, motion);
         }
 

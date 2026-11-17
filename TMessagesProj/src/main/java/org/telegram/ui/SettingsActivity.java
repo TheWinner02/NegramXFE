@@ -722,12 +722,27 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
     }
 
+    private final xyz.nextalone.nagram.ui.fluid.FluidSettingsRefresh fluidSettingsRefresh =
+            new xyz.nextalone.nagram.ui.fluid.FluidSettingsRefresh(() -> {
+                if (listView != null && listView.adapter != null) listView.adapter.notifyDataSetChanged();
+            });
+
+    @Override
+    public void onBecomeFullyHidden() {
+        super.onBecomeFullyHidden();
+        fluidSettingsRefresh.onHidden();
+    }
+
+    @Override
+    public void onBecomeFullyVisible() {
+        super.onBecomeFullyVisible();
+        fluidSettingsRefresh.onVisible();
+    }
+
     @Override
     public void onResume() {
         super.onResume();
-        if (listView.adapter != null) {
-            listView.adapter.notifyDataSetChanged();
-        }
+        fluidSettingsRefresh.onResume();
     }
 
     private ArrayList<Integer> accountNumbers = new ArrayList<>();
