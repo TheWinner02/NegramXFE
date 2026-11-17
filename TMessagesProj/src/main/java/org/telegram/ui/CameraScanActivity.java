@@ -145,6 +145,7 @@ public class CameraScanActivity extends BaseFragment {
     private int sps; // samples per second (when already recognized)
 
     private boolean qrLoading = false;
+    private volatile boolean scanDestroyed;
     private boolean qrLoaded = false;
 
     private QRCodeReader qrReader = null;
@@ -235,6 +236,8 @@ public class CameraScanActivity extends BaseFragment {
 
             @Override
             public void dismiss() {
+                if (fragment.scanDestroyed) return;
+                fragment.scanDestroyed = true;
                 super.dismiss();
                 actionBarLayout[0] = null;
                 cameraDelegate.onDismiss();
@@ -274,6 +277,7 @@ public class CameraScanActivity extends BaseFragment {
 
     @Override
     public void onFragmentDestroy() {
+        scanDestroyed = true;
         super.onFragmentDestroy();
         destroy(false, null);
         if (portraitRequest != null) {
@@ -1091,11 +1095,14 @@ public class CameraScanActivity extends BaseFragment {
                     recognizedText = res.text;
                     if (!recognized) {
                         recognized = true;
+                        if (scanDestroyed) return;
                         qrLoading = delegate.processQr(recognizedText, () -> {
+                            if (scanDestroyed) return;
                             if (cameraView != null && cameraView.getCameraSession() != null) {
                                 CameraController.getInstance().stopPreview(cameraView.getCameraSession());
                             }
                             AndroidUtilities.runOnUIThread(() -> {
+                                if (scanDestroyed) return;
                                 if (delegate != null) {
                                     delegate.didFindQr(recognizedText);
                                 }
@@ -1127,6 +1134,7 @@ public class CameraScanActivity extends BaseFragment {
                     }
                     String text = recognizedText;
                     AndroidUtilities.runOnUIThread(() -> {
+                        if (scanDestroyed) return;
                         if (delegate != null) {
                             delegate.didFindQr(text);
                         }
@@ -1384,7 +1392,7 @@ public class CameraScanActivity extends BaseFragment {
                 Uri uri = Uri.parse(text);
                 String path = uri.getPath().replace("/", "");
             } else {
-                if (currentType == TYPE_QR_LOGIN && !text.startsWith("tg://login?token=")) {
+                if (currentType == TYPE_QR_LOGIN && org.telegram.messenger.QrLoginToken.decode(text) == null) {
                     onNoQrFound();
                     return null;
                 }

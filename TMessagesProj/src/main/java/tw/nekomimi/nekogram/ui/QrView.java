@@ -44,6 +44,7 @@ public class QrView extends View {
     private RLottieDrawable loadingMatrix;
     private Bitmap contentBitmap, oldContentBitmap, qrLogo;
     private String link;
+    private int contentGeneration;
     private final float[] radii = new float[8];
 
     public QrView(Context context) {
@@ -58,7 +59,7 @@ public class QrView extends View {
                 qrLogo.recycle();
                 qrLogo = null;
             }
-            Utilities.themeQueue.postRunnable(() -> prepareContent(w, h));
+            prepareContent(w, h);
         }
     }
 
@@ -154,14 +155,25 @@ public class QrView extends View {
     }
 
     public void clear() {
+        contentGeneration++;
         link = hadLink = null;
+        hadWidth = hadHeight = null;
+        firstPrepare = true;
+        if (oldContentBitmap != null && oldContentBitmap != contentBitmap) oldContentBitmap.recycle();
+        if (contentBitmap != null) contentBitmap.recycle();
         contentBitmap = oldContentBitmap = null;
+        contentBitmapAlpha.set(1f, true);
+        invalidate();
     }
 
     public void setData(String link) {
+        if (TextUtils.isEmpty(link)) {
+            // Never keep a scannable expired token underneath the loading animation.
+            clear();
+            return;
+        }
         this.link = link;
-        final int w = getWidth(), h = getHeight();
-        Utilities.themeQueue.postRunnable(() -> prepareContent(w, h));
+        prepareContent(getWidth(), getHeight());
         invalidate();
     }
 
@@ -170,69 +182,54 @@ public class QrView extends View {
     private boolean firstPrepare = true;
 
     private void prepareContent(int w, int h) {
-        if (w == 0 || h == 0) {
-            return;
-        }
-        if (TextUtils.isEmpty(link)) {
+        final int owner = ++contentGeneration;
+        final String data = link;
+        if (w <= 0 || h <= 0 || TextUtils.isEmpty(data)) return;
+        if (TextUtils.equals(data, hadLink) && hadWidth != null && hadHeight != null && hadWidth == w && hadHeight == h) return;
+        Utilities.themeQueue.postRunnable(() -> {
+            Bitmap result = null;
+            HashMap<EncodeHintType, Object> hints = new HashMap<>();
+            hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
+            hints.put(EncodeHintType.MARGIN, 0);
+            try {
+                result = new TelegramQRCodeWriter().encode(data, w, h, hints, null, 0.75f, 0, Color.BLACK);
+            } catch (Exception error) {
+                // Do not log the login token or encoder exception containing its contents.
+                FileLog.e("Failed to render login QR");
+            }
+            final Bitmap bitmap = result;
+            if (bitmap == null) return;
             AndroidUtilities.runOnUIThread(() -> {
-                firstPrepare = false;
-                if (contentBitmap != null) {
-                    Bitmap oldBitmap = contentBitmap;
-                    contentBitmap = null;
-                    contentBitmapAlpha.set(0, true);
-                    if (oldContentBitmap != null) {
-                        oldContentBitmap.recycle();
-                    }
-                    oldContentBitmap = oldBitmap;
-                    this.invalidate();
+                if (owner != contentGeneration || !TextUtils.equals(link, data)) {
+                    bitmap.recycle();
+                    return;
                 }
+                hadWidth = w;
+                hadHeight = h;
+                hadLink = data;
+                Bitmap oldBitmap = contentBitmap;
+                contentBitmap = bitmap;
+                if (!firstPrepare) contentBitmapAlpha.set(0, true);
+                firstPrepare = false;
+                if (oldContentBitmap != null) oldContentBitmap.recycle();
+                oldContentBitmap = oldBitmap;
+                invalidate();
             });
-            return;
-        }
-
-        if (TextUtils.equals(link, hadLink) && hadWidth != null && hadHeight != null && hadWidth == w && hadHeight == h) {
-            return;
-        }
-
-        Bitmap qrBitmap = null;
-        HashMap<EncodeHintType, Object> hints = new HashMap<>();
-        hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
-        hints.put(EncodeHintType.MARGIN, 0);
-        TelegramQRCodeWriter writer = new TelegramQRCodeWriter();
-        try {
-            qrBitmap = writer.encode(link, w, h, hints, null, 0.75f, 0, Color.BLACK);
-        } catch (Exception e) {
-            FileLog.e(e);
-        }
-        if (qrBitmap == null) {
-            return;
-        }
-
-        Bitmap bitmap = qrBitmap;
-
-        hadWidth = w;
-        hadHeight = h;
-        hadLink = link;
-
-        AndroidUtilities.runOnUIThread(() -> {
-            Bitmap oldBitmap = contentBitmap;
-            contentBitmap = bitmap;
-            if (!firstPrepare) {
-                contentBitmapAlpha.set(0, true);
-            }
-            firstPrepare = false;
-            if (oldContentBitmap != null) {
-                oldContentBitmap.recycle();
-            }
-            oldContentBitmap = oldBitmap;
-
-            this.invalidate();
         });
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        prepareContent(getWidth(), getHeight());
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
+        String data = link;
+        clear();
+        link = data;
         if (loadingMatrix != null) {
             loadingMatrix.stop();
             loadingMatrix.recycle(false);

@@ -8483,6 +8483,10 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         private final QrView qrView;
 
         private boolean waitingForEvent;
+        private boolean active, requestInFlight, refreshPending;
+        private int generation, requestId, retryAttempt;
+        private Runnable refreshRunnable;
+        private final TextView retryView;
 
         public LoginActivityQrView(Context context) {
             super(context);
@@ -8508,10 +8512,18 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             qrView = new QrView(context);
             qrView.setData(null);
             addView(qrView, LayoutHelper.createLinear(280, 280, Gravity.CENTER_HORIZONTAL, 30, 30,30, 30));
+            retryView = new TextView(context);
+            retryView.setGravity(Gravity.CENTER);
+            retryView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            retryView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(12), AndroidUtilities.dp(16), AndroidUtilities.dp(12));
+            retryView.setVisibility(GONE);
+            retryView.setOnClickListener(v -> exportLoginToken(false));
+            addView(retryView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 16, 0, 16, 8));
         }
 
         @Override
         public void updateColors() {
+            retryView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText));
             titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             confirmTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText6));
             confirmTextView.setLinkTextColor(Theme.getColor(Theme.key_chats_actionBackground));
@@ -8529,133 +8541,211 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
         @Override
         public void onDestroyActivity() {
-            removeObserver();
+            stopFlow();
             super.onDestroyActivity();
         }
 
         @Override
         public void onShow() {
             super.onShow();
-            waitingForEvent = true;
-            exportLoginToken(true);
+            stopFlow();
+            // Never reset or migrate a slot which already owns an authenticated account.
+            if (getUserConfig().isClientActivated()) {
+                needShowAlert(getString(R.string.NagramX), getString(R.string.AccountAlreadyLoggedIn));
+                return;
+            }
+            active = waitingForEvent = true;
+            retryAttempt = 0;
+            getNotificationCenter().addObserver(this, NotificationCenter.updateLoginToken);
+            boolean backend = getConnectionsManager().isTestBackend();
+            if (backend != LoginActivity.this.testBackend) getConnectionsManager().switchBackend(false);
+            getConnectionsManager().cleanup(false);
+            exportLoginToken(false);
         }
 
         @Override
         public void onHide() {
-            removeObserver();
+            stopFlow();
             super.onHide();
-            qrView.clear();
         }
 
-        private void removeObserver() {
+        private boolean isCurrent(int owner) {
+            return active && generation == owner && currentViewNum == VIEW_QR_LOGIN;
+        }
+
+        private void cancelRefresh() {
+            if (refreshRunnable != null) {
+                AndroidUtilities.cancelRunOnUIThread(refreshRunnable);
+                refreshRunnable = null;
+            }
+        }
+
+        private void stopTokenUpdates() {
             waitingForEvent = false;
+            refreshPending = false;
+            cancelRefresh();
             getNotificationCenter().removeObserver(this, NotificationCenter.updateLoginToken);
         }
 
+        private void stopFlow() {
+            active = false;
+            generation++;
+            stopTokenUpdates();
+            if (requestId != 0) getConnectionsManager().cancelRequest(requestId, true);
+            requestId = 0;
+            requestInFlight = false;
+            if (currentViewNum == VIEW_QR_LOGIN) showDoneButton(false, false);
+            qrView.clear();
+            retryView.setVisibility(GONE);
+        }
+
+        private void scheduleRefresh(long delay, boolean expireQr) {
+            cancelRefresh();
+            final int owner = generation;
+            refreshRunnable = () -> {
+                refreshRunnable = null;
+                if (!isCurrent(owner) || !waitingForEvent) return;
+                if (expireQr) qrView.setData(null);
+                exportLoginToken(false);
+            };
+            AndroidUtilities.runOnUIThread(refreshRunnable, Math.max(1000L, delay));
+        }
+
         public void exportLoginToken(boolean show) {
-            if (!waitingForEvent) {
+            if (!active || !waitingForEvent || getContext() == null) return;
+            if (requestInFlight) {
+                refreshPending = true;
                 return;
             }
-            Context context = getContext();
-            if (context == null) {
-                return;
-            }
-
-            if (show)  {
-                getNotificationCenter().addObserver(this, NotificationCenter.updateLoginToken);
-                boolean testBackend = getConnectionsManager().isTestBackend();
-                if (testBackend != LoginActivity.this.testBackend) {
-                    getConnectionsManager().switchBackend(false);
-                }
-                getConnectionsManager().cleanup(false);
-            }
-
+            cancelRefresh();
+            retryView.setVisibility(GONE);
+            retryView.setEnabled(true);
+            requestInFlight = true;
+            final int owner = generation;
             TLRPC.TL_auth_exportLoginToken req = new TLRPC.TL_auth_exportLoginToken();
             req.api_hash = NekoXConfig.currentAppHash();
             req.api_id = NekoXConfig.currentAppId();
             for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
-                UserConfig userConfig = UserConfig.getInstance(a);
-                if (userConfig.isClientActivated()) {
-                    long uid = userConfig.getClientUserId();
-                    req.except_ids.add(uid);
-                }
+                UserConfig config = UserConfig.getInstance(a);
+                if (config.isClientActivated()) req.except_ids.add(config.getClientUserId());
             }
-
-            getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-                if (error == null) {
-                    if (response instanceof TLRPC.TL_auth_loginToken) {
-                        TLRPC.TL_auth_loginToken res = (TLRPC.TL_auth_loginToken) response;
-                        String link = "tg://login?token=" + Base64.encodeToString(res.token, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
-                        qrView.setData(link);
-                        long expires = res.expires - getConnectionsManager().getCurrentTime();
-                        if (expires < 0) {
-                            expires = 20;
-                        }
-                        AndroidUtilities.runOnUIThread(() -> exportLoginToken(false), expires * 1000L);
-                    } else if (response instanceof TLRPC.TL_auth_loginTokenSuccess) {
-                        removeObserver();
-                        postDelayed(() -> onAuthSuccess((TLRPC.TL_auth_authorization) ((TLRPC.TL_auth_loginTokenSuccess) response).authorization), 150);
-                    } else if (response instanceof TLRPC.TL_auth_loginTokenMigrateTo) {
-                        removeObserver();
-                        showDoneButton(true, true);
-                        TLRPC.TL_auth_loginTokenMigrateTo res = (TLRPC.TL_auth_loginTokenMigrateTo) response;
-
-                        ConnectionsManager.native_moveToDatacenter(currentAccount, res.dc_id);
-                        TLRPC.TL_auth_importLoginToken request = new TLRPC.TL_auth_importLoginToken();
-                        request.token = res.token;
-                        getConnectionsManager().sendRequest(request, (response1, error1) -> AndroidUtilities.runOnUIThread(() -> {
-                            if (error1 == null) {
-                                if (response1 instanceof TLRPC.TL_auth_loginTokenSuccess) {
-                                    postDelayed(() -> {
-                                        showDoneButton(false, true);
-                                        onAuthSuccess((TLRPC.TL_auth_authorization) ((TLRPC.TL_auth_loginTokenSuccess) response1).authorization);
-                                    }, 150);
-                                }
-                            } else if (error1.text != null) {
-                                handleError(error1.text);
-                            }
-                        }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin | ConnectionsManager.RequestFlagTryDifferentDc | ConnectionsManager.RequestFlagEnableUnauthorized);
+            requestId = getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+                if (!isCurrent(owner)) return;
+                requestInFlight = false;
+                requestId = 0;
+                if (error != null) {
+                    handleError(error.text, error.code, owner);
+                } else if (response instanceof TLRPC.TL_auth_loginToken) {
+                    retryAttempt = 0;
+                    TLRPC.TL_auth_loginToken token = (TLRPC.TL_auth_loginToken) response;
+                    long remaining = token.expires - (long) getConnectionsManager().getCurrentTime();
+                    if (remaining > 0 && token.token != null && token.token.length > 0) {
+                        qrView.setData("tg://login?token=" + Base64.encodeToString(token.token, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING));
+                        scheduleRefresh(remaining * 1000L, true);
+                    } else {
+                        qrView.setData(null);
+                        scheduleRefresh(1000L, false);
                     }
-                } else if (error.text != null) {
-                    removeObserver();
-                    handleError(error.text);
-                }
-
-            }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin | ConnectionsManager.RequestFlagTryDifferentDc | ConnectionsManager.RequestFlagEnableUnauthorized);
+                    if (refreshPending) {
+                        refreshPending = false;
+                        exportLoginToken(false);
+                    }
+                } else if (response instanceof TLRPC.TL_auth_loginTokenSuccess) {
+                    completeLogin((TLRPC.TL_auth_loginTokenSuccess) response, owner);
+                } else if (response instanceof TLRPC.TL_auth_loginTokenMigrateTo) {
+                    stopTokenUpdates();
+                    qrView.setData(null);
+                    showDoneButton(true, true);
+                    TLRPC.TL_auth_loginTokenMigrateTo token = (TLRPC.TL_auth_loginTokenMigrateTo) response;
+                    ConnectionsManager.native_moveToDatacenter(currentAccount, token.dc_id);
+                    TLRPC.TL_auth_importLoginToken request = new TLRPC.TL_auth_importLoginToken();
+                    request.token = token.token;
+                    requestInFlight = true;
+                    requestId = getConnectionsManager().sendRequest(request, (result, failure) -> AndroidUtilities.runOnUIThread(() -> {
+                        if (!isCurrent(owner)) return;
+                        requestId = 0;
+                        requestInFlight = false;
+                        if (failure != null) handleError(failure.text, failure.code, owner);
+                        else if (result instanceof TLRPC.TL_auth_loginTokenSuccess) completeLogin((TLRPC.TL_auth_loginTokenSuccess) result, owner);
+                        else handleError(null, 500, owner);
+                    }), qrRequestFlags());
+                } else handleError(null, 500, owner);
+            }), qrRequestFlags());
         }
 
-        private void handleError(String errorText) {
-            if (errorText.contains("SESSION_PASSWORD_NEEDED")) {
+        private int qrRequestFlags() {
+            return ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin
+                    | ConnectionsManager.RequestFlagTryDifferentDc | ConnectionsManager.RequestFlagEnableUnauthorized;
+        }
+
+        private void completeLogin(TLRPC.TL_auth_loginTokenSuccess result, int owner) {
+            if (!(result.authorization instanceof TLRPC.TL_auth_authorization)) {
+                handleError(null, 500, owner);
+                return;
+            }
+            stopTokenUpdates();
+            qrView.setData(null);
+            postDelayed(() -> {
+                if (!isCurrent(owner)) return;
+                showDoneButton(false, true);
+                active = false;
+                generation++;
+                onAuthSuccess((TLRPC.TL_auth_authorization) result.authorization);
+            }, 150);
+        }
+
+        private void handleError(String text, int code, int owner) {
+            if (!isCurrent(owner)) return;
+            stopTokenUpdates();
+            qrView.setData(null);
+            showDoneButton(false, true);
+            if ("SESSION_PASSWORD_NEEDED".equals(text)) {
+                requestInFlight = true;
                 TL_account.getPassword req = new TL_account.getPassword();
-                getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-                    showDoneButton(false, true);
-                    if (error == null) {
+                requestId = getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+                    if (!isCurrent(owner)) return;
+                    requestId = 0;
+                    requestInFlight = false;
+                    if (error != null) {
+                        showRetry(error.text, error.code);
+                    } else if (response instanceof TL_account.Password) {
                         TL_account.Password password = (TL_account.Password) response;
                         if (!TwoStepVerificationActivity.canHandleCurrentPassword(password, true)) {
-                            AlertsCreator.showUpdateAppAlert(getParentActivity(), LocaleController.getString(R.string.UpdateAppAlert), true);
+                            AlertsCreator.showUpdateAppAlert(getParentActivity(), getString(R.string.UpdateAppAlert), true);
+                            showRetry(null, 400);
                             return;
                         }
                         Bundle bundle = new Bundle();
                         SerializedData data = new SerializedData(password.getObjectSize());
-                        password.serializeToStream(data);
-                        bundle.putString("password", Utilities.bytesToHex(data.toByteArray()));
+                        try {
+                            password.serializeToStream(data);
+                            bundle.putString("password", Utilities.bytesToHex(data.toByteArray()));
+                        } finally { data.cleanup(); }
                         setPage(VIEW_PASSWORD, true, bundle, false);
-                    } else {
-                        needShowAlert(LocaleController.getString(R.string.NagramX), error.text);
-                    }
+                    } else showRetry(null, 500);
                 }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
-            } else if (errorText.startsWith("FLOOD_WAIT")) {
-                needShowAlert(LocaleController.getString(R.string.NagramX), getString(R.string.FloodWait) + "\n" + errorText);
-            } else {
-                needShowAlert(LocaleController.getString(R.string.NagramX), errorText);
+            } else showRetry(text, code);
+        }
+
+        private void showRetry(String text, int code) {
+            if (!active) return;
+            waitingForEvent = true;
+            getNotificationCenter().addObserver(this, NotificationCenter.updateLoginToken);
+            boolean flood = text != null && text.startsWith("FLOOD_WAIT");
+            long delay = Math.min(30000L, 2000L << Math.min(retryAttempt++, 4));
+            if (flood) {
+                try { delay = Math.max(1L, Integer.parseInt(text.substring("FLOOD_WAIT_".length()))) * 1000L; }
+                catch (RuntimeException malformed) { delay = 30000L; }
             }
+            retryView.setText((flood ? getString(R.string.FloodWait) : getString(R.string.ErrorOccurred)) + "\n" + getString(R.string.Retry));
+            retryView.setEnabled(!flood);
+            retryView.setVisibility(VISIBLE);
+            if (flood || code < 0 || code >= 500) scheduleRefresh(delay, false);
         }
 
         @Override
         public void didReceivedNotification(int id, int account, Object... args) {
-            if (id == NotificationCenter.updateLoginToken) {
-                exportLoginToken(false);
-            }
+            if (id == NotificationCenter.updateLoginToken && waitingForEvent && retryView.isEnabled()) exportLoginToken(false);
         }
     }
 

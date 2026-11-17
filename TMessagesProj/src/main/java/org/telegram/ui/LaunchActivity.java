@@ -3671,19 +3671,39 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
             } else if (scanQr) {
                 ActionIntroActivity fragment = new ActionIntroActivity(ActionIntroActivity.ACTION_TYPE_QR_LOGIN);
                 fragment.setQrLoginDelegate(code -> {
+                    byte[] token = org.telegram.messenger.QrLoginToken.decode(code);
+                    if (token == null) {
+                        if (!isFinishing()) new AlertDialog.Builder(LaunchActivity.this)
+                                .setTitle(LocaleController.getString(R.string.AuthAnotherClient))
+                                .setMessage(LocaleController.getString(R.string.ErrorOccurred))
+                                .setPositiveButton(LocaleController.getString(R.string.OK), null).show();
+                        return;
+                    }
                     AlertDialog progressDialog = new AlertDialog(LaunchActivity.this, AlertDialog.ALERT_TYPE_SPINNER);
-                    progressDialog.setCanCancel(false);
+                    final int loginAccount = currentAccount;
+                    final int[] requestId = {0};
+                    final boolean[] cancelled = {false};
+                    progressDialog.setCanCancel(true);
+                    progressDialog.setOnCancelListener(dialog -> {
+                        cancelled[0] = true;
+                        if (requestId[0] != 0) ConnectionsManager.getInstance(loginAccount).cancelRequest(requestId[0], true);
+                    });
                     progressDialog.show();
-                    byte[] token = Base64.decode(code.substring("tg://login?token=".length()), Base64.URL_SAFE);
                     TLRPC.TL_auth_acceptLoginToken req = new TLRPC.TL_auth_acceptLoginToken();
                     req.token = token;
-                    ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+                    requestId[0] = ConnectionsManager.getInstance(loginAccount).sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+                        if (cancelled[0]) return;
+                        requestId[0] = 0;
                         try {
                             progressDialog.dismiss();
                         } catch (Exception ignore) {
                         }
                         if (!(response instanceof TLRPC.TL_authorization)) {
-                            AndroidUtilities.runOnUIThread(() -> AlertsCreator.showSimpleAlert(fragment, LocaleController.getString(R.string.AuthAnotherClient), LocaleController.getString(R.string.ErrorOccurred) + "\n" + error.text));
+                            if (!isFinishing()) new AlertDialog.Builder(LaunchActivity.this)
+                                    .setTitle(LocaleController.getString(R.string.AuthAnotherClient))
+                                    .setMessage(LocaleController.getString(R.string.ErrorOccurred)
+                                            + (error != null && error.text != null ? "\n" + error.text : ""))
+                                    .setPositiveButton(LocaleController.getString(R.string.OK), null).show();
                         }
                     }));
                 });

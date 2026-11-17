@@ -1232,9 +1232,22 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
 
             private TLObject response = null;
             private TLRPC.TL_error error = null;
+            private boolean dismissed;
+            private int requestId;
+            private Runnable pending;
+
+            @Override
+            public void onDismiss() {
+                dismissed = true;
+                if (pending != null) AndroidUtilities.cancelRunOnUIThread(pending);
+                pending = null;
+                if (requestId != 0) getConnectionsManager().cancelRequest(requestId, true);
+                requestId = 0;
+            }
 
             @Override
             public void didFindQr(String link) {
+                if (dismissed || getParentActivity() == null) return;
                 if (response instanceof TLRPC.TL_authorization) {
                     TLRPC.TL_authorization authorization = (TLRPC.TL_authorization) response;
                     if (((TLRPC.TL_authorization) response).password_pending) {
@@ -1264,15 +1277,17 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
             public boolean processQr(String link, Runnable onLoadEnd) {
                 this.response = null;
                 this.error = null;
-                AndroidUtilities.runOnUIThread(() -> {
+                pending = () -> {
+                    pending = null;
+                    if (dismissed) return;
                     try {
-                        String code = link.substring("tg://login?token=".length());
-                        code = code.replaceAll("\\/", "_");
-                        code = code.replaceAll("\\+", "-");
-                        byte[] token = Base64.decode(code, Base64.URL_SAFE);
+                        byte[] token = org.telegram.messenger.QrLoginToken.decode(link);
+                        if (token == null) throw new IllegalArgumentException("Invalid login QR");
                         TLRPC.TL_auth_acceptLoginToken req = new TLRPC.TL_auth_acceptLoginToken();
                         req.token = token;
-                        getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+                        requestId = getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+                            requestId = 0;
+                            if (dismissed) return;
                             this.response = response;
                             this.error = error;
                             onLoadEnd.run();
@@ -1284,7 +1299,8 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                         });
                         onLoadEnd.run();
                     }
-                }, 750);
+                };
+                AndroidUtilities.runOnUIThread(pending, 750);
                 return true;
             }
         });
