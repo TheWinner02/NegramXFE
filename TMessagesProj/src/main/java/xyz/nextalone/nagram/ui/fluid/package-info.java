@@ -148,6 +148,10 @@
  * the neutral fallback. This recovery only affects return geometry; opening and the shared
  * spring remain unchanged. Chat/topic identity handling stays separate from settings recovery.
  *
+ * <p>UniversalAdapter settings cells participate in the adapter's enabled-row contract.
+ * Their native row state can therefore supply a Fluid touch origin, including nested sticker,
+ * emoji and reaction settings. Explicitly disabled items and noninteractive headers stay excluded.
+ *
  * <p>Other UI styles retain their original motion. Gesture displacement, playback timelines,
  * indeterminate loading loops and specialized content transitions are not globally time-warped.
  */
